@@ -1,0 +1,1136 @@
+{
+    "status": "success",
+    "datasets": [
+        {
+            "testId": "PSY-TENANTA-001",
+            "subject": {
+                "id": "90-90-50-49",
+                "name": "Astrichia Djesintha Pah",
+                "sex": "female",
+                "registration": {
+                    "id": "dac6b1eb-fefa-4c7c-bd87-9c08fcc9e3e9",
+                    "code": "REG/20251124/0004",
+                    "status": "REG^01",
+                    "tenantId": "21e06dba-c635-41c1-b0d5-30df3e6f14eb"
+                }
+            },
+            "description": "Papicostik psikologi screening",
+            "answers": [
+                {
+                    "id": 1,
+                    "answer": "B"
+                },
+                {
+                    "id": 2,
+                    "answer": "B"
+                },
+                {
+                    "id": 3,
+                    "answer": "A"
+                },
+                {
+                    "id": 4,
+                    "answer": "A"
+                },
+                {
+                    "id": 5,
+                    "answer": "A"
+                },
+                {
+                    "id": 6,
+                    "answer": "B"
+                },
+                {
+                    "id": 7,
+                    "answer": "B"
+                },
+                {
+                    "id": 8,
+                    "answer": "B"
+                },
+                {
+                    "id": 9,
+                    "answer": "A"
+                },
+                {
+                    "id": 10,
+                    "answer": "A"
+                },
+                {
+                    "id": 11,
+                    "answer": "B"
+                },
+                {
+                    "id": 12,
+                    "answer": "B"
+                },
+                {
+                    "id": 13,
+                    "answer": "B"
+                },
+                {
+                    "id": 14,
+                    "answer": "B"
+                },
+                {
+                    "id": 15,
+                    "answer": "A"
+                },
+                {
+                    "id": 16,
+                    "answer": "A"
+                },
+                {
+                    "id": 17,
+                    "answer": "B"
+                },
+                {
+                    "id": 18,
+                    "answer": "B"
+                },
+                {
+                    "id": 19,
+                    "answer": "B"
+                },
+                {
+                    "id": 20,
+                    "answer": "A"
+                },
+                {
+                    "id": 21,
+                    "answer": "B"
+                },
+                {
+                    "id": 22,
+                    "answer": "B"
+                },
+                {
+                    "id": 23,
+                    "answer": "B"
+                },
+                {
+                    "id": 24,
+                    "answer": "A"
+                },
+                {
+                    "id": 25,
+                    "answer": "B"
+                },
+                {
+                    "id": 26,
+                    "answer": "A"
+                },
+                {
+                    "id": 27,
+                    "answer": "B"
+                },
+                {
+                    "id": 28,
+                    "answer": "B"
+                },
+                {
+                    "id": 29,
+                    "answer": "A"
+                },
+                {
+                    "id": 30,
+                    "answer": "A"
+                },
+                {
+                    "id": 31,
+                    "answer": "B"
+                },
+                {
+                    "id": 32,
+                    "answer": "B"
+                },
+                {
+                    "id": 33,
+                    "answer": "B"
+                },
+                {
+                    "id": 34,
+                    "answer": "B"
+                },
+                {
+                    "id": 35,
+                    "answer": "A"
+                },
+                {
+                    "id": 36,
+                    "answer": "B"
+                },
+                {
+                    "id": 37,
+                    "answer": "B"
+                },
+                {
+                    "id": 38,
+                    "answer": "A"
+                },
+                {
+                    "id": 39,
+                    "answer": "B"
+                },
+                {
+                    "id": 40,
+                    "answer": "B"
+                },
+                {
+                    "id": 41,
+                    "answer": "B"
+                },
+                {
+                    "id": 42,
+                    "answer": "B"
+                },
+                {
+                    "id": 43,
+                    "answer": "A"
+                },
+                {
+                    "id": 44,
+                    "answer": "B"
+                },
+                {
+                    "id": 45,
+                    "answer": "B"
+                },
+                {
+                    "id": 46,
+                    "answer": "A"
+                },
+                {
+                    "id": 47,
+                    "answer": "A"
+                },
+                {
+                    "id": 48,
+                    "answer": "A"
+                },
+                {
+                    "id": 49,
+                    "answer": "B"
+                },
+                {
+                    "id": 50,
+                    "answer": "A"
+                },
+                {
+                    "id": 51,
+                    "answer": "A"
+                },
+                {
+                    "id": 52,
+                    "answer": "B"
+                },
+                {
+                    "id": 53,
+                    "answer": "A"
+                },
+                {
+                    "id": 54,
+                    "answer": "B"
+                },
+                {
+                    "id": 55,
+                    "answer": "B"
+                },
+                {
+                    "id": 56,
+                    "answer": "A"
+                },
+                {
+                    "id": 57,
+                    "answer": "B"
+                },
+                {
+                    "id": 58,
+                    "answer": "A"
+                },
+                {
+                    "id": 59,
+                    "answer": "A"
+                },
+                {
+                    "id": 60,
+                    "answer": "B"
+                },
+                {
+                    "id": 61,
+                    "answer": "B"
+                },
+                {
+                    "id": 62,
+                    "answer": "B"
+                },
+                {
+                    "id": 63,
+                    "answer": "B"
+                },
+                {
+                    "id": 64,
+                    "answer": "B"
+                },
+                {
+                    "id": 65,
+                    "answer": "B"
+                },
+                {
+                    "id": 66,
+                    "answer": "A"
+                },
+                {
+                    "id": 67,
+                    "answer": "A"
+                },
+                {
+                    "id": 68,
+                    "answer": "A"
+                },
+                {
+                    "id": 69,
+                    "answer": "B"
+                },
+                {
+                    "id": 70,
+                    "answer": "B"
+                },
+                {
+                    "id": 71,
+                    "answer": "B"
+                },
+                {
+                    "id": 72,
+                    "answer": "B"
+                },
+                {
+                    "id": 73,
+                    "answer": "B"
+                },
+                {
+                    "id": 74,
+                    "answer": "B"
+                },
+                {
+                    "id": 75,
+                    "answer": "B"
+                },
+                {
+                    "id": 76,
+                    "answer": "A"
+                },
+                {
+                    "id": 77,
+                    "answer": "B"
+                },
+                {
+                    "id": 78,
+                    "answer": "B"
+                },
+                {
+                    "id": 79,
+                    "answer": "B"
+                },
+                {
+                    "id": 80,
+                    "answer": "A"
+                },
+                {
+                    "id": 81,
+                    "answer": "A"
+                },
+                {
+                    "id": 82,
+                    "answer": "B"
+                },
+                {
+                    "id": 83,
+                    "answer": "B"
+                },
+                {
+                    "id": 84,
+                    "answer": "A"
+                },
+                {
+                    "id": 85,
+                    "answer": "B"
+                },
+                {
+                    "id": 86,
+                    "answer": "B"
+                },
+                {
+                    "id": 87,
+                    "answer": "B"
+                },
+                {
+                    "id": 88,
+                    "answer": "B"
+                },
+                {
+                    "id": 89,
+                    "answer": "A"
+                },
+                {
+                    "id": 90,
+                    "answer": "B"
+                }
+            ]
+        },
+        {
+            "testId": "PSY-TENANTA-001",
+            "subject": {
+                "id": "56-42-87-28",
+                "name": "Ns. Ni Luh Diah Anggreni, S.Kep",
+                "sex": "female",
+                "registration": {
+                    "id": "8e5cf6c0-6983-4183-912d-031ca01c9790",
+                    "code": "REG/20251124/0003",
+                    "status": "REG^01",
+                    "tenantId": "21e06dba-c635-41c1-b0d5-30df3e6f14eb"
+                }
+            },
+            "description": "Papicostik psikologi screening",
+            "answers": [
+                {
+                    "id": 1,
+                    "answer": "A"
+                },
+                {
+                    "id": 2,
+                    "answer": "B"
+                },
+                {
+                    "id": 3,
+                    "answer": "A"
+                },
+                {
+                    "id": 4,
+                    "answer": "B"
+                },
+                {
+                    "id": 5,
+                    "answer": "A"
+                },
+                {
+                    "id": 6,
+                    "answer": "A"
+                },
+                {
+                    "id": 7,
+                    "answer": "B"
+                },
+                {
+                    "id": 8,
+                    "answer": "B"
+                },
+                {
+                    "id": 9,
+                    "answer": "A"
+                },
+                {
+                    "id": 10,
+                    "answer": "A"
+                },
+                {
+                    "id": 11,
+                    "answer": "A"
+                },
+                {
+                    "id": 12,
+                    "answer": "B"
+                },
+                {
+                    "id": 13,
+                    "answer": "B"
+                },
+                {
+                    "id": 14,
+                    "answer": "B"
+                },
+                {
+                    "id": 15,
+                    "answer": "A"
+                },
+                {
+                    "id": 16,
+                    "answer": "A"
+                },
+                {
+                    "id": 17,
+                    "answer": "B"
+                },
+                {
+                    "id": 18,
+                    "answer": "B"
+                },
+                {
+                    "id": 19,
+                    "answer": "B"
+                },
+                {
+                    "id": 20,
+                    "answer": "A"
+                },
+                {
+                    "id": 21,
+                    "answer": "B"
+                },
+                {
+                    "id": 22,
+                    "answer": "B"
+                },
+                {
+                    "id": 23,
+                    "answer": "B"
+                },
+                {
+                    "id": 24,
+                    "answer": "B"
+                },
+                {
+                    "id": 25,
+                    "answer": "B"
+                },
+                {
+                    "id": 26,
+                    "answer": "A"
+                },
+                {
+                    "id": 27,
+                    "answer": "A"
+                },
+                {
+                    "id": 28,
+                    "answer": "A"
+                },
+                {
+                    "id": 29,
+                    "answer": "A"
+                },
+                {
+                    "id": 30,
+                    "answer": "B"
+                },
+                {
+                    "id": 31,
+                    "answer": "A"
+                },
+                {
+                    "id": 32,
+                    "answer": "B"
+                },
+                {
+                    "id": 33,
+                    "answer": "B"
+                },
+                {
+                    "id": 34,
+                    "answer": "B"
+                },
+                {
+                    "id": 35,
+                    "answer": "B"
+                },
+                {
+                    "id": 36,
+                    "answer": "B"
+                },
+                {
+                    "id": 37,
+                    "answer": "B"
+                },
+                {
+                    "id": 38,
+                    "answer": "B"
+                },
+                {
+                    "id": 39,
+                    "answer": "B"
+                },
+                {
+                    "id": 40,
+                    "answer": "A"
+                },
+                {
+                    "id": 41,
+                    "answer": "A"
+                },
+                {
+                    "id": 42,
+                    "answer": "B"
+                },
+                {
+                    "id": 43,
+                    "answer": "A"
+                },
+                {
+                    "id": 44,
+                    "answer": "B"
+                },
+                {
+                    "id": 45,
+                    "answer": "B"
+                },
+                {
+                    "id": 46,
+                    "answer": "B"
+                },
+                {
+                    "id": 47,
+                    "answer": "A"
+                },
+                {
+                    "id": 48,
+                    "answer": "A"
+                },
+                {
+                    "id": 49,
+                    "answer": "A"
+                },
+                {
+                    "id": 50,
+                    "answer": "A"
+                },
+                {
+                    "id": 51,
+                    "answer": "A"
+                },
+                {
+                    "id": 52,
+                    "answer": "B"
+                },
+                {
+                    "id": 53,
+                    "answer": "B"
+                },
+                {
+                    "id": 54,
+                    "answer": "B"
+                },
+                {
+                    "id": 55,
+                    "answer": "B"
+                },
+                {
+                    "id": 56,
+                    "answer": "B"
+                },
+                {
+                    "id": 57,
+                    "answer": "B"
+                },
+                {
+                    "id": 58,
+                    "answer": "A"
+                },
+                {
+                    "id": 59,
+                    "answer": "A"
+                },
+                {
+                    "id": 60,
+                    "answer": "B"
+                },
+                {
+                    "id": 61,
+                    "answer": "B"
+                },
+                {
+                    "id": 62,
+                    "answer": "A"
+                },
+                {
+                    "id": 63,
+                    "answer": "B"
+                },
+                {
+                    "id": 64,
+                    "answer": "A"
+                },
+                {
+                    "id": 65,
+                    "answer": "A"
+                },
+                {
+                    "id": 66,
+                    "answer": "B"
+                },
+                {
+                    "id": 67,
+                    "answer": "A"
+                },
+                {
+                    "id": 68,
+                    "answer": "A"
+                },
+                {
+                    "id": 69,
+                    "answer": "B"
+                },
+                {
+                    "id": 70,
+                    "answer": "A"
+                },
+                {
+                    "id": 71,
+                    "answer": "A"
+                },
+                {
+                    "id": 72,
+                    "answer": "B"
+                },
+                {
+                    "id": 73,
+                    "answer": "B"
+                },
+                {
+                    "id": 74,
+                    "answer": "A"
+                },
+                {
+                    "id": 75,
+                    "answer": "B"
+                },
+                {
+                    "id": 76,
+                    "answer": "A"
+                },
+                {
+                    "id": 77,
+                    "answer": "A"
+                },
+                {
+                    "id": 78,
+                    "answer": "B"
+                },
+                {
+                    "id": 79,
+                    "answer": "B"
+                },
+                {
+                    "id": 80,
+                    "answer": "B"
+                },
+                {
+                    "id": 81,
+                    "answer": "A"
+                },
+                {
+                    "id": 82,
+                    "answer": "B"
+                },
+                {
+                    "id": 83,
+                    "answer": "A"
+                },
+                {
+                    "id": 84,
+                    "answer": "A"
+                },
+                {
+                    "id": 85,
+                    "answer": "B"
+                },
+                {
+                    "id": 86,
+                    "answer": "B"
+                },
+                {
+                    "id": 87,
+                    "answer": "B"
+                },
+                {
+                    "id": 88,
+                    "answer": "B"
+                },
+                {
+                    "id": 89,
+                    "answer": "A"
+                },
+                {
+                    "id": 90,
+                    "answer": "B"
+                }
+            ]
+        },
+        {
+            "testId": "PSY-TENANTA-001",
+            "subject": {
+                "id": "76-64-76-72",
+                "name": "Ni Made Ginda Widyaswari",
+                "sex": "female",
+                "registration": {
+                    "id": "ffd96f6d-67d0-4f0a-93ad-b484218ec60c",
+                    "code": "REG/20251124/0005",
+                    "status": "REG^01",
+                    "tenantId": "21e06dba-c635-41c1-b0d5-30df3e6f14eb"
+                }
+            },
+            "description": "Papicostik psikologi screening",
+            "answers": [
+                {
+                    "id": 1,
+                    "answer": "A"
+                },
+                {
+                    "id": 2,
+                    "answer": "B"
+                },
+                {
+                    "id": 3,
+                    "answer": "B"
+                },
+                {
+                    "id": 4,
+                    "answer": "B"
+                },
+                {
+                    "id": 5,
+                    "answer": "A"
+                },
+                {
+                    "id": 6,
+                    "answer": "A"
+                },
+                {
+                    "id": 7,
+                    "answer": "B"
+                },
+                {
+                    "id": 8,
+                    "answer": "B"
+                },
+                {
+                    "id": 9,
+                    "answer": "B"
+                },
+                {
+                    "id": 10,
+                    "answer": "A"
+                },
+                {
+                    "id": 11,
+                    "answer": "B"
+                },
+                {
+                    "id": 12,
+                    "answer": "B"
+                },
+                {
+                    "id": 13,
+                    "answer": "B"
+                },
+                {
+                    "id": 14,
+                    "answer": "B"
+                },
+                {
+                    "id": 15,
+                    "answer": "B"
+                },
+                {
+                    "id": 16,
+                    "answer": "A"
+                },
+                {
+                    "id": 17,
+                    "answer": "A"
+                },
+                {
+                    "id": 18,
+                    "answer": "B"
+                },
+                {
+                    "id": 19,
+                    "answer": "B"
+                },
+                {
+                    "id": 20,
+                    "answer": "A"
+                },
+                {
+                    "id": 21,
+                    "answer": "B"
+                },
+                {
+                    "id": 22,
+                    "answer": "B"
+                },
+                {
+                    "id": 23,
+                    "answer": "B"
+                },
+                {
+                    "id": 24,
+                    "answer": "B"
+                },
+                {
+                    "id": 25,
+                    "answer": "B"
+                },
+                {
+                    "id": 26,
+                    "answer": "A"
+                },
+                {
+                    "id": 27,
+                    "answer": "A"
+                },
+                {
+                    "id": 28,
+                    "answer": "A"
+                },
+                {
+                    "id": 29,
+                    "answer": "A"
+                },
+                {
+                    "id": 30,
+                    "answer": "A"
+                },
+                {
+                    "id": 31,
+                    "answer": "B"
+                },
+                {
+                    "id": 32,
+                    "answer": "B"
+                },
+                {
+                    "id": 33,
+                    "answer": "B"
+                },
+                {
+                    "id": 34,
+                    "answer": "B"
+                },
+                {
+                    "id": 35,
+                    "answer": "B"
+                },
+                {
+                    "id": 36,
+                    "answer": "A"
+                },
+                {
+                    "id": 37,
+                    "answer": "B"
+                },
+                {
+                    "id": 38,
+                    "answer": "A"
+                },
+                {
+                    "id": 39,
+                    "answer": "B"
+                },
+                {
+                    "id": 40,
+                    "answer": "A"
+                },
+                {
+                    "id": 41,
+                    "answer": "A"
+                },
+                {
+                    "id": 42,
+                    "answer": "B"
+                },
+                {
+                    "id": 43,
+                    "answer": "B"
+                },
+                {
+                    "id": 44,
+                    "answer": "B"
+                },
+                {
+                    "id": 45,
+                    "answer": "B"
+                },
+                {
+                    "id": 46,
+                    "answer": "B"
+                },
+                {
+                    "id": 47,
+                    "answer": "A"
+                },
+                {
+                    "id": 48,
+                    "answer": "A"
+                },
+                {
+                    "id": 49,
+                    "answer": "B"
+                },
+                {
+                    "id": 50,
+                    "answer": "B"
+                },
+                {
+                    "id": 51,
+                    "answer": "B"
+                },
+                {
+                    "id": 52,
+                    "answer": "B"
+                },
+                {
+                    "id": 53,
+                    "answer": "A"
+                },
+                {
+                    "id": 54,
+                    "answer": "B"
+                },
+                {
+                    "id": 55,
+                    "answer": "B"
+                },
+                {
+                    "id": 56,
+                    "answer": "A"
+                },
+                {
+                    "id": 57,
+                    "answer": "A"
+                },
+                {
+                    "id": 58,
+                    "answer": "A"
+                },
+                {
+                    "id": 59,
+                    "answer": "B"
+                },
+                {
+                    "id": 60,
+                    "answer": "A"
+                },
+                {
+                    "id": 61,
+                    "answer": "A"
+                },
+                {
+                    "id": 62,
+                    "answer": "A"
+                },
+                {
+                    "id": 63,
+                    "answer": "B"
+                },
+                {
+                    "id": 64,
+                    "answer": "A"
+                },
+                {
+                    "id": 65,
+                    "answer": "A"
+                },
+                {
+                    "id": 66,
+                    "answer": "A"
+                },
+                {
+                    "id": 67,
+                    "answer": "A"
+                },
+                {
+                    "id": 68,
+                    "answer": "A"
+                },
+                {
+                    "id": 69,
+                    "answer": "B"
+                },
+                {
+                    "id": 70,
+                    "answer": "A"
+                },
+                {
+                    "id": 71,
+                    "answer": "A"
+                },
+                {
+                    "id": 72,
+                    "answer": "A"
+                },
+                {
+                    "id": 73,
+                    "answer": "B"
+                },
+                {
+                    "id": 74,
+                    "answer": "B"
+                },
+                {
+                    "id": 75,
+                    "answer": "A"
+                },
+                {
+                    "id": 76,
+                    "answer": "A"
+                },
+                {
+                    "id": 77,
+                    "answer": "A"
+                },
+                {
+                    "id": 78,
+                    "answer": "B"
+                },
+                {
+                    "id": 79,
+                    "answer": "B"
+                },
+                {
+                    "id": 80,
+                    "answer": "A"
+                },
+                {
+                    "id": 81,
+                    "answer": "B"
+                },
+                {
+                    "id": 82,
+                    "answer": "A"
+                },
+                {
+                    "id": 83,
+                    "answer": "A"
+                },
+                {
+                    "id": 84,
+                    "answer": "B"
+                },
+                {
+                    "id": 85,
+                    "answer": "A"
+                },
+                {
+                    "id": 86,
+                    "answer": "A"
+                },
+                {
+                    "id": 87,
+                    "answer": "B"
+                },
+                {
+                    "id": 88,
+                    "answer": "A"
+                },
+                {
+                    "id": 89,
+                    "answer": "A"
+                },
+                {
+                    "id": 90,
+                    "answer": "B"
+                }
+            ]
+        }
+    ]
+}

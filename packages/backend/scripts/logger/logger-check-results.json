@@ -1,0 +1,31 @@
+{
+  "timestamp": "2025-11-25T08:12:22.031Z",
+  "stats": {
+    "totalFiles": 46,
+    "filesWithLoggers": 21,
+    "totalLoggers": 170,
+    "completeLoggers": 170,
+    "incompleteLoggers": 0,
+    "byMissingField": {
+      "action": 0,
+      "userId": 0,
+      "tenantId": 0,
+      "ip": 0,
+      "userAgent": 0,
+      "method": 0,
+      "path": 0
+    }
+  },
+  "issues": [
+    {
+      "filePath": "D:\\dev\\gym-membership-backend\\src\\utils\\scheduler.js",
+      "imports": {
+        "hasGetClientIp": false,
+        "hasGetUserAgent": false,
+        "hasBothImports": false,
+        "importLine": null
+      },
+      "incompleteLoggers": []
+    }
+  ]
+}

@@ -1,0 +1,539 @@
+{
+  "info": {
+    "name": "Finance Module - Complete with Auth",
+    "description": "Complete Finance Module collection including authentication endpoints for easy testing.\n\n**Quick Start:**\n1. Import this collection\n2. Import environment file\n3. Run 'Login' request first\n4. Test Finance endpoints\n\n**Version:** 1.0.0\n**Date:** December 22, 2025",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tenantId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "expenseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    ",
+                  "    // Save auth token",
+                  "    pm.environment.set('authToken', response.token);",
+                  "    ",
+                  "    // Save user info",
+                  "    pm.environment.set('userId', response.user.id);",
+                  "    pm.environment.set('tenantId', response.user.tenant.id);",
+                  "    ",
+                  "    pm.test('Login successful', () => {",
+                  "        pm.expect(response.token).to.exist;",
+                  "        pm.expect(response.user).to.exist;",
+                  "        pm.expect(response.user.tenant).to.exist;",
+                  "    });",
+                  "    ",
+                  "    console.log('✅ Logged in as:', response.user.name);",
+                  "    console.log('🏢 Tenant:', response.user.tenant.name);",
+                  "    console.log('🔑 Token saved to environment');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@tenant-a.com\",\n  \"password\": \"password123\",\n  \"tenantId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login to get authentication token.\n\n**Default credentials:**\n- Email: admin@test.com\n- Password: password123\n- TenantId: 1\n\n**Auto-saves:**\n- authToken\n- userId\n- tenantId"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get profile successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.user).to.exist;",
+                  "    console.log('👤 User:', response.user.name);",
+                  "    console.log('🎭 Role:', response.user.role.name);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "profile"]
+            },
+            "description": "Get current user profile.\n\nVerify authentication is working."
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints for login and profile management."
+    },
+    {
+      "name": "💰 Expense Management",
+      "item": [
+        {
+          "name": "Create Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('expenseId', response.data.id);",
+                  "    ",
+                  "    pm.test('Expense created successfully', () => {",
+                  "        pm.expect(response.success).to.be.true;",
+                  "        pm.expect(response.data).to.have.property('id');",
+                  "        pm.expect(response.data).to.have.property('expenseNumber');",
+                  "        pm.expect(response.data.expenseNumber).to.match(/^EXP-/);",
+                  "    });",
+                  "    ",
+                  "    console.log('✅ Expense created:', response.data.expenseNumber);",
+                  "    console.log('💵 Amount:', response.data.totalAmount);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"{{categoryId}}\",\n  \"title\": \"Monthly Office Rent - December 2025\",\n  \"description\": \"Office space rental for main branch\",\n  \"amount\": 15000000,\n  \"taxAmount\": 1500000,\n  \"expenseDate\": \"2025-12-22\",\n  \"dueDate\": \"2025-12-31\",\n  \"paymentMethod\": \"transfer\",\n  \"vendor\": \"PT Property Management Indonesia\",\n  \"status\": \"pending\",\n  \"notes\": \"Payment due end of month. Account number: 1234567890\",\n  \"tags\": [\"rent\", \"fixed-cost\", \"monthly\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses"]
+            },
+            "description": "Create a new expense record.\n\n**Required fields:**\n- categoryId\n- title\n- amount\n- expenseDate\n\n**Auto-generated:**\n- expenseNumber (EXP-YYYY-NNNNNN)\n- totalAmount (amount + taxAmount)\n\n**Status options:**\n- draft: Not submitted\n- pending: Awaiting approval\n- approved: Approved, ready for payment\n- paid: Payment completed\n- cancelled: Cancelled"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Expenses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get expenses successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response.data).to.be.an('array');",
+                  "    ",
+                  "    console.log('📋 Total expenses:', response.total || response.data.length);",
+                  "    if (response.data.length > 0) {",
+                  "        console.log('💰 Total amount:', response.data.reduce((sum, e) => sum + parseFloat(e.totalAmount || 0), 0).toLocaleString('id-ID'));",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses?page=1&limit=20&sortBy=expenseDate&sortOrder=DESC",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryId",
+                  "value": "{{categoryId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-12-01",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31",
+                  "disabled": true
+                },
+                {
+                  "key": "vendor",
+                  "value": "PT Property",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "rent",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "expenseDate"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "DESC"
+                }
+              ]
+            },
+            "description": "Get all expenses with advanced filtering.\n\n**Filters:**\n- status: draft|pending|approved|paid|cancelled\n- categoryId: Filter by expense category\n- startDate & endDate: Date range\n- vendor: Vendor name (partial match)\n- search: Search in title/description\n\n**Sorting:**\n- sortBy: expenseDate|amount|createdAt|dueDate\n- sortOrder: ASC|DESC\n\n**Pagination:**\n- page: Page number (default: 1)\n- limit: Items per page (default: 20)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Expense by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses", "{{expenseId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Expense",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Monthly Office Rent - Updated Price\",\n  \"amount\": 16000000,\n  \"taxAmount\": 1600000,\n  \"notes\": \"Price increased starting January 2026\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses", "{{expenseId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.test('Expense approved', () => {",
+                  "        pm.expect(response.data.status).to.equal('approved');",
+                  "        pm.expect(response.data.approvedAt).to.exist;",
+                  "    });",
+                  "    console.log('✅ Expense approved by:', response.data.approvedBy || 'current user');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Approved for December payment batch\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses/{{expenseId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses", "{{expenseId}}", "approve"]
+            },
+            "description": "Approve pending expense.\n\n**Requirements:**\n- Expense status must be 'pending'\n- User must have 'update Expense' permission\n\n**Changes:**\n- Status: pending → approved\n- Sets approvedBy and approvedAt"
+          },
+          "response": []
+        },
+        {
+          "name": "Mark as Paid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.test('Expense marked as paid', () => {",
+                  "        pm.expect(response.data.status).to.equal('paid');",
+                  "        pm.expect(response.data.paidDate).to.exist;",
+                  "    });",
+                  "    console.log('✅ Payment recorded:', response.data.paymentMethod);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paidDate\": \"2025-12-22\",\n  \"paymentMethod\": \"transfer\",\n  \"referenceNumber\": \"TRF-20251222-001234\",\n  \"notes\": \"Paid via BCA bank transfer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses/{{expenseId}}/pay",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses", "{{expenseId}}", "pay"]
+            },
+            "description": "Mark expense as paid.\n\n**Requirements:**\n- Status must be 'approved'\n\n**Fields:**\n- paidDate: Payment date (default: today)\n- paymentMethod: cash|transfer|credit_card|debit_card|check\n- referenceNumber: Bank transaction/check number\n- notes: Payment notes"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Expense",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses", "{{expenseId}}"]
+            },
+            "description": "Delete expense (soft delete).\n\n**Note:** Can only delete draft expenses."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📁 Expense Categories",
+      "item": [
+        {
+          "name": "Create Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('categoryId', response.data.id);",
+                  "    console.log('✅ Category created:', response.data.name);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Office Rent\",\n  \"description\": \"Monthly office space rental costs\",\n  \"type\": \"fixed\",\n  \"color\": \"#FF5733\",\n  \"icon\": \"🏢\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expense-categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expense-categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/expense-categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expense-categories"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📊 Financial Reports",
+      "item": [
+        {
+          "name": "Profit & Loss Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/reports/profit-loss?startDate=2025-12-01&endDate=2025-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "reports", "profit-loss"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-12-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Revenue Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/reports/revenue?startDate=2025-12-01&endDate=2025-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "reports", "revenue"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-12-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Expense Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/reports/expenses?startDate=2025-12-01&endDate=2025-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "reports", "expenses"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-12-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

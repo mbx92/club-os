@@ -1,0 +1,39 @@
+[
+  { "aspect": "Intelegensi", "code": "WPT", "description": "Hasil WPT" },
+
+  { "aspect": "Stabilitas Emosi", "code": "E", "description": "Pengendalian Emosi" },
+  { "aspect": "Stabilitas Emosi", "code": "K", "description": "Agresif" },
+
+  { "aspect": "Kepercayaan Diri", "code": "I", "description": "Keputusan" },
+
+  { "aspect": "Penyesuaian Diri", "code": "Z", "description": "Berubah" },
+  { "aspect": "Penyesuaian Diri", "code": "S", "description": "Hubungan Sosial" },
+
+  { "aspect": "Kontak Sosial", "code": "X", "description": "Butuh Perhatian" },
+  { "aspect": "Kontak Sosial", "code": "S", "description": "Hubungan Sosial" },
+  { "aspect": "Kontak Sosial", "code": "O", "description": "Kedekatan dan Kasih Sayang" },
+
+  { "aspect": "Kerjasama", "code": "B", "description": "Diterima dalam Kelompok" },
+
+  { "aspect": "Hasrat Berprestasi", "code": "A", "description": "Motivasi" },
+
+  { "aspect": "Ketekunan", "code": "N", "description": "Menyelesaikan Tugas" },
+  { "aspect": "Ketekunan", "code": "G", "description": "Pekerja Keras" },
+
+  { "aspect": "Inisiatif", "code": "Z", "description": "Berubah" },
+  { "aspect": "Inisiatif", "code": "K", "description": "Agresif" },
+
+  { "aspect": "Sistematika Kerja", "code": "W", "description": "Mengikuti Aturan" },
+  { "aspect": "Sistematika Kerja", "code": "F", "description": "Membantu Atasan" },
+  { "aspect": "Sistematika Kerja", "code": "C", "description": "Mengatur" },
+  { "aspect": "Sistematika Kerja", "code": "R", "description": "Teoritis" },
+
+  { "aspect": "Ketelitian", "code": "D", "description": "Bekerja Detail" },
+
+  { "aspect": "Tempo Kerja", "code": "T", "description": "Sibuk" },
+  { "aspect": "Tempo Kerja", "code": "V", "description": "Penuh Semangat" },
+
+  { "aspect": "Kepemimpinan", "code": "L", "description": "Peran Pemimpin" },
+  { "aspect": "Kepemimpinan", "code": "P", "description": "Kontrol Orang Lain" },
+  { "aspect": "Kepemimpinan", "code": "I", "description": "Keputusan" }
+]

@@ -1,0 +1,289 @@
+{
+  "info": {
+    "name": "Midtrans Payment Gateway",
+    "description": "Complete Midtrans payment integration endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "YOUR_JWT_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "transactionId",
+      "value": "transaction-uuid",
+      "type": "string"
+    },
+    {
+      "key": "transactionNumber",
+      "value": "TRX-001",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Get Midtrans Config",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/payment/midtrans/config",
+          "host": ["{{baseUrl}}"],
+          "path": ["payment", "midtrans", "config"]
+        },
+        "description": "Get Midtrans client configuration for frontend"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Create Payment (Snap)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"transactionId\": \"{{transactionId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/payment/midtrans/create",
+          "host": ["{{baseUrl}}"],
+          "path": ["payment", "midtrans", "create"]
+        },
+        "description": "Create Snap payment token (hosted payment page)"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Create Charge - Bank Transfer BCA",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"transactionId\": \"{{transactionId}}\",\n  \"paymentType\": \"bank_transfer\",\n  \"bankTransfer\": {\n    \"bank\": \"bca\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/payment/midtrans/charge",
+          "host": ["{{baseUrl}}"],
+          "path": ["payment", "midtrans", "charge"]
+        },
+        "description": "Create direct charge for BCA bank transfer"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Create Charge - Bank Transfer Mandiri",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"transactionId\": \"{{transactionId}}\",\n  \"paymentType\": \"echannel\",\n  \"bankTransfer\": {\n    \"bank\": \"mandiri\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/payment/midtrans/charge",
+          "host": ["{{baseUrl}}"],
+          "path": ["payment", "midtrans", "charge"]
+        },
+        "description": "Create direct charge for Mandiri bank transfer"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Create Charge - GoPay",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"transactionId\": \"{{transactionId}}\",\n  \"paymentType\": \"gopay\",\n  \"gopay\": {\n    \"enable_callback\": true,\n    \"callback_url\": \"http://localhost:3001/payment/gopay/callback\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/payment/midtrans/charge",
+          "host": ["{{baseUrl}}"],
+          "path": ["payment", "midtrans", "charge"]
+        },
+        "description": "Create direct charge for GoPay e-wallet"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Create Charge - Credit Card",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"transactionId\": \"{{transactionId}}\",\n  \"paymentType\": \"credit_card\",\n  \"creditCard\": {\n    \"token_id\": \"TOKEN_FROM_MIDTRANS_JS\",\n    \"authentication\": true\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/payment/midtrans/charge",
+          "host": ["{{baseUrl}}"],
+          "path": ["payment", "midtrans", "charge"]
+        },
+        "description": "Create direct charge for credit card (need token from Midtrans.js)"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Check Payment Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/payment/midtrans/status/{{transactionNumber}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["payment", "midtrans", "status", "{{transactionNumber}}"]
+        },
+        "description": "Check transaction status from Midtrans"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Cancel Payment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/payment/midtrans/cancel/{{transactionNumber}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["payment", "midtrans", "cancel", "{{transactionNumber}}"]
+        },
+        "description": "Cancel pending payment transaction"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Refund Payment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 50000,\n  \"reason\": \"Customer request\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/payment/midtrans/refund/{{transactionNumber}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["payment", "midtrans", "refund", "{{transactionNumber}}"]
+        },
+        "description": "Refund payment (full or partial)"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Webhook Notification (Midtrans Callback)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"transaction_time\": \"2024-01-15 10:30:00\",\n  \"transaction_status\": \"settlement\",\n  \"transaction_id\": \"abc123-midtrans\",\n  \"status_message\": \"midtrans payment success\",\n  \"status_code\": \"200\",\n  \"signature_key\": \"signature_hash\",\n  \"payment_type\": \"bank_transfer\",\n  \"order_id\": \"TRX-001\",\n  \"merchant_id\": \"G123456789\",\n  \"gross_amount\": \"100000.00\",\n  \"fraud_status\": \"accept\",\n  \"currency\": \"IDR\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/payment/midtrans/notification",
+          "host": ["{{baseUrl}}"],
+          "path": ["payment", "midtrans", "notification"]
+        },
+        "description": "Webhook endpoint for Midtrans notifications (NO AUTH - public endpoint)"
+      },
+      "response": []
+    }
+  ]
+}

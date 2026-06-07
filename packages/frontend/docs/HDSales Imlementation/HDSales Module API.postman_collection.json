@@ -1,0 +1,1737 @@
+{
+	"info": {
+		"_postman_id": "2246bc80-cbf8-448e-8e86-f430ab2e5580",
+		"name": "HDSales Module API",
+		"description": "Harley-Davidson motorcycle sales & inventory management API endpoints.\n\n**Requirements:**\n- Enterprise plan subscription\n- Valid JWT jwt_token\n- Appropriate CASL permissions\n\n**Base URL:** `{{baseUrl}}/hdsales`\n\n**Total Endpoints:** 50",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "17947763",
+		"_collection_link": "https://lively-eclipse-844290.postman.co/workspace/My-Workspace~69067671-1f36-44c7-884d-f26319532af0/collection/17947763-2246bc80-cbf8-448e-8e86-f430ab2e5580?action=share&source=collection_link&creator=17947763"
+	},
+	"item": [
+		{
+			"name": "Categories",
+			"item": [
+				{
+					"name": "Get All Categories",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/categories",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"categories"
+							]
+						},
+						"description": "Get all motorcycle categories with optional pagination and filtering.\n\n**Permissions Required:** read:HDCategory"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Category by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/categories/:categoryId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"categories",
+								":categoryId"
+							],
+							"variable": [
+								{
+									"key": "categoryId",
+									"value": "{{categoryId}}",
+									"description": "Category UUID"
+								}
+							]
+						},
+						"description": "Get detailed information about a specific category.\n\n**Permissions Required:** read:HDCategory"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Category",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Sportster\",\n  \"code\": \"SPT\",\n  \"description\": \"Iconic American motorcycle series\",\n  \"productDetailsSchema\": {\n    \"engine\": {\"type\": \"string\", \"required\": true},\n    \"transmission\": {\"type\": \"string\", \"required\": true},\n    \"color\": {\"type\": \"string\", \"required\": true},\n    \"vin\": {\"type\": \"string\", \"required\": true},\n    \"engineSize\": {\"type\": \"string\", \"required\": false},\n    \"year\": {\"type\": \"number\", \"required\": false}\n  },\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/categories",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"categories"
+							]
+						},
+						"description": "Create a new motorcycle category.\n\n**Permissions Required:** create:HDCategory"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Category",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Sportster Updated\",\n  \"description\": \"Updated description\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/categories/:categoryId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"categories",
+								":categoryId"
+							],
+							"variable": [
+								{
+									"key": "categoryId",
+									"value": "{{categoryId}}"
+								}
+							]
+						},
+						"description": "Update an existing category.\n\n**Permissions Required:** update:HDCategory"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Category",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/categories/:categoryId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"categories",
+								":categoryId"
+							],
+							"variable": [
+								{
+									"key": "categoryId",
+									"value": "{{categoryId}}"
+								}
+							]
+						},
+						"description": "Delete a category (soft delete).\n\n**Permissions Required:** delete:HDCategory"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Products by Category",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/categories/:categoryId/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"categories",
+								":categoryId",
+								"products"
+							],
+							"variable": [
+								{
+									"key": "categoryId",
+									"value": "{{categoryId}}"
+								}
+							]
+						},
+						"description": "Get all products in a specific category.\n\n**Permissions Required:** read:HDCategory"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Category Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/categories/:categoryId/stats",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"categories",
+								":categoryId",
+								"stats"
+							],
+							"variable": [
+								{
+									"key": "categoryId",
+									"value": "{{categoryId}}"
+								}
+							]
+						},
+						"description": "Get statistics for a category (total products, sales, inventory value).\n\n**Permissions Required:** read:HDCategory"
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Product Details",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"categoryId\": \"{{categoryId}}\",\n  \"productDetails\": {\n    \"engine\": \"Revolution Max 1250T\",\n    \"transmission\": \"6-Speed\",\n    \"color\": \"Vivid Black\",\n    \"vin\": \"1HD1LEV19RB123456\",\n    \"engineSize\": \"1252cc\",\n    \"year\": 2024\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/categories/validate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"categories",
+								"validate"
+							]
+						},
+						"description": "Validate product details against category schema.\n\n**Permissions Required:** read:HDCategory"
+					},
+					"response": []
+				}
+			],
+			"description": "Category management endpoints (8 endpoints)"
+		},
+		{
+			"name": "Products",
+			"item": [
+				{
+					"name": "Get All Products",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/products?page=1&limit=20&categoryId={{categoryId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"products"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "categoryId",
+									"value": "{{categoryId}}",
+									"description": "Filter by category"
+								}
+							]
+						},
+						"description": "Get all products with pagination and filtering.\n\n**Permissions Required:** read:HDProduct"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/products/:productId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"products",
+								":productId"
+							],
+							"variable": [
+								{
+									"key": "productId",
+									"value": "{{productId}}"
+								}
+							]
+						},
+						"description": "Get detailed product information.\n\n**Permissions Required:** read:HDProduct"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Product",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"categoryId\": \"{{categoryId}}\",\n  \"name\": \"Sportster S\",\n  \"sku\": \"HD-SPT-S-2024-001\",\n  \"description\": \"All-new performance custom\",\n  \"motorcycleDetails\": {\n    \"engine\": \"Revolution Max 1250T\",\n    \"transmission\": \"6-Speed\",\n    \"color\": \"Vivid Black\",\n    \"vin\": \"1HD1LEV19RB123456\",\n    \"engineSize\": \"1252cc\",\n    \"year\": 2024\n  },\n  \"costPrice\": 450000000,\n  \"sellingPrice\": 550000000,\n  \"currentStock\": 5,\n  \"reorderPoint\": 2,\n  \"reorderQuantity\": 3,\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"products"
+							]
+						},
+						"description": "Create a new motorcycle product.\n\n**Permissions Required:** create:HDProduct"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Product",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Sportster S 2024 Updated\",\n  \"sellingPrice\": 560000000,\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/products/:productId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"products",
+								":productId"
+							],
+							"variable": [
+								{
+									"key": "productId",
+									"value": "{{productId}}"
+								}
+							]
+						},
+						"description": "Update product information.\n\n**Permissions Required:** update:HDProduct"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Product",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/products/:productId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"products",
+								":productId"
+							],
+							"variable": [
+								{
+									"key": "productId",
+									"value": "{{productId}}"
+								}
+							]
+						},
+						"description": "Delete a product (soft delete).\n\n**Permissions Required:** delete:HDProduct"
+					},
+					"response": []
+				},
+				{
+					"name": "Adjust Stock",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 2,\n  \"type\": \"adjustment\",\n  \"notes\": \"Stock correction after physical count\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/products/:productId/stock",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"products",
+								":productId",
+								"stock"
+							],
+							"variable": [
+								{
+									"key": "productId",
+									"value": "{{productId}}"
+								}
+							]
+						},
+						"description": "Manually adjust product stock.\n\n**Permissions Required:** update:HDProduct"
+					},
+					"response": []
+				},
+				{
+					"name": "Search by Details",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"engine\": \"Revolution Max\",\n  \"color\": \"Vivid Black\",\n  \"year\": 2024\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/products/search/details",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"products",
+								"search",
+								"details"
+							]
+						},
+						"description": "Search products by motorcycle details (engine, color, year, etc).\n\n**Permissions Required:** read:HDProduct"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Low Stock Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/products/low-stock",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"products",
+								"low-stock"
+							]
+						},
+						"description": "Get products with stock below reorder point.\n\n**Permissions Required:** read:HDProduct"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/products/stats",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"products",
+								"stats"
+							]
+						},
+						"description": "Get overall product statistics.\n\n**Permissions Required:** read:HDProduct"
+					},
+					"response": []
+				},
+				{
+					"name": "Bulk Import Products",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"products\": [\n    {\n      \"categoryId\": \"{{categoryId}}\",\n      \"name\": \"Road King Special\",\n      \"sku\": \"HD-TRG-RKS-2024-001\",\n      \"motorcycleDetails\": {\n        \"engine\": \"Milwaukee-Eight 114\",\n        \"transmission\": \"6-Speed Cruise Drive\",\n        \"color\": \"Billiard Blue\",\n        \"vin\": \"1HD1KEF11RB234567\"\n      },\n      \"costPrice\": 620000000,\n      \"sellingPrice\": 750000000,\n      \"currentStock\": 3\n    },\n    {\n      \"categoryId\": \"{{categoryId}}\",\n      \"name\": \"Street Glide Special\",\n      \"sku\": \"HD-TRG-SGS-2024-001\",\n      \"motorcycleDetails\": {\n        \"engine\": \"Milwaukee-Eight 114\",\n        \"transmission\": \"6-Speed Cruise Drive\",\n        \"color\": \"Silver Fortune\",\n        \"vin\": \"1HD1KEG19RB345678\"\n      },\n      \"costPrice\": 680000000,\n      \"sellingPrice\": 820000000,\n      \"currentStock\": 2\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/products/bulk-import",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"products",
+								"bulk-import"
+							]
+						},
+						"description": "Bulk import multiple products.\n\n**Permissions Required:** create:HDProduct"
+					},
+					"response": []
+				}
+			],
+			"description": "Product management endpoints (10 endpoints)"
+		},
+		{
+			"name": "Purchases",
+			"item": [
+				{
+					"name": "Get All Purchases",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/purchases?status=pending&page=1&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"purchases"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "pending",
+									"description": "pending, confirmed, received, completed, cancelled"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get all purchase orders.\n\n**Permissions Required:** read:HDPurchase"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Purchase by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/purchases/:purchaseId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"purchases",
+								":purchaseId"
+							],
+							"variable": [
+								{
+									"key": "purchaseId",
+									"value": "{{purchaseId}}"
+								}
+							]
+						},
+						"description": "Get purchase order details with items.\n\n**Permissions Required:** read:HDPurchase"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Purchase Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"supplierName\": \"PT Harley-Davidson Indonesia\",\n  \"supplierContact\": \"John Doe\",\n  \"supplierPhone\": \"08123456789\",\n  \"expectedDeliveryDate\": \"2025-01-15\",\n  \"notes\": \"Urgent order for new arrivals\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 3,\n      \"costPrice\": 450000000\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/purchases",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"purchases"
+							]
+						},
+						"description": "Create a new purchase order.\n\n**Permissions Required:** create:HDPurchase"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Purchase Order",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"supplierName\": \"PT Harley-Davidson Indonesia Updated\",\n  \"expectedDeliveryDate\": \"2025-01-20\",\n  \"notes\": \"Updated delivery schedule\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/purchases/:purchaseId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"purchases",
+								":purchaseId"
+							],
+							"variable": [
+								{
+									"key": "purchaseId",
+									"value": "{{purchaseId}}"
+								}
+							]
+						},
+						"description": "Update purchase order (only pending status).\n\n**Permissions Required:** update:HDPurchase"
+					},
+					"response": []
+				},
+				{
+					"name": "Confirm Purchase",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/purchases/:purchaseId/confirm",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"purchases",
+								":purchaseId",
+								"confirm"
+							],
+							"variable": [
+								{
+									"key": "purchaseId",
+									"value": "{{purchaseId}}"
+								}
+							]
+						},
+						"description": "Confirm purchase order (pending → confirmed).\n\n**Permissions Required:** update:HDPurchase"
+					},
+					"response": []
+				},
+				{
+					"name": "Receive Purchase",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"actualDeliveryDate\": \"2025-01-15\",\n  \"receivedNotes\": \"All items received in good condition\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/purchases/:purchaseId/receive",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"purchases",
+								":purchaseId",
+								"receive"
+							],
+							"variable": [
+								{
+									"key": "purchaseId",
+									"value": "{{purchaseId}}"
+								}
+							]
+						},
+						"description": "Receive purchase and update inventory (confirmed → received → completed).\n\n**Permissions Required:** update:HDPurchase"
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Purchase",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cancelReason\": \"Supplier unable to deliver\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/purchases/:purchaseId/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"purchases",
+								":purchaseId",
+								"cancel"
+							],
+							"variable": [
+								{
+									"key": "purchaseId",
+									"value": "{{purchaseId}}"
+								}
+							]
+						},
+						"description": "Cancel purchase order.\n\n**Permissions Required:** update:HDPurchase"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Purchase",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/purchases/:purchaseId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"purchases",
+								":purchaseId"
+							],
+							"variable": [
+								{
+									"key": "purchaseId",
+									"value": "{{purchaseId}}"
+								}
+							]
+						},
+						"description": "Delete purchase order (soft delete).\n\n**Permissions Required:** delete:HDPurchase"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Purchase Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/purchases/stats?startDate=2025-01-01&endDate=2025-12-31",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"purchases",
+								"stats"
+							],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2025-01-01"
+								},
+								{
+									"key": "endDate",
+									"value": "2025-12-31"
+								}
+							]
+						},
+						"description": "Get purchase statistics by date range.\n\n**Permissions Required:** read:HDPurchase"
+					},
+					"response": []
+				}
+			],
+			"description": "Purchase order management endpoints (9 endpoints)"
+		},
+		{
+			"name": "Sales",
+			"item": [
+				{
+					"name": "Get All Sales",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/sales?status=completed&page=1&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"sales"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "completed",
+									"description": "pending, completed, cancelled"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get all sales transactions.\n\n**Permissions Required:** read:HDSale"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sale by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/sales/:saleId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"sales",
+								":saleId"
+							],
+							"variable": [
+								{
+									"key": "saleId",
+									"value": "{{saleId}}"
+								}
+							]
+						},
+						"description": "Get sale transaction details with items and payments.\n\n**Permissions Required:** read:HDSale"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Sale",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerName\": \"Budi Santoso\",\n  \"customerPhone\": \"08123456789\",\n  \"customerEmail\": \"budi@example.com\",\n  \"customerAddress\": \"Jakarta Selatan\",\n  \"notes\": \"First time buyer\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1,\n      \"sellingPrice\": 550000000,\n      \"discount\": 5000000,\n      \"notes\": \"Special promotion\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/sales",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"sales"
+							]
+						},
+						"description": "Create a new sale transaction.\n\n**Permissions Required:** create:HDSale"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Sale",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerName\": \"Budi Santoso Updated\",\n  \"customerEmail\": \"budi.new@example.com\",\n  \"notes\": \"Updated customer info\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/sales/:saleId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"sales",
+								":saleId"
+							],
+							"variable": [
+								{
+									"key": "saleId",
+									"value": "{{saleId}}"
+								}
+							]
+						},
+						"description": "Update sale transaction (only pending status).\n\n**Permissions Required:** update:HDSale"
+					},
+					"response": []
+				},
+				{
+					"name": "Complete Sale",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/sales/:saleId/complete",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"sales",
+								":saleId",
+								"complete"
+							],
+							"variable": [
+								{
+									"key": "saleId",
+									"value": "{{saleId}}"
+								}
+							]
+						},
+						"description": "Complete sale and deduct inventory (pending → completed).\n\n**Permissions Required:** update:HDSale"
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Sale",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cancelReason\": \"Customer changed mind\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/sales/:saleId/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"sales",
+								":saleId",
+								"cancel"
+							],
+							"variable": [
+								{
+									"key": "saleId",
+									"value": "{{saleId}}"
+								}
+							]
+						},
+						"description": "Cancel sale transaction.\n\n**Permissions Required:** update:HDSale"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Payment",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 100000000,\n  \"paymentMethod\": \"cash\",\n  \"paymentDate\": \"2025-01-10\",\n  \"notes\": \"Down payment\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/sales/:saleId/payments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"sales",
+								":saleId",
+								"payments"
+							],
+							"variable": [
+								{
+									"key": "saleId",
+									"value": "{{saleId}}"
+								}
+							]
+						},
+						"description": "Add payment to sale. Payment methods: cash, credit_card, bank_transfer, financing.\n\n**Permissions Required:** update:HDSale"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Sale",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/sales/:saleId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"sales",
+								":saleId"
+							],
+							"variable": [
+								{
+									"key": "saleId",
+									"value": "{{saleId}}"
+								}
+							]
+						},
+						"description": "Delete sale transaction (soft delete).\n\n**Permissions Required:** delete:HDSale"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sales Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/sales/stats?startDate=2025-01-01&endDate=2025-12-31",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"sales",
+								"stats"
+							],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2025-01-01"
+								},
+								{
+									"key": "endDate",
+									"value": "2025-12-31"
+								}
+							]
+						},
+						"description": "Get sales statistics by date range.\n\n**Permissions Required:** read:HDSale"
+					},
+					"response": []
+				}
+			],
+			"description": "Sales transaction management endpoints (9 endpoints)"
+		},
+		{
+			"name": "Inventory",
+			"item": [
+				{
+					"name": "Get All Movements",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/inventory/movements?type=sale&page=1&limit=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"inventory",
+								"movements"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "sale",
+									"description": "purchase, sale, adjustment, return, transfer"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Get all inventory movements.\n\n**Permissions Required:** read:HDInventory"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product Movements",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/inventory/movements/:productId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"inventory",
+								"movements",
+								":productId"
+							],
+							"variable": [
+								{
+									"key": "productId",
+									"value": "{{productId}}"
+								}
+							]
+						},
+						"description": "Get inventory movements for specific product.\n\n**Permissions Required:** read:HDInventory"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Inventory Summary",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/inventory/summary",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"inventory",
+								"summary"
+							]
+						},
+						"description": "Get inventory summary with stock levels.\n\n**Permissions Required:** read:HDInventory"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Inventory Valuation",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/inventory/valuation",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"inventory",
+								"valuation"
+							]
+						},
+						"description": "Get total inventory value at cost and selling price.\n\n**Permissions Required:** read:HDInventory"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Low Stock Alerts",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/inventory/low-stock",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"inventory",
+								"low-stock"
+							]
+						},
+						"description": "Get products below reorder point.\n\n**Permissions Required:** read:HDInventory"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Inventory Turnover",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/inventory/turnover?startDate=2025-01-01&endDate=2025-12-31",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"inventory",
+								"turnover"
+							],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2025-01-01"
+								},
+								{
+									"key": "endDate",
+									"value": "2025-12-31"
+								}
+							]
+						},
+						"description": "Get inventory turnover ratio analysis.\n\n**Permissions Required:** read:HDInventory"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Movement Analytics",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/inventory/analytics?startDate=2025-01-01&endDate=2025-12-31",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"inventory",
+								"analytics"
+							],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2025-01-01"
+								},
+								{
+									"key": "endDate",
+									"value": "2025-12-31"
+								}
+							]
+						},
+						"description": "Get inventory movement analytics.\n\n**Permissions Required:** read:HDInventory"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Dead Stock",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/inventory/dead-stock?days=180",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"inventory",
+								"dead-stock"
+							],
+							"query": [
+								{
+									"key": "days",
+									"value": "180",
+									"description": "Products with no movement in X days"
+								}
+							]
+						},
+						"description": "Get products with no movement (dead stock).\n\n**Permissions Required:** read:HDInventory"
+					},
+					"response": []
+				},
+				{
+					"name": "Export Inventory Data",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/inventory/export?format=csv",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"inventory",
+								"export"
+							],
+							"query": [
+								{
+									"key": "format",
+									"value": "csv",
+									"description": "csv or excel"
+								}
+							]
+						},
+						"description": "Export inventory data to CSV or Excel.\n\n**Permissions Required:** read:HDInventory"
+					},
+					"response": []
+				}
+			],
+			"description": "Inventory tracking and analytics endpoints (9 endpoints)"
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Get Dashboard Overview",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/dashboard/overview",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"dashboard",
+								"overview"
+							]
+						},
+						"description": "Get dashboard overview with key metrics (sales, inventory, alerts).\n\n**Permissions Required:** read:HDSale"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sales Trends",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/dashboard/trends?period=monthly&year=2025",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"dashboard",
+								"trends"
+							],
+							"query": [
+								{
+									"key": "period",
+									"value": "monthly",
+									"description": "daily, weekly, monthly, yearly"
+								},
+								{
+									"key": "year",
+									"value": "2025"
+								}
+							]
+						},
+						"description": "Get sales trends by period.\n\n**Permissions Required:** read:HDSale"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Top Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/dashboard/top-products?limit=10&startDate=2025-01-01&endDate=2025-12-31",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"dashboard",
+								"top-products"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "startDate",
+									"value": "2025-01-01"
+								},
+								{
+									"key": "endDate",
+									"value": "2025-12-31"
+								}
+							]
+						},
+						"description": "Get top selling products by quantity or revenue.\n\n**Permissions Required:** read:HDProduct"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profit Analysis",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/dashboard/profit?startDate=2025-01-01&endDate=2025-12-31&groupBy=month",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"dashboard",
+								"profit"
+							],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2025-01-01"
+								},
+								{
+									"key": "endDate",
+									"value": "2025-12-31"
+								},
+								{
+									"key": "groupBy",
+									"value": "month",
+									"description": "day, week, month, year"
+								}
+							]
+						},
+						"description": "Get profit analysis (revenue, cost, margin).\n\n**Permissions Required:** read:HDSale"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Alerts Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/hdsales/dashboard/alerts",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hdsales",
+								"dashboard",
+								"alerts"
+							]
+						},
+						"description": "Get system alerts (low stock, pending orders, etc).\n\n**Permissions Required:** read:HDInventory"
+					},
+					"response": []
+				}
+			],
+			"description": "Dashboard and analytics endpoints (5 endpoints)"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "jwt_token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Auto-refresh jwt_token if needed",
+					"const jwt_tokenExpiry = pm.environment.get('jwt_tokenExpiry');",
+					"const now = new Date().getTime();",
+					"",
+					"if (jwt_tokenExpiry && now > jwt_tokenExpiry) {",
+					"    console.log('jwt_token expired, need to re-login');",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Auto-save important IDs from responses",
+					"if (pm.response.code === 200 || pm.response.code === 201) {",
+					"    try {",
+					"        const jsonData = pm.response.json();",
+					"        ",
+					"        // Save categoryId",
+					"        if (jsonData.data && jsonData.data.id && pm.request.url.path.includes('categories')) {",
+					"            pm.environment.set('categoryId', jsonData.data.id);",
+					"        }",
+					"        ",
+					"        // Save productId",
+					"        if (jsonData.data && jsonData.data.id && pm.request.url.path.includes('products')) {",
+					"            pm.environment.set('productId', jsonData.data.id);",
+					"        }",
+					"        ",
+					"        // Save purchaseId",
+					"        if (jsonData.data && jsonData.data.id && pm.request.url.path.includes('purchases')) {",
+					"            pm.environment.set('purchaseId', jsonData.data.id);",
+					"        }",
+					"        ",
+					"        // Save saleId",
+					"        if (jsonData.data && jsonData.data.id && pm.request.url.path.includes('sales')) {",
+					"            pm.environment.set('saleId', jsonData.data.id);",
+					"        }",
+					"    } catch (e) {",
+					"        console.log('Response not JSON or error parsing:', e);",
+					"    }",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "categoryId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "productId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "purchaseId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "saleId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

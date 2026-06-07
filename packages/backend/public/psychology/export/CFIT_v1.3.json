@@ -1,0 +1,718 @@
+{
+  "code": "CFIT",
+  "name": "Culture Fair Intelligence Test - Form 2A",
+  "description": "Tes kecerdasan non-verbal untuk mengukur kemampuan berpikir logis, melihat pola, dan memecahkan masalah tanpa dipengaruhi bahasa. Tes ini terdiri dari 4 subtes: Series, Classification, Matrices, dan Topology.",
+  "category": "cognitive",
+  "estimatedDuration": 60,
+  "questions": [
+    {
+      "id": "series_1",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "series",
+      "imagePath": "/psychology/cfit/subtes1/1.png"
+    },
+    {
+      "id": "series_2",
+      "type": "question",
+      "answer": "D",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "series",
+      "imagePath": "/psychology/cfit/subtes1/2.png"
+    },
+    {
+      "id": "series_3",
+      "type": "question",
+      "answer": "A",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "series",
+      "imagePath": "/psychology/cfit/subtes1/3.png"
+    },
+    {
+      "id": "series_4",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "series",
+      "imagePath": "/psychology/cfit/subtes1/4.png"
+    },
+    {
+      "id": "series_5",
+      "type": "question",
+      "answer": "B",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "series",
+      "imagePath": "/psychology/cfit/subtes1/5.png"
+    },
+    {
+      "id": "series_6",
+      "type": "question",
+      "answer": "E",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "series",
+      "imagePath": "/psychology/cfit/subtes1/6.png"
+    },
+    {
+      "id": "series_7",
+      "type": "question",
+      "answer": "B",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "series",
+      "imagePath": "/psychology/cfit/subtes1/7.png"
+    },
+    {
+      "id": "series_8",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "series",
+      "imagePath": "/psychology/cfit/subtes1/8.png"
+    },
+    {
+      "id": "series_9",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "series",
+      "imagePath": "/psychology/cfit/subtes1/9.png"
+    },
+    {
+      "id": "series_10",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "series",
+      "imagePath": "/psychology/cfit/subtes1/10.png"
+    },
+    {
+      "id": "series_11",
+      "type": "question",
+      "answer": "D",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "series",
+      "imagePath": "/psychology/cfit/subtes1/11.png"
+    },
+    {
+      "id": "series_12",
+      "type": "question",
+      "answer": "A",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "series",
+      "imagePath": "/psychology/cfit/subtes1/12.png"
+    },
+    {
+      "id": "classification_1",
+      "type": "question",
+      "answer": "B",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "classification",
+      "imagePath": "/psychology/cfit/subtes2/1.png"
+    },
+    {
+      "id": "classification_2",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "classification",
+      "imagePath": "/psychology/cfit/subtes2/2.png"
+    },
+    {
+      "id": "classification_3",
+      "type": "question",
+      "answer": "D",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "classification",
+      "imagePath": "/psychology/cfit/subtes2/3.png"
+    },
+    {
+      "id": "classification_4",
+      "type": "question",
+      "answer": "A",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "classification",
+      "imagePath": "/psychology/cfit/subtes2/4.png"
+    },
+    {
+      "id": "classification_5",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "classification",
+      "imagePath": "/psychology/cfit/subtes2/5.png"
+    },
+    {
+      "id": "classification_6",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "classification",
+      "imagePath": "/psychology/cfit/subtes2/6.png"
+    },
+    {
+      "id": "classification_7",
+      "type": "question",
+      "answer": "A",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "classification",
+      "imagePath": "/psychology/cfit/subtes2/7.png"
+    },
+    {
+      "id": "classification_8",
+      "type": "question",
+      "answer": "E",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "classification",
+      "imagePath": "/psychology/cfit/subtes2/8.png"
+    },
+    {
+      "id": "classification_9",
+      "type": "question",
+      "answer": "D",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "classification",
+      "imagePath": "/psychology/cfit/subtes2/9.png"
+    },
+    {
+      "id": "classification_10",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "classification",
+      "imagePath": "/psychology/cfit/subtes2/10.png"
+    },
+    {
+      "id": "classification_11",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "classification",
+      "imagePath": "/psychology/cfit/subtes2/11.png"
+    },
+    {
+      "id": "classification_12",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "classification",
+      "imagePath": "/psychology/cfit/subtes2/12.png"
+    },
+    {
+      "id": "classification_13",
+      "type": "question",
+      "answer": "A",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "classification",
+      "imagePath": "/psychology/cfit/subtes2/13.png"
+    },
+    {
+      "id": "classification_14",
+      "type": "question",
+      "answer": "D",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "classification",
+      "imagePath": "/psychology/cfit/subtes2/14.png"
+    },
+    {
+      "id": "matrices_1",
+      "type": "question",
+      "answer": "A",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "matrices",
+      "imagePath": "/psychology/cfit/subtes3/1.png"
+    },
+    {
+      "id": "matrices_2",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "matrices",
+      "imagePath": "/psychology/cfit/subtes3/2.png"
+    },
+    {
+      "id": "matrices_3",
+      "type": "question",
+      "answer": "B",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "matrices",
+      "imagePath": "/psychology/cfit/subtes3/3.png"
+    },
+    {
+      "id": "matrices_4",
+      "type": "question",
+      "answer": "E",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "matrices",
+      "imagePath": "/psychology/cfit/subtes3/4.png"
+    },
+    {
+      "id": "matrices_5",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "matrices",
+      "imagePath": "/psychology/cfit/subtes3/5.png"
+    },
+    {
+      "id": "matrices_6",
+      "type": "question",
+      "answer": "A",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "matrices",
+      "imagePath": "/psychology/cfit/subtes3/6.png"
+    },
+    {
+      "id": "matrices_7",
+      "type": "question",
+      "answer": "B",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "matrices",
+      "imagePath": "/psychology/cfit/subtes3/7.png"
+    },
+    {
+      "id": "matrices_8",
+      "type": "question",
+      "answer": "D",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "matrices",
+      "imagePath": "/psychology/cfit/subtes3/8.png"
+    },
+    {
+      "id": "matrices_9",
+      "type": "question",
+      "answer": "E",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "matrices",
+      "imagePath": "/psychology/cfit/subtes3/9.png"
+    },
+    {
+      "id": "matrices_10",
+      "type": "question",
+      "answer": "A",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "matrices",
+      "imagePath": "/psychology/cfit/subtes3/10.png"
+    },
+    {
+      "id": "matrices_11",
+      "type": "question",
+      "answer": "B",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "matrices",
+      "imagePath": "/psychology/cfit/subtes3/11.png"
+    },
+    {
+      "id": "matrices_12",
+      "type": "question",
+      "answer": "B",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "matrices",
+      "imagePath": "/psychology/cfit/subtes3/12.png"
+    },
+    {
+      "id": "topology_1",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "topology",
+      "imagePath": "/psychology/cfit/subtes4/1.png"
+    },
+    {
+      "id": "topology_2",
+      "type": "question",
+      "answer": "B",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "topology",
+      "imagePath": "/psychology/cfit/subtes4/2.png"
+    },
+    {
+      "id": "topology_3",
+      "type": "question",
+      "answer": "A",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "topology",
+      "imagePath": "/psychology/cfit/subtes4/3.png"
+    },
+    {
+      "id": "topology_4",
+      "type": "question",
+      "answer": "D",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "topology",
+      "imagePath": "/psychology/cfit/subtes4/4.png"
+    },
+    {
+      "id": "topology_5",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "topology",
+      "imagePath": "/psychology/cfit/subtes4/5.png"
+    },
+    {
+      "id": "topology_6",
+      "type": "question",
+      "answer": "C",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "topology",
+      "imagePath": "/psychology/cfit/subtes4/6.png"
+    },
+    {
+      "id": "topology_7",
+      "type": "question",
+      "answer": "A",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "topology",
+      "imagePath": "/psychology/cfit/subtes4/7.png"
+    },
+    {
+      "id": "topology_8",
+      "type": "question",
+      "answer": "B",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "subtest": "topology",
+      "imagePath": "/psychology/cfit/subtes4/8.png"
+    }
+  ],
+  "answerSchema": {
+    "type": "multiple_choice",
+    "options": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E"
+    ],
+    "required": true,
+    "hasImages": true
+  },
+  "scoringConfig": {
+    "type": "cfit",
+    "subtests": {
+      "series": {
+        "code": "series",
+        "name": "Series",
+        "timeLimit": 240,
+        "description": "Melanjutkan pola gambar",
+        "questionCount": 12
+      },
+      "matrices": {
+        "code": "matrices",
+        "name": "Matrices",
+        "timeLimit": 180,
+        "description": "Melengkapi kotak kosong",
+        "questionCount": 12
+      },
+      "topology": {
+        "code": "topology",
+        "name": "Topology",
+        "timeLimit": 150,
+        "description": "Mencari hubungan yang sama",
+        "questionCount": 8
+      },
+      "classification": {
+        "code": "classification",
+        "name": "Classification",
+        "timeLimit": 180,
+        "description": "Mencari gambar yang berbeda",
+        "questionCount": 14
+      }
+    },
+    "maxRawScore": 46,
+    "ageBasedNorms": true,
+    "scoringMethod": "raw_to_iq",
+    "requiresBirthDate": true
+  },
+  "config": {
+    "allowBack": false,
+    "allowSkip": true,
+    "hasSubtests": true,
+    "requiresAge": true,
+    "showProgress": true,
+    "instructionText": "Tes ini terdiri dari 4 subtes. Setiap subtes memiliki durasi waktu dan cara pengerjaan sendiri. Tidak diperbolehkan kembali ke subtes sebelumnya setelah waktu habis.",
+    "subtestTimeLimit": true,
+    "requiresBirthDate": true,
+    "randomizeQuestions": false,
+    "autoSubmitOnTimeout": true
+  },
+  "isActive": true,
+  "version": "1.3",
+  "exportedAt": "2025-12-09T08:09:23.933Z",
+  "exportedBy": "admin@tenant-a.com"
+}

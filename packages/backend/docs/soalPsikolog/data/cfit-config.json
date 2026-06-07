@@ -1,0 +1,128 @@
+{
+  "testConfig": {
+    "code": "CFIT",
+    "name": "Culture Fair Intelligence Test - Form 2A",
+    "version": "2A",
+    "allowBack": false,
+    "showProgress": true,
+    "randomizeQuestions": false,
+    "randomizeOptions": false,
+    "hasSubtests": true,
+    "subtestTimeLimit": true,
+    "requiresAge": true,
+    "requiresBirthDate": true,
+    "autoSubmitOnTimeout": true
+  },
+  "instructions": {
+    "main": {
+      "title": "INSTRUKSI TES CFIT",
+      "content": "Tes ini terdiri dari 4 subtes:\n\n1. **Series** – melanjutkan pola gambar\n2. **Classification** – mencari gambar yang berbeda dari yang lain\n3. **Matrices** – melengkapi gambar yang kosong\n4. **Topology** – mencari gambar yang hubungannya sama dengan contoh\n\n**Tujuan tes:** Tes ini digunakan untuk mengukur kemampuan berpikir logis, melihat pola, dan memecahkan masalah tanpa dipengaruhi oleh bahasa.\n\n**Aturan umum:**\n- Setiap subtes memiliki durasi waktu dan cara pengerjaan sendiri, mohon untuk diperhatikan\n- Pilih jawaban yang menurut Anda paling tepat\n- Tidak diperbolehkan membuka aplikasi lain saat pengerjaan tes"
+    },
+    "subtest1": {
+      "title": "SUBTES I - SERIES",
+      "icon": "⏳",
+      "timeLimit": "4 menit",
+      "instruction": "Pilih 1 gambar dari 5 pilihan yang paling tepat untuk melanjutkan urutan gambar.",
+      "exampleCount": 3
+    },
+    "subtest2": {
+      "title": "SUBTES II - CLASSIFICATION",
+      "icon": "⏳",
+      "timeLimit": "3 menit",
+      "instruction": "Pilih 1 gambar yang berbeda dari lima gambar lainnya.",
+      "exampleCount": 2
+    },
+    "subtest3": {
+      "title": "SUBTES III - MATRICES",
+      "icon": "⏳",
+      "timeLimit": "3 menit",
+      "instruction": "Pilih 1 gambar yang melengkapi kotak kosong di matriks.",
+      "exampleCount": 3
+    },
+    "subtest4": {
+      "title": "SUBTES IV - TOPOLOGY",
+      "icon": "⏳",
+      "timeLimit": "2,5 menit",
+      "instruction": "Pilih 1 gambar dari 5 pilihan yang memiliki bentuk dan hubungan yang sama dengan contoh.",
+      "exampleCount": 3
+    }
+  },
+  "identityFields": [
+    {
+      "name": "name",
+      "label": "Nama",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "gender",
+      "label": "Jenis Kelamin",
+      "type": "select",
+      "options": ["Laki-laki", "Perempuan"],
+      "required": true
+    },
+    {
+      "name": "testDate",
+      "label": "Tanggal Tes",
+      "type": "date",
+      "required": true,
+      "default": "today"
+    },
+    {
+      "name": "birthDate",
+      "label": "Tanggal Lahir",
+      "type": "date",
+      "required": true,
+      "format": "dd/mm/yyyy"
+    },
+    {
+      "name": "age",
+      "label": "Usia",
+      "type": "calculated",
+      "format": "{years} Tahun, {months} Bulan, {days} Hari",
+      "calculatedFrom": ["birthDate", "testDate"]
+    }
+  ],
+  "scoring": {
+    "method": "raw_to_iq",
+    "maxRawScore": 46,
+    "ageBasedNorms": true,
+    "defaultAgeGroup": "14-0_14-11",
+    "resultFields": [
+      {
+        "name": "subtestScores",
+        "label": "Skor Per Subtes",
+        "type": "object",
+        "fields": ["series", "classification", "matrices", "topology"]
+      },
+      {
+        "name": "rawScore",
+        "label": "Total Raw Score",
+        "type": "number",
+        "range": [0, 46]
+      },
+      {
+        "name": "iqScore",
+        "label": "IQ Score",
+        "type": "number"
+      },
+      {
+        "name": "classification",
+        "label": "Klasifikasi",
+        "type": "string"
+      }
+    ]
+  },
+  "warnings": {
+    "timeExpiring": {
+      "threshold": 30,
+      "message": "Waktu tersisa {seconds} detik!"
+    },
+    "timeExpired": {
+      "message": "Waktu habis! Jawaban Anda akan otomatis tersimpan."
+    },
+    "cannotGoBack": {
+      "message": "Anda tidak dapat kembali ke subtes sebelumnya setelah waktu habis atau submit."
+    }
+  }
+}

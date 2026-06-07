@@ -1,0 +1,1532 @@
+{
+	"info": {
+		"_postman_id": "restaurant-module-2025",
+		"name": "Restaurant Module API",
+		"description": "Complete API collection for Restaurant Module with multi-tenant support, CASL authorization, and feature gating. Includes product catalog with JSONB variants, hierarchical categories, table management, and stock tracking.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "restaurant-module"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.token) {",
+									"    pm.environment.set(\"jwt_token\", res.token);",
+									"    pm.environment.set(\"authToken\", res.token);",
+									"    pm.environment.set(\"refreshToken\", res.refreshToken);",
+									"    if (res.user && res.user.tenantId) {",
+									"        pm.environment.set(\"tenantId\", res.user.tenantId);",
+									"    }",
+									"    if (res.user && res.user.id) {",
+									"        pm.environment.set(\"userId\", res.user.id);",
+									"    }",
+									"    console.log(\"✅ Token and user info saved to environment\");",
+									"} else {",
+									"    console.warn(\"⚠️ No token in response\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{restaurantUserEmail}}\",\n  \"password\": \"{{restaurantUserPassword}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"authToken\", jsonData.token);",
+									"    pm.environment.set(\"jwt_token\", jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/refresh-token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"refresh-token"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Product Categories",
+			"item": [
+				{
+					"name": "Get All Categories",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories?tree={{tree}}&parentId={{parentId}}&includeCount={{includeCount}}&includeInactive={{includeInactive}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"categories"
+							],
+							"query": [
+								{
+									"key": "tree",
+									"value": "false",
+									"description": "Return hierarchical tree structure (true/false)"
+								},
+								{
+									"key": "parentId",
+									"value": "{{parentId}}",
+									"description": "Filter by parent category",
+									"disabled": true
+								},
+								{
+									"key": "includeCount",
+									"value": "false",
+									"description": "Include product count per category"
+								},
+								{
+									"key": "includeInactive",
+									"value": "false",
+									"description": "Include inactive categories"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Category Tree",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories/tree?includeInactive={{includeInactive}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"categories",
+								"tree"
+							],
+							"query": [
+								{
+									"key": "includeInactive",
+									"value": "false",
+									"description": "Include inactive categories in tree"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Category By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories/{{categoryId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"categories",
+								"{{categoryId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Category",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"categoryId\", jsonData.data.id);",
+									"        console.log(\"✅ Category ID saved to environment\");",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Beverages\",\n  \"description\": \"All types of drinks and beverages\",\n  \"parentId\": null,\n  \"displayOrder\": 1,\n  \"color\": \"#2196F3\",\n  \"icon\": \"local_cafe\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"categories"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Subcategory",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"subcategoryId\", jsonData.data.id);",
+									"        console.log(\"✅ Subcategory ID saved to environment\");",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Coffee\",\n  \"description\": \"Hot and cold coffee beverages\",\n  \"parentId\": \"{{categoryId}}\",\n  \"displayOrder\": 1,\n  \"color\": \"#795548\",\n  \"icon\": \"coffee\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"categories"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Category",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Beverages Updated\",\n  \"description\": \"All types of drinks and beverages - updated\",\n  \"displayOrder\": 2,\n  \"color\": \"#1976D2\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories/{{categoryId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"categories",
+								"{{categoryId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Category",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories/{{subcategoryId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"categories",
+								"{{subcategoryId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reorder Categories",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"categories\": [\n    {\n      \"id\": \"{{categoryId}}\",\n      \"displayOrder\": 1\n    },\n    {\n      \"id\": \"{{subcategoryId}}\",\n      \"displayOrder\": 2\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories/reorder",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"categories",
+								"reorder"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Products",
+			"item": [
+				{
+					"name": "Get All Products",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products?search={{search}}&categoryId={{categoryId}}&locationId={{locationId}}&isActive={{isActive}}&trackInventory={{trackInventory}}&lowStock={{lowStock}}&productType={{productType}}&page=1&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"products"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "{{search}}",
+									"description": "Search by name, SKU, or barcode",
+									"disabled": true
+								},
+								{
+									"key": "categoryId",
+									"value": "{{categoryId}}",
+									"description": "Filter by category"
+								},
+								{
+									"key": "locationId",
+									"value": "{{locationId}}",
+									"description": "Filter by location"
+								},
+								{
+									"key": "isActive",
+									"value": "true",
+									"description": "Filter by active status"
+								},
+								{
+									"key": "trackInventory",
+									"value": "true",
+									"description": "Filter by inventory tracking"
+								},
+								{
+									"key": "lowStock",
+									"value": "false",
+									"description": "Show only low stock products"
+								},
+								{
+									"key": "productType",
+									"value": "{{productType}}",
+									"description": "Filter by JSONB productType field",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Low Stock Products",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products/low-stock?locationId={{locationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"products",
+								"low-stock"
+							],
+							"query": [
+								{
+									"key": "locationId",
+									"value": "{{locationId}}",
+									"description": "Filter by location"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products/{{productId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"products",
+								"{{productId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Product with Variants",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"productId\", jsonData.data.id);",
+									"        console.log(\"✅ Product ID saved to environment\");",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Coffee\",\n  \"sku\": \"BEV-COFFEE-001\",\n  \"price\": 25000,\n  \"categoryId\": \"{{categoryId}}\",\n  \"locationId\": \"{{locationId}}\",\n  \"trackInventory\": true,\n  \"stockQuantity\": 100,\n  \"minStockLevel\": 10,\n  \"productDetails\": {\n    \"productType\": \"beverage\",\n    \"hasVariants\": true,\n    \"variants\": [\n      {\n        \"name\": \"Small\",\n        \"sku\": \"BEV-COFFEE-001-S\",\n        \"price\": 20000,\n        \"isAvailable\": true\n      },\n      {\n        \"name\": \"Large\",\n        \"sku\": \"BEV-COFFEE-001-L\",\n        \"price\": 25000,\n        \"isAvailable\": true\n      }\n    ],\n    \"options\": [\n      {\n        \"name\": \"Sugar Level\",\n        \"values\": [\"No Sugar\", \"Less Sugar\", \"Normal\", \"Extra Sweet\"]\n      },\n      {\n        \"name\": \"Ice Level\",\n        \"values\": [\"No Ice\", \"Less Ice\", \"Normal Ice\"]\n      }\n    ],\n    \"allergens\": [\"Milk\", \"Caffeine\"]\n  },\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"products"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Simple Product",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"productId2\", jsonData.data.id);",
+									"        console.log(\"✅ Second Product ID saved to environment\");",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Nasi Goreng\",\n  \"sku\": \"FOOD-NASI-001\",\n  \"price\": 35000,\n  \"categoryId\": \"{{categoryId}}\",\n  \"locationId\": \"{{locationId}}\",\n  \"trackInventory\": true,\n  \"stockQuantity\": 50,\n  \"minStockLevel\": 5,\n  \"productDetails\": {\n    \"productType\": \"food\",\n    \"hasVariants\": false,\n    \"preparationTime\": 15,\n    \"spiceLevel\": \"medium\",\n    \"ingredients\": [\"Rice\", \"Eggs\", \"Chicken\", \"Vegetables\", \"Soy Sauce\"],\n    \"allergens\": [\"Soy\", \"Eggs\"]\n  },\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"products"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Product",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Coffee Premium\",\n  \"price\": 28000,\n  \"stockQuantity\": 120,\n  \"minStockLevel\": 15,\n  \"productDetails\": {\n    \"productType\": \"beverage\",\n    \"hasVariants\": true,\n    \"variants\": [\n      {\n        \"name\": \"Small\",\n        \"sku\": \"BEV-COFFEE-001-S\",\n        \"price\": 22000,\n        \"isAvailable\": true\n      },\n      {\n        \"name\": \"Large\",\n        \"sku\": \"BEV-COFFEE-001-L\",\n        \"price\": 28000,\n        \"isAvailable\": true\n      },\n      {\n        \"name\": \"X-Large\",\n        \"sku\": \"BEV-COFFEE-001-XL\",\n        \"price\": 32000,\n        \"isAvailable\": true\n      }\n    ],\n    \"options\": [\n      {\n        \"name\": \"Sugar Level\",\n        \"values\": [\"No Sugar\", \"Less Sugar\", \"Normal\", \"Extra Sweet\"]\n      },\n      {\n        \"name\": \"Ice Level\",\n        \"values\": [\"No Ice\", \"Less Ice\", \"Normal Ice\"]\n      },\n      {\n        \"name\": \"Coffee Type\",\n        \"values\": [\"Arabica\", \"Robusta\", \"Blend\"]\n      }\n    ],\n    \"allergens\": [\"Milk\", \"Caffeine\"]\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products/{{productId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"products",
+								"{{productId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Product (Soft Delete)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products/{{productId2}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"products",
+								"{{productId2}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Adjust Stock - Add",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 50,\n  \"notes\": \"Stock replenishment from supplier\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products/{{productId}}/adjust-stock",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"products",
+								"{{productId}}",
+								"adjust-stock"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Adjust Stock - Remove",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": -10,\n  \"notes\": \"Stock adjustment - damaged items\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products/{{productId}}/adjust-stock",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"products",
+								"{{productId}}",
+								"adjust-stock"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Restaurant Tables",
+			"item": [
+				{
+					"name": "Get All Tables",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables?locationId={{locationId}}&status={{status}}&section={{section}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"tables"
+							],
+							"query": [
+								{
+									"key": "locationId",
+									"value": "{{locationId}}",
+									"description": "Filter by location"
+								},
+								{
+									"key": "status",
+									"value": "{{status}}",
+									"description": "Filter by status (available, occupied, reserved, cleaning)",
+									"disabled": true
+								},
+								{
+									"key": "section",
+									"value": "{{section}}",
+									"description": "Filter by table section",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Table Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/statistics?locationId={{locationId}}&startDate={{startDate}}&endDate={{endDate}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"tables",
+								"statistics"
+							],
+							"query": [
+								{
+									"key": "locationId",
+									"value": "{{locationId}}",
+									"description": "Filter by location"
+								},
+								{
+									"key": "startDate",
+									"value": "{{startDate}}",
+									"description": "Start date for statistics",
+									"disabled": true
+								},
+								{
+									"key": "endDate",
+									"value": "{{endDate}}",
+									"description": "End date for statistics",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Table Layout",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/layout/{{locationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"tables",
+								"layout",
+								"{{locationId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Table By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/{{tableId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"tables",
+								"{{tableId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Table",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"tableId\", jsonData.data.id);",
+									"        console.log(\"✅ Table ID saved to environment\");",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tableNumber\": \"T01\",\n  \"capacity\": 4,\n  \"locationId\": \"{{locationId}}\",\n  \"positionX\": 100,\n  \"positionY\": 200,\n  \"width\": 80,\n  \"height\": 80,\n  \"shape\": \"rectangle\",\n  \"section\": \"Main Hall\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"tables"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Table",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tableNumber\": \"T01-Updated\",\n  \"capacity\": 6,\n  \"positionX\": 150,\n  \"positionY\": 250,\n  \"width\": 100,\n  \"height\": 100,\n  \"section\": \"VIP Area\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/{{tableId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"tables",
+								"{{tableId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Table",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/{{tableId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"tables",
+								"{{tableId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Occupy Table",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.currentOrderId) {",
+									"        pm.environment.set(\"orderId\", jsonData.data.currentOrderId);",
+									"        console.log(\"✅ Order ID saved to environment\");",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"numberOfGuests\": 4,\n  \"orderId\": \"{{orderId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/{{tableId}}/occupy",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"tables",
+								"{{tableId}}",
+								"occupy"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Release Table",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notes\": \"Table cleaned and ready for next guests\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/{{tableId}}/release",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"tables",
+								"{{tableId}}",
+								"release"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reserve Table",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reservedFor\": \"John Doe\",\n  \"reservationTime\": \"2025-01-26T20:00:00Z\",\n  \"numberOfGuests\": 4,\n  \"notes\": \"Birthday celebration\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/{{tableId}}/reserve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"tables",
+								"{{tableId}}",
+								"reserve"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Set Table for Cleaning",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notes\": \"Table needs cleaning after guests left\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/{{tableId}}/cleaning",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"tables",
+								"{{tableId}}",
+								"cleaning"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Locations",
+			"item": [
+				{
+					"name": "Get All Locations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/locations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"locations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Location",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"locationId\", jsonData.data.id);",
+									"        console.log(\"✅ Location ID saved to environment\");",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Main Restaurant\",\n  \"code\": \"BRA-001\",\n  \"type\": \"main\",\n  \"address\": \"Jl. Sudirman No. 123\",\n  \"city\": \"Jakarta\",\n  \"province\": \"DKI Jakarta\",\n  \"postalCode\": \"12345\",\n  \"country\": \"Indonesia\",\n  \"phone\": \"+62812345678\",\n  \"email\": \"main@restaurant.com\",\n  \"latitude\": -6.2088,\n  \"longitude\": 106.8456,\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/locations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"locations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Location By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/locations/{{locationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"locations",
+								"{{locationId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Location",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Main Restaurant Updated\",\n  \"phone\": \"+62812345679\",\n  \"email\": \"main-updated@restaurant.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/locations/{{locationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"locations",
+								"{{locationId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Location",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/locations/{{locationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"locations",
+								"{{locationId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Stock Movements",
+			"item": [
+				{
+					"name": "Get Stock Movements",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/stock-movements?productId={{productId}}&locationId={{locationId}}&movementType={{movementType}}&startDate={{startDate}}&endDate={{endDate}}&page=1&limit=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"stock-movements"
+							],
+							"query": [
+								{
+									"key": "productId",
+									"value": "{{productId}}",
+									"description": "Filter by product"
+								},
+								{
+									"key": "locationId",
+									"value": "{{locationId}}",
+									"description": "Filter by location"
+								},
+								{
+									"key": "movementType",
+									"value": "{{movementType}}",
+									"description": "Filter by movement type (in, out, adjustment, transfer)",
+									"disabled": true
+								},
+								{
+									"key": "startDate",
+									"value": "{{startDate}}",
+									"description": "Filter by start date",
+									"disabled": true
+								},
+								{
+									"key": "endDate",
+									"value": "{{endDate}}",
+									"description": "Filter by end date",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "50"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Stock Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/stock-movements/summary?startDate={{startDate}}&endDate={{endDate}}&locationId={{locationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"stock-movements",
+								"summary"
+							],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "{{startDate}}",
+									"description": "Start date for summary",
+									"disabled": true
+								},
+								{
+									"key": "endDate",
+									"value": "{{endDate}}",
+									"description": "End date for summary",
+									"disabled": true
+								},
+								{
+									"key": "locationId",
+									"value": "{{locationId}}",
+									"description": "Filter by location"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Most Moved Products",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/stock-movements/most-moved?limit={{limit}}&locationId={{locationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"restaurant",
+								"stock-movements",
+								"most-moved"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Number of products to return"
+								},
+								{
+									"key": "locationId",
+									"value": "{{locationId}}",
+									"description": "Filter by location"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	]
+}

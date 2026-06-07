@@ -1,0 +1,643 @@
+{
+	"info": {
+		"_postman_id": "voucher-module-collection",
+		"name": "Voucher Module - Gym Membership",
+		"description": "API Collection for Voucher Management with Superadmin (Subscription Vouchers) and Tenant (Operations Vouchers) Support",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "voucher_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "voucher_code",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Tenant Vouchers",
+			"item": [
+				{
+					"name": "Create Tenant Voucher (Percentage)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.voucher.id) {",
+									"        pm.collectionVariables.set('voucher_id', response.data.voucher.id);",
+									"        pm.collectionVariables.set('voucher_code', response.data.voucher.code);",
+									"        console.log('✅ Voucher ID saved:', response.data.voucher.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"GYM2025DISC\",\n  \"name\": \"New Year Discount 2025\",\n  \"description\": \"Special discount for new year promotion\",\n  \"type\": \"percentage\",\n  \"value\": 20,\n  \"maxDiscountAmount\": 100000,\n  \"minPurchaseAmount\": 500000,\n  \"applicableTo\": \"membership\",\n  \"applicableItems\": [],\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-01-31T23:59:59.999Z\",\n  \"usageLimit\": 100,\n  \"userUsageLimit\": 1,\n  \"isActive\": true,\n  \"isPublic\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vouchers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers"
+							]
+						},
+						"description": "Create tenant voucher for membership (percentage discount)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Tenant Voucher (Fixed Amount)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"FIRSTPURCHASE50K\",\n  \"name\": \"First Purchase Discount\",\n  \"description\": \"Discount Rp 50.000 for first purchase\",\n  \"type\": \"fixed\",\n  \"value\": 50000,\n  \"minPurchaseAmount\": 200000,\n  \"applicableTo\": \"all\",\n  \"applicableItems\": [],\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.999Z\",\n  \"userUsageLimit\": 1,\n  \"isActive\": true,\n  \"isPublic\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vouchers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers"
+							]
+						},
+						"description": "Create tenant voucher with fixed amount discount"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Product Voucher",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"PROTEIN10\",\n  \"name\": \"10% OFF Protein Products\",\n  \"description\": \"Discount for protein products\",\n  \"type\": \"percentage\",\n  \"value\": 10,\n  \"applicableTo\": \"product\",\n  \"applicableItems\": [],\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.999Z\",\n  \"isActive\": true,\n  \"isPublic\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vouchers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers"
+							]
+						},
+						"description": "Create voucher applicable only to products"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Tenant Vouchers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vouchers?page=1&limit=10&status=all&type=&applicableTo=&search=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "all",
+									"description": "all, active, inactive, expired, upcoming"
+								},
+								{
+									"key": "type",
+									"value": "",
+									"description": "percentage or fixed"
+								},
+								{
+									"key": "applicableTo",
+									"value": "",
+									"description": "all, membership, product, specific_items"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search by code, name, or description"
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"disabled": true
+								},
+								{
+									"key": "sortOrder",
+									"value": "DESC",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all vouchers for current tenant"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Voucher by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vouchers/{{voucher_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers",
+								"{{voucher_id}}"
+							]
+						},
+						"description": "Get single voucher details"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Tenant Voucher",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"New Year Discount 2025 (Extended)\",\n  \"description\": \"Extended until February\",\n  \"value\": 25,\n  \"maxDiscountAmount\": 150000,\n  \"endDate\": \"2025-02-28T23:59:59.999Z\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vouchers/{{voucher_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers",
+								"{{voucher_id}}"
+							]
+						},
+						"description": "Update voucher details"
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Voucher",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 1000000,\n  \"applicableTo\": \"membership\",\n  \"itemId\": \"{{membership_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vouchers/validate/{{voucher_code}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers",
+								"validate",
+								"{{voucher_code}}"
+							]
+						},
+						"description": "Validate voucher code and calculate discount"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Voucher Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vouchers/{{voucher_id}}/statistics?page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers",
+								"{{voucher_id}}",
+								"statistics"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get voucher usage statistics and history"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Tenant Voucher",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vouchers/{{voucher_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers",
+								"{{voucher_id}}"
+							]
+						},
+						"description": "Soft delete voucher (only if no usage records)"
+					},
+					"response": []
+				}
+			],
+			"description": "Tenant-scoped vouchers for gym operations (membership, products)"
+		},
+		{
+			"name": "Superadmin Subscription Vouchers",
+			"item": [
+				{
+					"name": "Create Subscription Voucher",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.voucher.id) {",
+									"        pm.collectionVariables.set('voucher_id', response.data.voucher.id);",
+									"        pm.collectionVariables.set('voucher_code', response.data.voucher.code);",
+									"        console.log('✅ Subscription Voucher ID saved:', response.data.voucher.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"NEWYEAR2025SUB\",\n  \"name\": \"New Year Subscription Discount\",\n  \"description\": \"20% OFF for new subscription purchases\",\n  \"type\": \"percentage\",\n  \"value\": 20,\n  \"maxDiscountAmount\": 500000,\n  \"minPurchaseAmount\": 1000000,\n  \"applicableTo\": \"subscription_plan\",\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-01-31T23:59:59.999Z\",\n  \"usageLimit\": 50,\n  \"userUsageLimit\": 1,\n  \"isActive\": true,\n  \"isPublic\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vouchers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers"
+							]
+						},
+						"description": "Superadmin creates subscription voucher (scope=subscription, tenantId=null)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Subscription Vouchers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vouchers?scope=subscription&page=1&limit=10&status=all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers"
+							],
+							"query": [
+								{
+									"key": "scope",
+									"value": "subscription",
+									"description": "Filter superadmin vouchers"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "all"
+								}
+							]
+						},
+						"description": "Superadmin gets all subscription vouchers"
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Subscription Voucher",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 2000000,\n  \"applicableTo\": \"subscription_plan\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vouchers/validate/{{voucher_code}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers",
+								"validate",
+								"{{voucher_code}}"
+							]
+						},
+						"description": "Validate subscription voucher for billing"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Tenant Voucher (Superadmin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"SUPERADMIN50K\",\n  \"name\": \"Superadmin Gift Voucher\",\n  \"description\": \"Special gift from superadmin\",\n  \"type\": \"fixed\",\n  \"value\": 50000,\n  \"applicableTo\": \"all\",\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.999Z\",\n  \"tenantId\": \"<TENANT_ID_HERE>\",\n  \"isActive\": true,\n  \"isPublic\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vouchers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers"
+							]
+						},
+						"description": "Superadmin creates tenant-scoped voucher for specific tenant"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Vouchers (Superadmin)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vouchers?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "scope",
+									"value": "tenant",
+									"description": "Filter by scope",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Superadmin sees all vouchers (both subscription and tenant)"
+					},
+					"response": []
+				}
+			],
+			"description": "Superadmin-only vouchers for subscription billing (global, tenantId=null)"
+		},
+		{
+			"name": "Test Scenarios",
+			"item": [
+				{
+					"name": "Create Voucher - Missing Required Fields",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Incomplete Voucher\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vouchers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers"
+							]
+						},
+						"description": "Test VALIDATION_ERROR"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Voucher - Duplicate Code",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"GYM2025DISC\",\n  \"name\": \"Duplicate Voucher\",\n  \"type\": \"percentage\",\n  \"value\": 10,\n  \"applicableTo\": \"all\",\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.999Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vouchers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers"
+							]
+						},
+						"description": "Test DUPLICATE_ENTRY error"
+					},
+					"response": []
+				},
+				{
+					"name": "Tenant Create Subscription Voucher (Forbidden)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"FORBIDDENSUB\",\n  \"name\": \"Forbidden Subscription Voucher\",\n  \"type\": \"percentage\",\n  \"value\": 20,\n  \"applicableTo\": \"subscription_plan\",\n  \"startDate\": \"2025-01-01T00:00:00.000Z\",\n  \"endDate\": \"2025-12-31T23:59:59.999Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vouchers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers"
+							]
+						},
+						"description": "Tenant user tries to create subscription voucher (should fail)"
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Expired Voucher",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 500000\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vouchers/validate/EXPIREDCODE",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers",
+								"validate",
+								"EXPIREDCODE"
+							]
+						},
+						"description": "Test NOT_FOUND for expired voucher"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Voucher - Not Found",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vouchers/00000000-0000-0000-0000-000000000000",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vouchers",
+								"00000000-0000-0000-0000-000000000000"
+							]
+						},
+						"description": "Test NOT_FOUND error"
+					},
+					"response": []
+				}
+			],
+			"description": "Test error scenarios and edge cases"
+		}
+	]
+}

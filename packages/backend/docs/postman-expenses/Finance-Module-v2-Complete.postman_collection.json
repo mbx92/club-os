@@ -1,0 +1,604 @@
+{
+  "info": {
+    "name": "Finance Module - Complete API",
+    "description": "Comprehensive Finance Module API collection covering Expenses, Incomes, and Cash Flow Management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "finance-module"
+  },
+  "item": [
+    {
+      "name": "Income Management",
+      "item": [
+        {
+          "name": "Create Manual Income",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"{{incomeCategoryId}}\",\n  \"locationId\": \"{{locationId}}\",\n  \"title\": \"Donation from Corporate Sponsor\",\n  \"description\": \"Annual sponsorship donation\",\n  \"amount\": 5000000,\n  \"taxAmount\": 0,\n  \"incomeDate\": \"2025-01-15\",\n  \"receivedDate\": \"2025-01-15\",\n  \"paymentMethod\": \"transfer\",\n  \"referenceNumber\": \"DON-2025-001\",\n  \"source\": \"PT ABC Corporation\",\n  \"status\": \"received\",\n  \"isRecurring\": true,\n  \"recurringFrequency\": \"yearly\",\n  \"recurringEndDate\": \"2030-01-15\",\n  \"notes\": \"Corporate sponsorship agreement\",\n  \"tags\": [\"donation\", \"corporate\", \"annual\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/incomes",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "incomes"]
+            },
+            "description": "Create a manual income entry (non-transactional)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Incomes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/incomes?page=1&limit=20&type=manual&startDate=2025-01-01&endDate=2025-12-31&sortBy=incomeDate&sortOrder=DESC",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "incomes"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "type", "value": "manual", "description": "Filter: manual or transactional" },
+                { "key": "status", "value": "received", "disabled": true },
+                { "key": "categoryId", "value": "{{incomeCategoryId}}", "disabled": true },
+                { "key": "locationId", "value": "{{locationId}}", "disabled": true },
+                { "key": "startDate", "value": "2025-01-01" },
+                { "key": "endDate", "value": "2025-12-31" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "sortBy", "value": "incomeDate" },
+                { "key": "sortOrder", "value": "DESC" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Income by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/incomes/{{incomeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "incomes", "{{incomeId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Income",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Donation Title\",\n  \"amount\": 5500000,\n  \"notes\": \"Amount increased due to contract amendment\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/incomes/{{incomeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "incomes", "{{incomeId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Income",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/incomes/{{incomeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "incomes", "{{incomeId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Income Categories",
+      "item": [
+        {
+          "name": "Create Income Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Corporate Donations\",\n  \"description\": \"Donations from corporate sponsors\",\n  \"type\": \"donation\",\n  \"color\": \"#4CAF50\",\n  \"icon\": \"gift\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/income-categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "income-categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Income Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/income-categories?includeStats=true&isActive=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "income-categories"],
+              "query": [
+                { "key": "includeStats", "value": "true" },
+                { "key": "isActive", "value": "true" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Income Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Corporate Sponsorships\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/income-categories/{{incomeCategoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "income-categories", "{{incomeCategoryId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Income Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/income-categories/{{incomeCategoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "income-categories", "{{incomeCategoryId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cash Flow Management",
+      "item": [
+        {
+          "name": "Get Cash Flow Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/cash-flow/summary?startDate=2025-01-01&endDate=2025-12-31&groupBy=month",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "cash-flow", "summary"],
+              "query": [
+                { "key": "startDate", "value": "2025-01-01", "description": "Required" },
+                { "key": "endDate", "value": "2025-12-31", "description": "Required" },
+                { "key": "locationId", "value": "{{locationId}}", "disabled": true },
+                { "key": "groupBy", "value": "month", "description": "day, week, month, year" }
+              ]
+            },
+            "description": "Get cash flow summary with inflows, outflows, net flow, and running balance"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cash Flow by Category",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/cash-flow/by-category?startDate=2025-01-01&endDate=2025-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "cash-flow", "by-category"],
+              "query": [
+                { "key": "startDate", "value": "2025-01-01", "description": "Required" },
+                { "key": "endDate", "value": "2025-12-31", "description": "Required" },
+                { "key": "locationId", "value": "{{locationId}}", "disabled": true },
+                { "key": "type", "value": "inflow", "disabled": true, "description": "inflow or outflow" }
+              ]
+            },
+            "description": "Get cash flow breakdown by inflow/outflow categories"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cash Flow Projection",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/cash-flow/projection?months=3",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "cash-flow", "projection"],
+              "query": [
+                { "key": "months", "value": "3", "description": "Number of months to project (default: 3)" }
+              ]
+            },
+            "description": "Get cash flow projections based on historical data (last 6 months)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Expenses",
+      "item": [
+        {
+          "name": "Create Expense",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"{{expenseCategoryId}}\",\n  \"locationId\": \"{{locationId}}\",\n  \"title\": \"Monthly Office Rent\",\n  \"description\": \"Rent payment for January 2025\",\n  \"amount\": 10000000,\n  \"taxAmount\": 0,\n  \"expenseDate\": \"2025-01-01\",\n  \"dueDate\": \"2025-01-05\",\n  \"paymentMethod\": \"transfer\",\n  \"vendor\": \"Building Management\",\n  \"status\": \"approved\",\n  \"isRecurring\": true,\n  \"recurringFrequency\": \"monthly\",\n  \"recurringEndDate\": \"2025-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Expenses",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses?page=1&limit=20&status=paid",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "status", "value": "paid" },
+                { "key": "categoryId", "value": "{{expenseCategoryId}}", "disabled": true },
+                { "key": "startDate", "value": "2025-01-01", "disabled": true },
+                { "key": "endDate", "value": "2025-12-31", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Expense",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses/{{expenseId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses", "{{expenseId}}", "approve"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Expense as Paid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentMethod\": \"transfer\",\n  \"paidDate\": \"2025-01-17\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses/{{expenseId}}/pay",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses", "{{expenseId}}", "pay"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Expense Categories",
+      "item": [
+        {
+          "name": "Create Expense Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Office Rent\",\n  \"description\": \"Monthly office rent payments\",\n  \"type\": \"fixed\",\n  \"color\": \"#FF5733\",\n  \"icon\": \"building\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expense-categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expense-categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Expense Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/expense-categories?includeStats=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expense-categories"],
+              "query": [
+                { "key": "includeStats", "value": "true" },
+                { "key": "isActive", "value": "true", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Financial Reports",
+      "item": [
+        {
+          "name": "Profit & Loss Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/reports/profit-loss?startDate=2025-01-01&endDate=2025-12-31&groupBy=month",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "reports", "profit-loss"],
+              "query": [
+                { "key": "startDate", "value": "2025-01-01", "description": "Required" },
+                { "key": "endDate", "value": "2025-12-31", "description": "Required" },
+                { "key": "locationId", "value": "{{locationId}}", "disabled": true },
+                { "key": "groupBy", "value": "month", "description": "day, week, month, year" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Revenue Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/reports/revenue?startDate=2025-01-01&endDate=2025-01-31&groupBy=day",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "reports", "revenue"],
+              "query": [
+                { "key": "startDate", "value": "2025-01-01" },
+                { "key": "endDate", "value": "2025-01-31" },
+                { "key": "groupBy", "value": "day" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Expense Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/reports/expenses?startDate=2025-01-01&endDate=2025-01-31&groupBy=week",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "reports", "expenses"],
+              "query": [
+                { "key": "startDate", "value": "2025-01-01" },
+                { "key": "endDate", "value": "2025-01-31" },
+                { "key": "groupBy", "value": "week" },
+                { "key": "categoryId", "value": "{{expenseCategoryId}}", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "locationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "incomeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "incomeCategoryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "expenseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "expenseCategoryId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

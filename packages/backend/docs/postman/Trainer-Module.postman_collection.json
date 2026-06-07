@@ -1,0 +1,590 @@
+{
+	"info": {
+		"_postman_id": "trainer-module-collection",
+		"name": "Trainer Module - Gym Membership",
+		"description": "API Collection for Trainer Management Module with auto-user creation, commission tracking, and tenant-specific currency formatting",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "trainer_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "commission_id",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Trainer CRUD",
+			"item": [
+				{
+					"name": "Get All Trainers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/gym/trainers?page=1&limit=10&search=&status=all&specialization=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"gym",
+								"trainers"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search by name, email, or phone"
+								},
+								{
+									"key": "status",
+									"value": "all",
+									"description": "Filter by status: all, active, inactive"
+								},
+								{
+									"key": "specialization",
+									"value": "",
+									"description": "Filter by specialization (e.g., yoga, spinning)"
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"description": "Sort field",
+									"disabled": true
+								},
+								{
+									"key": "sortOrder",
+									"value": "DESC",
+									"description": "Sort order: ASC or DESC",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all trainers with pagination, search, and filtering"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Trainer by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/gym/trainers/{{trainer_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"gym",
+								"trainers",
+								"{{trainer_id}}"
+							]
+						},
+						"description": "Get single trainer by ID with tenant settings for currency formatting"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Trainer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.trainer.id) {",
+									"        pm.collectionVariables.set('trainer_id', response.data.trainer.id);",
+									"        console.log('✅ Trainer ID saved:', response.data.trainer.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Smith\",\n  \"email\": \"john.trainer@gym.com\",\n  \"phone\": \"081234567890\",\n  \"dateOfBirth\": \"1985-05-15\",\n  \"gender\": \"male\",\n  \"specializations\": [\"yoga\", \"personal_training\", \"spinning\"],\n  \"certifications\": [\n    {\n      \"name\": \"Certified Personal Trainer\",\n      \"issuer\": \"NASM\",\n      \"date\": \"2020-01-15\",\n      \"expiryDate\": \"2025-01-15\"\n    }\n  ],\n  \"bio\": \"Experienced trainer with 10+ years in fitness industry\",\n  \"photoUrl\": \"https://example.com/photos/john.jpg\",\n  \"commissionType\": \"percentage\",\n  \"commissionValue\": 15.00,\n  \"commissionNotes\": \"15% of class fees\",\n  \"availability\": {\n    \"monday\": [\"09:00-12:00\", \"14:00-18:00\"],\n    \"tuesday\": [\"09:00-12:00\", \"14:00-18:00\"],\n    \"wednesday\": [\"09:00-12:00\", \"14:00-18:00\"],\n    \"thursday\": [\"09:00-12:00\", \"14:00-18:00\"],\n    \"friday\": [\"09:00-12:00\", \"14:00-18:00\"]\n  },\n  \"hireDate\": \"2024-01-01\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/gym/trainers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"gym",
+								"trainers"
+							]
+						},
+						"description": "Create new trainer with auto-create user account. Returns temp password (development only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Trainer (Phone Only)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.trainer.id) {",
+									"        pm.collectionVariables.set('trainer_id', response.data.trainer.id);",
+									"        console.log('✅ Trainer ID saved:', response.data.trainer.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Doe\",\n  \"phone\": \"081298765432\",\n  \"gender\": \"female\",\n  \"specializations\": [\"yoga\", \"pilates\"],\n  \"commissionType\": \"fixed\",\n  \"commissionValue\": 50000,\n  \"commissionNotes\": \"Rp 50.000 per class\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/gym/trainers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"gym",
+								"trainers"
+							]
+						},
+						"description": "Create trainer with phone number only (no email)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Trainer",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Smith\",\n  \"email\": \"john.trainer.updated@gym.com\",\n  \"phone\": \"081234567890\",\n  \"specializations\": [\"yoga\", \"personal_training\", \"spinning\", \"boxing\"],\n  \"commissionType\": \"percentage\",\n  \"commissionValue\": 20.00,\n  \"commissionNotes\": \"Increased to 20% after performance review\",\n  \"bio\": \"Senior trainer with 10+ years experience\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/gym/trainers/{{trainer_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"gym",
+								"trainers",
+								"{{trainer_id}}"
+							]
+						},
+						"description": "Update trainer information. Also updates associated user account."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Trainer",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/gym/trainers/{{trainer_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"gym",
+								"trainers",
+								"{{trainer_id}}"
+							]
+						},
+						"description": "Soft delete trainer. Cannot delete if trainer has pending commissions."
+					},
+					"response": []
+				}
+			],
+			"description": "CRUD operations for trainer management"
+		},
+		{
+			"name": "Trainer Authentication",
+			"item": [
+				{
+					"name": "Reset Trainer Password",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/gym/trainers/{{trainer_id}}/reset-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"gym",
+								"trainers",
+								"{{trainer_id}}",
+								"reset-password"
+							]
+						},
+						"description": "Reset trainer password. Generates new password and sends via email/SMS (or returns temp password in development)"
+					},
+					"response": []
+				},
+				{
+					"name": "Trainer Login (Email)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.token) {",
+									"        pm.collectionVariables.set('jwt_token', response.token);",
+									"        console.log('✅ JWT Token saved');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"emailOrPhone\": \"john.trainer@gym.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Trainer login using email. Use temp password from create trainer response."
+					},
+					"response": []
+				},
+				{
+					"name": "Trainer Login (Phone)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.token) {",
+									"        pm.collectionVariables.set('jwt_token', response.token);",
+									"        console.log('✅ JWT Token saved');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"emailOrPhone\": \"081234567890\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Trainer login using phone number"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for trainers"
+		},
+		{
+			"name": "Commission Management",
+			"item": [
+				{
+					"name": "Get Trainer Commissions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/gym/trainers/{{trainer_id}}/commissions?page=1&limit=10&status=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"gym",
+								"trainers",
+								"{{trainer_id}}",
+								"commissions"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status: pending, paid, cancelled"
+								},
+								{
+									"key": "startDate",
+									"value": "2024-01-01",
+									"description": "Filter from date",
+									"disabled": true
+								},
+								{
+									"key": "endDate",
+									"value": "2024-12-31",
+									"description": "Filter to date",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all commissions for a trainer with summary (total, paid, pending amounts)"
+					},
+					"response": []
+				},
+				{
+					"name": "Pay Commission",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"paymentMethod\": \"bank_transfer\",\n  \"notes\": \"Paid via BCA transfer\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/gym/trainers/{{trainer_id}}/commissions/{{commission_id}}/pay",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"gym",
+								"trainers",
+								"{{trainer_id}}",
+								"commissions",
+								"{{commission_id}}",
+								"pay"
+							]
+						},
+						"description": "Mark commission as paid. Updates status from pending to paid."
+					},
+					"response": []
+				}
+			],
+			"description": "Commission tracking and payment endpoints"
+		},
+		{
+			"name": "Test Scenarios",
+			"item": [
+				{
+					"name": "Create Trainer - Missing Required Fields",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Test\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/gym/trainers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"gym",
+								"trainers"
+							]
+						},
+						"description": "Test validation error: missing lastName and email/phone"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Trainer - Duplicate Email",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Duplicate\",\n  \"lastName\": \"Trainer\",\n  \"email\": \"john.trainer@gym.com\",\n  \"commissionType\": \"percentage\",\n  \"commissionValue\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/gym/trainers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"gym",
+								"trainers"
+							]
+						},
+						"description": "Test duplicate entry error"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Trainer - Not Found",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/gym/trainers/00000000-0000-0000-0000-000000000000",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"gym",
+								"trainers",
+								"00000000-0000-0000-0000-000000000000"
+							]
+						},
+						"description": "Test NOT_FOUND error code"
+					},
+					"response": []
+				},
+				{
+					"name": "Pay Commission - Already Paid",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"paymentMethod\": \"cash\",\n  \"notes\": \"Test duplicate payment\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/gym/trainers/{{trainer_id}}/commissions/{{commission_id}}/pay",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"gym",
+								"trainers",
+								"{{trainer_id}}",
+								"commissions",
+								"{{commission_id}}",
+								"pay"
+							]
+						},
+						"description": "Test INVALID_INPUT error when commission already paid"
+					},
+					"response": []
+				}
+			],
+			"description": "Test error scenarios and edge cases"
+		}
+	]
+}

@@ -1,0 +1,535 @@
+{
+  "info": {
+    "name": "Psychology - Test Usage Billing Report",
+    "description": "Laporan penggunaan test psikologi untuk keperluan penagihan/invoice",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Get Monthly Billing Report (All Tests)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let res = pm.response.json();",
+              "",
+              "pm.test(\"✅ Response successful\", function() {",
+              "    pm.expect(res.success).to.be.true;",
+              "});",
+              "",
+              "pm.test(\"✅ Has overall summary\", function() {",
+              "    pm.expect(res.data.overallSummary).to.exist;",
+              "    pm.expect(res.data.overallSummary.totalTests).to.be.a('number');",
+              "});",
+              "",
+              "pm.test(\"✅ Has summary by test type\", function() {",
+              "    pm.expect(res.data.summaryByTestType).to.be.an('array');",
+              "});",
+              "",
+              "pm.test(\"✅ Has session details\", function() {",
+              "    pm.expect(res.data.sessions).to.be.an('array');",
+              "});",
+              "",
+              "// Log summary",
+              "console.log('📊 BILLING SUMMARY');",
+              "console.log('Total Tests:', res.data.overallSummary.totalTests);",
+              "console.log('Verified:', res.data.overallSummary.verifiedTests);",
+              "console.log('Unverified:', res.data.overallSummary.unverifiedTests);",
+              "",
+              "console.log('\\n📋 BY TEST TYPE:');",
+              "res.data.summaryByTestType.forEach(item => {",
+              "    console.log(`${item.testType.code}: ${item.totalTests} tests (${item.verifiedTests} verified)`);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/psychology/reports/test-usage-billing?startDate=2026-01-01&endDate=2026-01-31&verified=all&limit=100",
+          "host": ["{{baseUrl}}"],
+          "path": ["psychology", "reports", "test-usage-billing"],
+          "query": [
+            {
+              "key": "startDate",
+              "value": "2026-01-01",
+              "description": "Start date (YYYY-MM-DD)"
+            },
+            {
+              "key": "endDate",
+              "value": "2026-01-31",
+              "description": "End date (YYYY-MM-DD)"
+            },
+            {
+              "key": "verified",
+              "value": "all",
+              "description": "Filter: verified | unverified | all"
+            },
+            {
+              "key": "limit",
+              "value": "100",
+              "description": "Items per page"
+            }
+          ]
+        },
+        "description": "Generate monthly billing report for January 2026"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Verified Tests Only",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let res = pm.response.json();",
+              "",
+              "pm.test(\"✅ All sessions are verified\", function() {",
+              "    res.data.sessions.forEach(session => {",
+              "        pm.expect(session.verified.isVerified).to.be.true;",
+              "    });",
+              "});",
+              "",
+              "console.log('✓ Verified Tests:', res.data.overallSummary.verifiedTests);",
+              "console.log('✗ Unverified:', res.data.overallSummary.unverifiedTests);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/psychology/reports/test-usage-billing?startDate=2026-01-01&endDate=2026-01-31&verified=verified",
+          "host": ["{{baseUrl}}"],
+          "path": ["psychology", "reports", "test-usage-billing"],
+          "query": [
+            {
+              "key": "startDate",
+              "value": "2026-01-01"
+            },
+            {
+              "key": "endDate",
+              "value": "2026-01-31"
+            },
+            {
+              "key": "verified",
+              "value": "verified",
+              "description": "Only verified tests"
+            }
+          ]
+        },
+        "description": "Get only verified tests for final invoice"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get Unverified Tests (Pending)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let res = pm.response.json();",
+              "",
+              "pm.test(\"✅ All sessions are unverified\", function() {",
+              "    res.data.sessions.forEach(session => {",
+              "        pm.expect(session.verified.isVerified).to.be.false;",
+              "    });",
+              "});",
+              "",
+              "console.log('⚠️ PENDING VERIFICATION:', res.data.overallSummary.totalTests);",
+              "console.log('\\nSession IDs needing verification:');",
+              "res.data.sessions.forEach(session => {",
+              "    console.log(`- ${session.sessionId} (${session.testType.code}) - ${session.patientName}`);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/psychology/reports/test-usage-billing?verified=unverified",
+          "host": ["{{baseUrl}}"],
+          "path": ["psychology", "reports", "test-usage-billing"],
+          "query": [
+            {
+              "key": "verified",
+              "value": "unverified",
+              "description": "Only unverified tests"
+            }
+          ]
+        },
+        "description": "Get unverified tests for follow-up before billing"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Get Specific Test Type Usage",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let res = pm.response.json();",
+              "",
+              "pm.test(\"✅ Only one test type in summary\", function() {",
+              "    pm.expect(res.data.summaryByTestType.length).to.equal(1);",
+              "});",
+              "",
+              "if (res.data.summaryByTestType.length > 0) {",
+              "    const testType = res.data.summaryByTestType[0];",
+              "    console.log('📊 Test Type:', testType.testType.name);",
+              "    console.log('Total Usage:', testType.totalTests);",
+              "    console.log('Verified:', testType.verifiedTests);",
+              "    console.log('Avg Duration:', testType.avgDurationMinutes, 'minutes');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/psychology/reports/test-usage-billing?testTypeId={{cfit_test_type_id}}&startDate=2026-01-01&endDate=2026-01-31",
+          "host": ["{{baseUrl}}"],
+          "path": ["psychology", "reports", "test-usage-billing"],
+          "query": [
+            {
+              "key": "testTypeId",
+              "value": "{{cfit_test_type_id}}",
+              "description": "Filter by specific test type UUID"
+            },
+            {
+              "key": "startDate",
+              "value": "2026-01-01"
+            },
+            {
+              "key": "endDate",
+              "value": "2026-01-31"
+            }
+          ]
+        },
+        "description": "Get usage for specific test type (e.g., CFIT only)"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Current Month Report (Auto)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Auto-generate current month dates",
+              "const now = new Date();",
+              "const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);",
+              "const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);",
+              "",
+              "const startDate = firstDay.toISOString().split('T')[0];",
+              "const endDate = lastDay.toISOString().split('T')[0];",
+              "",
+              "pm.variables.set('current_month_start', startDate);",
+              "pm.variables.set('current_month_end', endDate);",
+              "",
+              "console.log('📅 Current Month:', startDate, 'to', endDate);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let res = pm.response.json();",
+              "",
+              "console.log('\\n📊 CURRENT MONTH BILLING REPORT');",
+              "console.log('Period:', res.filters.startDate, 'to', res.filters.endDate);",
+              "console.log('Total Tests:', res.data.overallSummary.totalTests);",
+              "console.log('Verified:', res.data.overallSummary.verifiedTests);",
+              "console.log('Pending Verification:', res.data.overallSummary.unverifiedTests);",
+              "",
+              "// Calculate estimated billing (example rates)",
+              "const rates = {",
+              "    'CFIT': 50000,",
+              "    'PAPI': 75000,",
+              "    'EPPS': 60000,",
+              "    'DISC': 50000,",
+              "    'MBTI': 65000",
+              "};",
+              "",
+              "let totalBilling = 0;",
+              "console.log('\\n💰 ESTIMATED BILLING:');",
+              "res.data.summaryByTestType.forEach(item => {",
+              "    const rate = rates[item.testType.code] || 50000;",
+              "    const amount = item.totalTests * rate;",
+              "    totalBilling += amount;",
+              "    console.log(`${item.testType.code}: ${item.totalTests} x Rp ${rate.toLocaleString()} = Rp ${amount.toLocaleString()}`);",
+              "});",
+              "",
+              "console.log('\\nTOTAL: Rp', totalBilling.toLocaleString());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/psychology/reports/test-usage-billing?startDate={{current_month_start}}&endDate={{current_month_end}}&verified=all",
+          "host": ["{{baseUrl}}"],
+          "path": ["psychology", "reports", "test-usage-billing"],
+          "query": [
+            {
+              "key": "startDate",
+              "value": "{{current_month_start}}",
+              "description": "Auto-generated current month start"
+            },
+            {
+              "key": "endDate",
+              "value": "{{current_month_end}}",
+              "description": "Auto-generated current month end"
+            },
+            {
+              "key": "verified",
+              "value": "all"
+            }
+          ]
+        },
+        "description": "Get current month report (auto-calculated dates)"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Quarterly Report (Q1 2026)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let res = pm.response.json();",
+              "",
+              "console.log('\\n📊 Q1 2026 BILLING REPORT');",
+              "console.log('Total Tests:', res.data.overallSummary.totalTests);",
+              "console.log('Test Types Used:', res.data.overallSummary.uniqueTestTypes);",
+              "",
+              "// Group by month",
+              "const byMonth = {};",
+              "res.data.sessions.forEach(session => {",
+              "    const month = new Date(session.completedAt).toISOString().slice(0, 7);",
+              "    byMonth[month] = (byMonth[month] || 0) + 1;",
+              "});",
+              "",
+              "console.log('\\n📅 BY MONTH:');",
+              "Object.entries(byMonth).forEach(([month, count]) => {",
+              "    console.log(`${month}: ${count} tests`);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/psychology/reports/test-usage-billing?startDate=2026-01-01&endDate=2026-03-31&limit=1000",
+          "host": ["{{baseUrl}}"],
+          "path": ["psychology", "reports", "test-usage-billing"],
+          "query": [
+            {
+              "key": "startDate",
+              "value": "2026-01-01",
+              "description": "Q1 start"
+            },
+            {
+              "key": "endDate",
+              "value": "2026-03-31",
+              "description": "Q1 end"
+            },
+            {
+              "key": "limit",
+              "value": "1000",
+              "description": "Larger limit for quarterly report"
+            }
+          ]
+        },
+        "description": "Get quarterly report for Q1 2026"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Paginated Report (Page 1)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let res = pm.response.json();",
+              "",
+              "pm.test(\"✅ Has pagination info\", function() {",
+              "    pm.expect(res.pagination).to.exist;",
+              "    pm.expect(res.pagination.page).to.equal(1);",
+              "});",
+              "",
+              "console.log('\\n📄 PAGINATION INFO:');",
+              "console.log('Current Page:', res.pagination.page);",
+              "console.log('Items per Page:', res.pagination.limit);",
+              "console.log('Total Items:', res.pagination.total);",
+              "console.log('Total Pages:', res.pagination.totalPages);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/psychology/reports/test-usage-billing?page=1&limit=50",
+          "host": ["{{baseUrl}}"],
+          "path": ["psychology", "reports", "test-usage-billing"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "50"
+            }
+          ]
+        },
+        "description": "Get paginated results (page 1)"
+      },
+      "response": []
+    },
+    {
+      "name": "8. Super Admin - Multi Tenant Report",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let res = pm.response.json();",
+              "",
+              "pm.test(\"✅ Response successful\", function() {",
+              "    pm.expect(res.success).to.be.true;",
+              "});",
+              "",
+              "console.log('\\n🏢 TENANT:', res.metadata.tenantId);",
+              "console.log('Total Tests:', res.data.overallSummary.totalTests);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{superadmin_token}}",
+            "description": "Super admin JWT token"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/psychology/reports/test-usage-billing?tenantId={{specific_tenant_id}}&startDate=2026-01-01&endDate=2026-01-31",
+          "host": ["{{baseUrl}}"],
+          "path": ["psychology", "reports", "test-usage-billing"],
+          "query": [
+            {
+              "key": "tenantId",
+              "value": "{{specific_tenant_id}}",
+              "description": "Specific tenant ID (super admin only)"
+            },
+            {
+              "key": "startDate",
+              "value": "2026-01-01"
+            },
+            {
+              "key": "endDate",
+              "value": "2026-01-31"
+            }
+          ]
+        },
+        "description": "Super admin: Get report for specific tenant"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "superadmin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cfit_test_type_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "specific_tenant_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

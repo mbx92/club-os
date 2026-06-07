@@ -1,0 +1,1056 @@
+{
+	"info": {
+		"_postman_id": "restaurant-complete-2025",
+		"name": "Restaurant Module Complete API",
+		"description": "Complete API collection for Restaurant Module with:\n- Multi-tenant support\n- CASL authorization\n- Feature gating\n- Product catalog with JSONB variants\n- Hierarchical categories\n- Table management\n- Stock tracking\n- Order management with split payment\n- Split bill & merge bills\n- Direct order (quick sale)\n- Combined billing (membership + products)\n- Voucher integration",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "restaurant-complete"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.token) {",
+									"    pm.environment.set(\"jwt_token\", res.token);",
+									"    pm.environment.set(\"authToken\", res.token);",
+									"    pm.environment.set(\"refreshToken\", res.refreshToken);",
+									"    if (res.user && res.user.tenantId) {",
+									"        pm.environment.set(\"tenantId\", res.user.tenantId);",
+									"    }",
+									"    if (res.user && res.user.id) {",
+									"        pm.environment.set(\"userId\", res.user.id);",
+									"    }",
+									"    console.log(\"✅ Token and user info saved to environment\");",
+									"} else {",
+									"    console.warn(\"⚠️ No token in response\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{restaurantUserEmail}}\",\n  \"password\": \"{{restaurantUserPassword}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Product Categories",
+			"item": [
+				{
+					"name": "Get All Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories?tree=false&includeCount=true&includeInactive=false",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "categories"],
+							"query": [
+								{"key": "tree", "value": "false", "description": "Return hierarchical tree structure"},
+								{"key": "includeCount", "value": "true", "description": "Include product count per category"},
+								{"key": "includeInactive", "value": "false", "description": "Include inactive categories"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Category Tree",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories/tree",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "categories", "tree"]
+						}
+					}
+				},
+				{
+					"name": "Get Category By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories/{{categoryId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "categories", "{{categoryId}}"]
+						}
+					}
+				},
+				{
+					"name": "Create Category",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"categoryId\", jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Beverages\",\n  \"description\": \"All types of drinks and beverages\",\n  \"parentId\": null,\n  \"displayOrder\": 1,\n  \"color\": \"#2196F3\",\n  \"icon\": \"local_cafe\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "categories"]
+						}
+					}
+				},
+				{
+					"name": "Update Category",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Beverages Updated\",\n  \"description\": \"All types of drinks - updated\",\n  \"displayOrder\": 2\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories/{{categoryId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "categories", "{{categoryId}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Category",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories/{{categoryId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "categories", "{{categoryId}}"]
+						}
+					}
+				},
+				{
+					"name": "Reorder Categories",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"categories\": [\n    {\"id\": \"{{categoryId}}\", \"displayOrder\": 1},\n    {\"id\": \"{{subcategoryId}}\", \"displayOrder\": 2}\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/categories/reorder",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "categories", "reorder"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Products",
+			"item": [
+				{
+					"name": "Get All Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products?page=1&limit=20&isActive=true",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "products"],
+							"query": [
+								{"key": "page", "value": "1"},
+								{"key": "limit", "value": "20"},
+								{"key": "isActive", "value": "true"},
+								{"key": "categoryId", "value": "{{categoryId}}", "disabled": true},
+								{"key": "locationId", "value": "{{locationId}}", "disabled": true},
+								{"key": "search", "value": "", "disabled": true},
+								{"key": "lowStock", "value": "false", "disabled": true}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Low Stock Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products/low-stock",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "products", "low-stock"]
+						}
+					}
+				},
+				{
+					"name": "Get Product By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products/{{productId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "products", "{{productId}}"]
+						}
+					}
+				},
+				{
+					"name": "Create Product with Variants",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"productId\", jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Coffee\",\n  \"sku\": \"BEV-COFFEE-001\",\n  \"price\": 25000,\n  \"categoryId\": \"{{categoryId}}\",\n  \"locationId\": \"{{locationId}}\",\n  \"trackInventory\": true,\n  \"stockQuantity\": 100,\n  \"minStockLevel\": 10,\n  \"productDetails\": {\n    \"productType\": \"beverage\",\n    \"hasVariants\": true,\n    \"variants\": [\n      {\"name\": \"Small\", \"sku\": \"BEV-COFFEE-001-S\", \"price\": 20000, \"isAvailable\": true},\n      {\"name\": \"Large\", \"sku\": \"BEV-COFFEE-001-L\", \"price\": 25000, \"isAvailable\": true}\n    ],\n    \"options\": [\n      {\"name\": \"Sugar Level\", \"values\": [\"No Sugar\", \"Less Sugar\", \"Normal\"]},\n      {\"name\": \"Ice Level\", \"values\": [\"No Ice\", \"Less Ice\", \"Normal Ice\"]}\n    ],\n    \"allergens\": [\"Milk\", \"Caffeine\"]\n  },\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "products"]
+						}
+					}
+				},
+				{
+					"name": "Update Product",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Coffee Premium\",\n  \"price\": 28000,\n  \"stockQuantity\": 120\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products/{{productId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "products", "{{productId}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Product",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products/{{productId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "products", "{{productId}}"]
+						}
+					}
+				},
+				{
+					"name": "Adjust Stock",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 50,\n  \"notes\": \"Stock replenishment from supplier\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/products/{{productId}}/adjust-stock",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "products", "{{productId}}", "adjust-stock"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Restaurant Tables",
+			"item": [
+				{
+					"name": "Get All Tables",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "tables"],
+							"query": [
+								{"key": "locationId", "value": "{{locationId}}", "disabled": true},
+								{"key": "status", "value": "available", "disabled": true}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Table Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/statistics",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "tables", "statistics"]
+						}
+					}
+				},
+				{
+					"name": "Get Table Layout",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/layout/{{locationId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "tables", "layout", "{{locationId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Table By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/{{tableId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "tables", "{{tableId}}"]
+						}
+					}
+				},
+				{
+					"name": "Create Table",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"tableId\", jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tableNumber\": \"T01\",\n  \"capacity\": 4,\n  \"locationId\": \"{{locationId}}\",\n  \"positionX\": 100,\n  \"positionY\": 200,\n  \"width\": 80,\n  \"height\": 80,\n  \"shape\": \"rectangle\",\n  \"section\": \"Main Hall\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "tables"]
+						}
+					}
+				},
+				{
+					"name": "Update Table",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tableNumber\": \"T01-VIP\",\n  \"capacity\": 6,\n  \"section\": \"VIP Area\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/{{tableId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "tables", "{{tableId}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Table",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/{{tableId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "tables", "{{tableId}}"]
+						}
+					}
+				},
+				{
+					"name": "Occupy Table",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"numberOfGuests\": 4,\n  \"orderId\": \"{{orderId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/{{tableId}}/occupy",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "tables", "{{tableId}}", "occupy"]
+						}
+					}
+				},
+				{
+					"name": "Release Table",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notes\": \"Table cleaned and ready\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/{{tableId}}/release",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "tables", "{{tableId}}", "release"]
+						}
+					}
+				},
+				{
+					"name": "Reserve Table",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reservedFor\": \"John Doe\",\n  \"reservationTime\": \"2025-11-30T20:00:00Z\",\n  \"numberOfGuests\": 4,\n  \"notes\": \"Birthday celebration\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/{{tableId}}/reserve",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "tables", "{{tableId}}", "reserve"]
+						}
+					}
+				},
+				{
+					"name": "Set Table Cleaning",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notes\": \"Table needs cleaning\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/tables/{{tableId}}/cleaning",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "tables", "{{tableId}}", "cleaning"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Locations",
+			"item": [
+				{
+					"name": "Get All Locations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/locations",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "locations"]
+						}
+					}
+				},
+				{
+					"name": "Get Location By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/locations/{{locationId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "locations", "{{locationId}}"]
+						}
+					}
+				},
+				{
+					"name": "Create Location",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"locationId\", jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Main Restaurant\",\n  \"code\": \"BRA-001\",\n  \"type\": \"main\",\n  \"address\": \"Jl. Sudirman No. 123\",\n  \"city\": \"Jakarta\",\n  \"province\": \"DKI Jakarta\",\n  \"postalCode\": \"12345\",\n  \"country\": \"Indonesia\",\n  \"phone\": \"+62812345678\",\n  \"email\": \"main@restaurant.com\",\n  \"latitude\": -6.2088,\n  \"longitude\": 106.8456,\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/locations",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "locations"]
+						}
+					}
+				},
+				{
+					"name": "Update Location",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Main Restaurant Updated\",\n  \"phone\": \"+62812345679\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/locations/{{locationId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "locations", "{{locationId}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Location",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/locations/{{locationId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "locations", "{{locationId}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Stock Movements",
+			"item": [
+				{
+					"name": "Get Stock Movements",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/stock-movements?page=1&limit=50",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "stock-movements"],
+							"query": [
+								{"key": "page", "value": "1"},
+								{"key": "limit", "value": "50"},
+								{"key": "productId", "value": "{{productId}}", "disabled": true},
+								{"key": "locationId", "value": "{{locationId}}", "disabled": true},
+								{"key": "movementType", "value": "in", "disabled": true}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Stock Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/stock-movements/summary",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "stock-movements", "summary"]
+						}
+					}
+				},
+				{
+					"name": "Get Most Moved Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/stock-movements/most-moved?limit=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "stock-movements", "most-moved"],
+							"query": [{"key": "limit", "value": "10"}]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Orders",
+			"item": [
+				{
+					"name": "Get All Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders?page=1&limit=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders"],
+							"query": [
+								{"key": "page", "value": "1"},
+								{"key": "limit", "value": "20"},
+								{"key": "status", "value": "pending", "disabled": true},
+								{"key": "orderType", "value": "dine-in", "disabled": true},
+								{"key": "tableId", "value": "{{tableId}}", "disabled": true},
+								{"key": "locationId", "value": "{{locationId}}", "disabled": true},
+								{"key": "startDate", "value": "2025-11-01", "disabled": true},
+								{"key": "endDate", "value": "2025-11-30", "disabled": true}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Kitchen Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders/kitchen",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders", "kitchen"]
+						},
+						"description": "Get orders for kitchen display (confirmed/preparing status)"
+					}
+				},
+				{
+					"name": "Get Orders By Table",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders/table/{{tableId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders", "table", "{{tableId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Order By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders/{{orderId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders", "{{orderId}}"]
+						}
+					}
+				},
+				{
+					"name": "Create Order (Dine-in)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"orderId\", jsonData.data.id);",
+									"        pm.environment.set(\"transactionNumber\", jsonData.data.transactionNumber);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tableId\": \"{{tableId}}\",\n  \"locationId\": \"{{locationId}}\",\n  \"orderType\": \"dine-in\",\n  \"numberOfGuests\": 4,\n  \"customerName\": \"John Doe\",\n  \"customerPhone\": \"+62812345678\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2,\n      \"notes\": \"Less ice\"\n    }\n  ],\n  \"notes\": \"VIP customer\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders"]
+						}
+					}
+				},
+				{
+					"name": "Create Order (Takeaway)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"orderId2\", jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"locationId\": \"{{locationId}}\",\n  \"orderType\": \"takeaway\",\n  \"customerName\": \"Jane Smith\",\n  \"customerPhone\": \"+62898765432\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1,\n      \"notes\": \"\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders"]
+						}
+					}
+				},
+				{
+					"name": "Update Order Status",
+					"request": {
+						"method": "PATCH",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"preparing\",\n  \"notes\": \"Started preparing order\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders/{{orderId}}/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders", "{{orderId}}", "status"]
+						},
+						"description": "Status: pending, confirmed, preparing, ready, served, completed, cancelled"
+					}
+				},
+				{
+					"name": "Add Items to Order",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1,\n      \"notes\": \"Extra hot\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders/{{orderId}}/items",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders", "{{orderId}}", "items"]
+						}
+					}
+				},
+				{
+					"name": "Validate Voucher",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"DISCOUNT20\",\n  \"amount\": 100000\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders/validate-voucher",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders", "validate-voucher"]
+						},
+						"description": "Validate voucher and preview discount before completing order"
+					}
+				},
+				{
+					"name": "Complete Order - Single Payment",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"payments\": [\n    {\n      \"paymentMethod\": \"cash\",\n      \"amount\": 100000,\n      \"reference\": null\n    }\n  ],\n  \"customerName\": \"John Doe\",\n  \"customerPhone\": \"+62812345678\",\n  \"notes\": \"Thank you for dining with us\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders/{{orderId}}/complete",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders", "{{orderId}}", "complete"]
+						}
+					}
+				},
+				{
+					"name": "Complete Order - Split Payment",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"payments\": [\n    {\n      \"paymentMethod\": \"cash\",\n      \"amount\": 50000,\n      \"reference\": null\n    },\n    {\n      \"paymentMethod\": \"e_wallet\",\n      \"amount\": 30000,\n      \"reference\": \"GOPAY-123456\"\n    },\n    {\n      \"paymentMethod\": \"credit_card\",\n      \"amount\": 20000,\n      \"reference\": \"VISA-**** 4242\"\n    }\n  ],\n  \"voucherCode\": \"DISCOUNT10\",\n  \"customerName\": \"John Doe\",\n  \"customerPhone\": \"+62812345678\",\n  \"notes\": \"Split payment example\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders/{{orderId}}/complete",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders", "{{orderId}}", "complete"]
+						},
+						"description": "Complete order with multiple payment methods + voucher"
+					}
+				},
+				{
+					"name": "Split Bill - Equal",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"splitType\": \"equal\",\n  \"splits\": 3\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders/{{orderId}}/split",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders", "{{orderId}}", "split"]
+						},
+						"description": "Split order equally into N separate bills"
+					}
+				},
+				{
+					"name": "Split Bill - By Items",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"splitType\": \"by_items\",\n  \"splits\": [\n    {\n      \"itemIds\": [\"{{itemId1}}\", \"{{itemId2}}\"],\n      \"customerName\": \"Customer A\"\n    },\n    {\n      \"itemIds\": [\"{{itemId3}}\"],\n      \"customerName\": \"Customer B\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders/{{orderId}}/split",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders", "{{orderId}}", "split"]
+						},
+						"description": "Split order by specific items into separate bills"
+					}
+				},
+				{
+					"name": "Merge Bills",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"orderIds\": [\"{{orderId}}\", \"{{orderId2}}\"]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders/merge",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders", "merge"]
+						},
+						"description": "Merge multiple orders into one bill"
+					}
+				},
+				{
+					"name": "Direct Order (Quick Sale)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"directOrderId\", jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2,\n      \"notes\": \"No sugar\"\n    }\n  ],\n  \"payments\": [\n    {\n      \"paymentMethod\": \"cash\",\n      \"amount\": 50000\n    }\n  ],\n  \"voucherCode\": \"\",\n  \"orderType\": \"takeaway\",\n  \"locationId\": \"{{locationId}}\",\n  \"customerName\": \"Walk-in Customer\",\n  \"customerPhone\": \"\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders/direct",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders", "direct"]
+						},
+						"description": "Create and complete order in one step - ideal for quick sales / takeaway"
+					}
+				},
+				{
+					"name": "Direct Order with Voucher",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 3,\n      \"notes\": \"\"\n    }\n  ],\n  \"payments\": [\n    {\n      \"paymentMethod\": \"e_wallet\",\n      \"amount\": 60000,\n      \"reference\": \"OVO-789012\"\n    }\n  ],\n  \"voucherCode\": \"DISCOUNT20\",\n  \"orderType\": \"takeaway\",\n  \"locationId\": \"{{locationId}}\",\n  \"customerName\": \"Member Customer\",\n  \"customerPhone\": \"+62812345678\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/orders/direct",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "orders", "direct"]
+						},
+						"description": "Quick sale with voucher discount"
+					}
+				}
+			]
+		},
+		{
+			"name": "Combined Billing",
+			"item": [
+				{
+					"name": "Create Combined Transaction",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.environment.set(\"combinedTransactionId\", jsonData.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerId\": \"{{memberId}}\",\n  \"customerType\": \"member\",\n  \"customerName\": \"John Doe\",\n  \"customerPhone\": \"+62812345678\",\n  \"tableId\": \"{{tableId}}\",\n  \"locationId\": \"{{locationId}}\",\n  \"orderType\": \"dine-in\",\n  \"items\": [\n    {\n      \"type\": \"product\",\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2,\n      \"notes\": \"Less ice\"\n    },\n    {\n      \"type\": \"membership\",\n      \"membershipTypeId\": \"{{membershipTypeId}}\",\n      \"startDate\": \"2025-12-01\"\n    }\n  ],\n  \"payments\": [\n    {\n      \"method\": \"credit_card\",\n      \"amount\": 500000,\n      \"reference\": \"VISA-**** 4242\"\n    },\n    {\n      \"method\": \"e_wallet\",\n      \"amount\": 150000,\n      \"reference\": \"GOPAY-123456\"\n    }\n  ],\n  \"voucherCode\": \"COMBO10\",\n  \"notes\": \"Combined membership renewal and cafe order\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/billing/combined",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "billing", "combined"]
+						},
+						"description": "Create transaction combining membership + products in one bill. Requires 'combinedBilling' feature."
+					}
+				},
+				{
+					"name": "Create Combined Transaction (Non-Member)",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerType\": \"non-member\",\n  \"customerName\": \"Walk-in Guest\",\n  \"customerPhone\": \"+62898765432\",\n  \"locationId\": \"{{locationId}}\",\n  \"orderType\": \"takeaway\",\n  \"items\": [\n    {\n      \"type\": \"product\",\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 3,\n      \"notes\": \"\"\n    }\n  ],\n  \"payments\": [\n    {\n      \"method\": \"qris\",\n      \"amount\": 75000,\n      \"reference\": \"QRIS-789012\"\n    }\n  ],\n  \"notes\": \"Non-member order\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/billing/combined",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "billing", "combined"]
+						}
+					}
+				},
+				{
+					"name": "Get Transaction Receipt",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/billing/receipt/{{combinedTransactionId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "billing", "receipt", "{{combinedTransactionId}}"]
+						},
+						"description": "Get transaction receipt with printer settings for thermal printing"
+					}
+				},
+				{
+					"name": "Validate Voucher for Combined",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"COMBO10\",\n  \"subtotal\": 650000,\n  \"customerId\": \"{{memberId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/restaurant/billing/validate-voucher",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "restaurant", "billing", "validate-voucher"]
+						},
+						"description": "Validate voucher before creating combined transaction"
+					}
+				}
+			],
+			"description": "Combined billing for membership + products. Requires 'combinedBilling' feature in subscription plan."
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	]
+}

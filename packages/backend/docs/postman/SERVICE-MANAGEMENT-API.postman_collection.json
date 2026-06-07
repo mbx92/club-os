@@ -1,0 +1,738 @@
+{
+  "info": {
+    "_postman_id": "service-management-collection-id",
+    "name": "Service Management API",
+    "description": "Complete API collection for Service Management module including list view, calendar, alerts, statistics, and trainer assignment",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "service_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "trainer_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "member_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Service Management List",
+      "item": [
+        {
+          "name": "Get All Active Services",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has data array\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test(\"Response has pagination\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('pagination');",
+                  "});",
+                  "",
+                  "// Save first service ID for other tests",
+                  "if (pm.response.json().data.length > 0) {",
+                  "    pm.collectionVariables.set('service_id', pm.response.json().data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/list?page=1&limit=20&sortBy=endDate&sortOrder=ASC",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "list"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "endDate"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "ASC"
+                }
+              ]
+            },
+            "description": "Get all active services with pagination. Shows remaining sessions, expiry dates, and interactive info."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Services Expiring Soon (7 Days)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/list?expiringInDays=7&status=active",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "list"],
+              "query": [
+                {
+                  "key": "expiringInDays",
+                  "value": "7",
+                  "description": "Services expiring in 7 days"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            },
+            "description": "Alert: Get services that will expire in the next 7 days"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Services with Low Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/list?lowSessionsThreshold=3&status=active",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "list"],
+              "query": [
+                {
+                  "key": "lowSessionsThreshold",
+                  "value": "3",
+                  "description": "Services with ≤3 sessions remaining"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            },
+            "description": "Alert: Get services with low remaining sessions (≤3)"
+          },
+          "response": []
+        },
+        {
+          "name": "Filter by Service Type (PT Packages)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/list?serviceType=pt_package&status=active",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "list"],
+              "query": [
+                {
+                  "key": "serviceType",
+                  "value": "pt_package"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            },
+            "description": "Filter services by type (pt_package, class_package, membership, etc.)"
+          },
+          "response": []
+        },
+        {
+          "name": "Filter by Trainer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/list?trainerId={{trainer_id}}&status=active",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "list"],
+              "query": [
+                {
+                  "key": "trainerId",
+                  "value": "{{trainer_id}}"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            },
+            "description": "Filter services by assigned trainer"
+          },
+          "response": []
+        },
+        {
+          "name": "Search by Member Name",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/list?search=john&page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "list"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "john",
+                  "description": "Search by member name or email"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Search services by member name or email"
+          },
+          "response": []
+        }
+      ],
+      "description": "Comprehensive list view of all services with interactive display"
+    },
+    {
+      "name": "2. Calendar View",
+      "item": [
+        {
+          "name": "Get Services Calendar - Current Month",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Get current year and month",
+                  "const now = new Date();",
+                  "pm.collectionVariables.set('current_year', now.getFullYear());",
+                  "pm.collectionVariables.set('current_month', now.getMonth() + 1);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has calendar data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('events');",
+                  "    pm.expect(jsonData.data).to.have.property('summary');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/calendar?year={{current_year}}&month={{current_month}}",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "calendar"],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "{{current_year}}"
+                },
+                {
+                  "key": "month",
+                  "value": "{{current_month}}"
+                }
+              ]
+            },
+            "description": "Get calendar view for current month with service start/end events"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Calendar - December 2025",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/calendar?year=2025&month=12",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "calendar"],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2025"
+                },
+                {
+                  "key": "month",
+                  "value": "12"
+                }
+              ]
+            },
+            "description": "Get calendar view for specific month"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Calendar - Filter by Service Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/calendar?year=2025&month=12&serviceType=pt_package",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "calendar"],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2025"
+                },
+                {
+                  "key": "month",
+                  "value": "12"
+                },
+                {
+                  "key": "serviceType",
+                  "value": "pt_package"
+                }
+              ]
+            },
+            "description": "Get calendar filtered by service type"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Calendar - Specific Member",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/calendar?year=2025&month=12&memberId={{member_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "calendar"],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2025"
+                },
+                {
+                  "key": "month",
+                  "value": "12"
+                },
+                {
+                  "key": "memberId",
+                  "value": "{{member_id}}"
+                }
+              ]
+            },
+            "description": "Get calendar for specific member only"
+          },
+          "response": []
+        }
+      ],
+      "description": "Calendar view for monthly service tracking"
+    },
+    {
+      "name": "3. Alerts & Notifications",
+      "item": [
+        {
+          "name": "Get Service Alerts (Default)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has alerts data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('expiring');",
+                  "    pm.expect(jsonData.data).to.have.property('lowSessions');",
+                  "    pm.expect(jsonData).to.have.property('summary');",
+                  "});",
+                  "",
+                  "pm.test(\"Alerts include severity levels\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data.expiring.length > 0) {",
+                  "        pm.expect(jsonData.data.expiring[0]).to.have.property('severity');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/alerts",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "alerts"]
+            },
+            "description": "Get service alerts with default thresholds (7 days, 3 sessions)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Alerts - Custom Thresholds",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/alerts?daysThreshold=14&lowSessionsThreshold=5",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "alerts"],
+              "query": [
+                {
+                  "key": "daysThreshold",
+                  "value": "14",
+                  "description": "Services expiring in 14 days"
+                },
+                {
+                  "key": "lowSessionsThreshold",
+                  "value": "5",
+                  "description": "Services with ≤5 sessions"
+                }
+              ]
+            },
+            "description": "Get alerts with custom thresholds"
+          },
+          "response": []
+        },
+        {
+          "name": "Get High Priority Alerts Only",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/alerts?daysThreshold=3&lowSessionsThreshold=1",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "alerts"],
+              "query": [
+                {
+                  "key": "daysThreshold",
+                  "value": "3",
+                  "description": "Critical: 3 days or less"
+                },
+                {
+                  "key": "lowSessionsThreshold",
+                  "value": "1",
+                  "description": "Critical: 1 session or less"
+                }
+              ]
+            },
+            "description": "Get only high-priority alerts"
+          },
+          "response": []
+        }
+      ],
+      "description": "Automated alerts for expiring services and low sessions"
+    },
+    {
+      "name": "4. Statistics",
+      "item": [
+        {
+          "name": "Get Service Statistics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has statistics\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('byStatus');",
+                  "    pm.expect(jsonData.data).to.have.property('byServiceType');",
+                  "    pm.expect(jsonData.data).to.have.property('alerts');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/stats",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "stats"]
+            },
+            "description": "Get service statistics for dashboard display"
+          },
+          "response": []
+        }
+      ],
+      "description": "Service statistics and analytics"
+    },
+    {
+      "name": "5. Trainer Assignment",
+      "item": [
+        {
+          "name": "Assign Trainer to Service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Trainer assigned successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData.data).to.have.property('trainerId');",
+                  "    pm.expect(jsonData.data).to.have.property('trainerName');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trainerId\": \"{{trainer_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/service/management/{{service_id}}/assign-trainer",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "{{service_id}}", "assign-trainer"]
+            },
+            "description": "Assign or reassign trainer to an existing active service"
+          },
+          "response": []
+        },
+        {
+          "name": "Purchase Service with Trainer (Legacy Endpoint)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": \"{{member_id}}\",\n  \"servicePlanId\": \"pt-package-uuid\",\n  \"startDate\": \"2025-12-01\",\n  \"assignedTrainerId\": \"{{trainer_id}}\",\n  \"autoRenew\": false,\n  \"paymentMethod\": \"cash\",\n  \"paidAmount\": 2400000,\n  \"notes\": \"PT package dengan trainer assignment\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/service/active/purchase",
+              "host": ["{{base_url}}"],
+              "path": ["service", "active", "purchase"]
+            },
+            "description": "Purchase service and assign trainer in one transaction"
+          },
+          "response": []
+        }
+      ],
+      "description": "Trainer assignment workflows"
+    },
+    {
+      "name": "6. Real-World Scenarios",
+      "item": [
+        {
+          "name": "Scenario 1: Renewal Campaign (Expiring Services)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Get all services expiring in 7 days",
+                  "// Use this for renewal campaign",
+                  "pm.test(\"Get expiring services for campaign\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log(`Found ${jsonData.data.length} services expiring soon`);",
+                  "    ",
+                  "    // Extract member contact info for campaign",
+                  "    jsonData.data.forEach(service => {",
+                  "        console.log(`Member: ${service.member.firstName} ${service.member.lastName}`);",
+                  "        console.log(`Phone: ${service.member.phoneNumber}`);",
+                  "        console.log(`Service: ${service.servicePlan.name}`);",
+                  "        console.log(`Expires: ${service.daysUntilExpiry} days`);",
+                  "        console.log('---');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/list?expiringInDays=7&status=active",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "list"],
+              "query": [
+                {
+                  "key": "expiringInDays",
+                  "value": "7"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            },
+            "description": "Get expiring services for proactive renewal campaigns"
+          },
+          "response": []
+        },
+        {
+          "name": "Scenario 2: Trainer Workload Analysis",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Analyze trainer workload",
+                  "pm.test(\"Analyze trainer workload\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    console.log(`Trainer has ${jsonData.data.length} active services`);",
+                  "    ",
+                  "    let totalSessions = 0;",
+                  "    jsonData.data.forEach(service => {",
+                  "        totalSessions += service.remainingSessions || 0;",
+                  "    });",
+                  "    ",
+                  "    console.log(`Total remaining sessions: ${totalSessions}`);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/list?trainerId={{trainer_id}}&status=active",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "list"],
+              "query": [
+                {
+                  "key": "trainerId",
+                  "value": "{{trainer_id}}"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            },
+            "description": "Analyze trainer workload and capacity"
+          },
+          "response": []
+        },
+        {
+          "name": "Scenario 3: Dashboard Overview",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Get complete dashboard overview",
+                  "pm.test(\"Dashboard overview\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    ",
+                  "    console.log('=== SERVICE STATISTICS ===');",
+                  "    ",
+                  "    console.log('\\nBy Status:');",
+                  "    jsonData.data.byStatus.forEach(stat => {",
+                  "        console.log(`${stat.status}: ${stat.count}`);",
+                  "    });",
+                  "    ",
+                  "    console.log('\\nBy Service Type:');",
+                  "    jsonData.data.byServiceType.forEach(stat => {",
+                  "        console.log(`${stat.serviceType}: ${stat.count}`);",
+                  "    });",
+                  "    ",
+                  "    console.log('\\nAlerts:');",
+                  "    console.log(`Expiring: ${jsonData.data.alerts.expiring}`);",
+                  "    console.log(`Low Sessions: ${jsonData.data.alerts.lowSessions}`);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/service/management/stats",
+              "host": ["{{base_url}}"],
+              "path": ["service", "management", "stats"]
+            },
+            "description": "Get complete overview for dashboard"
+          },
+          "response": []
+        }
+      ],
+      "description": "Real-world usage scenarios and workflows"
+    }
+  ]
+}

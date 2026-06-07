@@ -1,0 +1,739 @@
+{
+  "info": {
+    "name": "Check-In System API",
+    "description": "Complete API collection for gym check-in system with automatic session usage",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "gym-checkin-api"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Check-In Management",
+      "item": [
+        {
+          "name": "1. Create Check-In (General Membership)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Check-in created successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.eql('Check-in successful');",
+                  "    pm.expect(jsonData.data.checkIn).to.have.property('id');",
+                  "    pm.expect(jsonData.data.activeService).to.have.property('serviceType');",
+                  "    ",
+                  "    // Save check-in ID for later use",
+                  "    pm.environment.set('checkin_id', jsonData.data.checkIn.id);",
+                  "    ",
+                  "    console.log('Check-in ID:', jsonData.data.checkIn.id);",
+                  "    console.log('Service Type:', jsonData.data.activeService.serviceType);",
+                  "    console.log('Session Used:', jsonData.data.sessionUsed);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": \"{{member_id}}\",\n  \"notes\": \"Morning workout session\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins"]
+            },
+            "description": "Create a general check-in for member with active membership. Validates membership status and expiry."
+          },
+          "response": []
+        },
+        {
+          "name": "2. Create Check-In (PT Package - Auto Session Usage)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Session used automatically\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.sessionUsed).to.be.true;",
+                  "    pm.expect(jsonData.data.activeService.remainingSessions).to.be.a('number');",
+                  "    ",
+                  "    console.log('Remaining Sessions:', jsonData.data.activeService.remainingSessions);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": \"{{member_id}}\",\n  \"serviceType\": \"pt_package\",\n  \"notes\": \"Upper body training - chest & triceps\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins"]
+            },
+            "description": "Create check-in for PT package. Automatically uses one session from active PT service."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Create Check-In (Class Package)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": \"{{member_id}}\",\n  \"serviceType\": \"class_package\",\n  \"notes\": \"Yoga class - morning session\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins"]
+            },
+            "description": "Create check-in for class package (yoga, zumba, etc). Auto-uses session."
+          },
+          "response": []
+        },
+        {
+          "name": "4. Get All Check-Ins",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns paginated check-ins\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "    pm.expect(jsonData.pagination).to.have.property('currentPage');",
+                  "    pm.expect(jsonData.pagination).to.have.property('totalPages');",
+                  "    ",
+                  "    console.log('Total check-ins:', jsonData.pagination.totalRecords);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins?page=1&limit=20&sortBy=checkInTime&sortOrder=DESC",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "checkInTime"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "DESC"
+                }
+              ]
+            },
+            "description": "Get all check-ins with pagination and filtering options."
+          },
+          "response": []
+        },
+        {
+          "name": "5. Get Check-Ins by Member",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins?memberId={{member_id}}&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins"],
+              "query": [
+                {
+                  "key": "memberId",
+                  "value": "{{member_id}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get check-in history for specific member."
+          },
+          "response": []
+        },
+        {
+          "name": "6. Get Check-Ins by Date Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins?startDate=2025-11-01T00:00:00Z&endDate=2025-11-30T23:59:59Z",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-11-01T00:00:00Z"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-11-30T23:59:59Z"
+                }
+              ]
+            },
+            "description": "Filter check-ins by date range."
+          },
+          "response": []
+        },
+        {
+          "name": "7. Get Check-Ins by Service Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins?serviceType=pt_package",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins"],
+              "query": [
+                {
+                  "key": "serviceType",
+                  "value": "pt_package",
+                  "description": "membership | pt_package | class_package | spa_package"
+                }
+              ]
+            },
+            "description": "Filter check-ins by service type (PT, class, etc)."
+          },
+          "response": []
+        },
+        {
+          "name": "8. Get Check-In by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins/{{checkin_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins", "{{checkin_id}}"]
+            },
+            "description": "Get detailed information about a specific check-in."
+          },
+          "response": []
+        },
+        {
+          "name": "9. Update Check-In (Add Checkout)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checkOutTime\": \"2025-11-26T10:30:00.000Z\",\n  \"notes\": \"Completed full workout session\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins/{{checkin_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins", "{{checkin_id}}"]
+            },
+            "description": "Update check-in with checkout time and additional notes."
+          },
+          "response": []
+        },
+        {
+          "name": "10. Delete Check-In",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins/{{checkin_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins", "{{checkin_id}}"]
+            },
+            "description": "Delete a check-in record (admin only)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Check-In Statistics",
+      "item": [
+        {
+          "name": "1. Get Overall Statistics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns statistics\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('total');",
+                  "    pm.expect(jsonData.data).to.have.property('today');",
+                  "    pm.expect(jsonData.data).to.have.property('thisWeek');",
+                  "    pm.expect(jsonData.data).to.have.property('thisMonth');",
+                  "    pm.expect(jsonData.data).to.have.property('uniqueMembersToday');",
+                  "    ",
+                  "    console.log('📊 Check-In Statistics:');",
+                  "    console.log('Total:', jsonData.data.total);",
+                  "    console.log('Today:', jsonData.data.today);",
+                  "    console.log('This Week:', jsonData.data.thisWeek);",
+                  "    console.log('This Month:', jsonData.data.thisMonth);",
+                  "    console.log('Unique Members Today:', jsonData.data.uniqueMembersToday);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins/stats",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins", "stats"]
+            },
+            "description": "Get check-in statistics: total, today, this week, this month, unique members."
+          },
+          "response": []
+        },
+        {
+          "name": "2. Get Statistics by Date Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins/stats?startDate=2025-11-01&endDate=2025-11-30",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins", "stats"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-11-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-11-30"
+                }
+              ]
+            },
+            "description": "Get statistics for specific date range."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Get Statistics by Member",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins/stats?memberId={{member_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins", "stats"],
+              "query": [
+                {
+                  "key": "memberId",
+                  "value": "{{member_id}}"
+                }
+              ]
+            },
+            "description": "Get check-in statistics for specific member."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Integration Scenarios",
+      "item": [
+        {
+          "name": "Scenario 1: Member Morning Check-In",
+          "item": [
+            {
+              "name": "Step 1: Verify Active Membership",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Member has active service\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    var hasActive = jsonData.data.some(s => s.status === 'active');",
+                      "    pm.expect(hasActive).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/service/active/{{member_id}}?status=active",
+                  "host": ["{{base_url}}"],
+                  "path": ["service", "active", "{{member_id}}"],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "active"
+                    }
+                  ]
+                },
+                "description": "Check if member has active services before check-in."
+              },
+              "response": []
+            },
+            {
+              "name": "Step 2: Create Check-In",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"memberId\": \"{{member_id}}\",\n  \"notes\": \"Morning workout - cardio\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/gym/check-ins",
+                  "host": ["{{base_url}}"],
+                  "path": ["gym", "check-ins"]
+                },
+                "description": "Perform check-in."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Scenario 2: PT Session with Trainer",
+          "item": [
+            {
+              "name": "Step 1: Check PT Package Sessions",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/service/active/{{member_id}}?status=active&serviceType=pt_package",
+                  "host": ["{{base_url}}"],
+                  "path": ["service", "active", "{{member_id}}"],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "active"
+                    },
+                    {
+                      "key": "serviceType",
+                      "value": "pt_package"
+                    }
+                  ]
+                },
+                "description": "Check remaining PT sessions."
+              },
+              "response": []
+            },
+            {
+              "name": "Step 2: Check-In for PT Session",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Session used successfully\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.data.sessionUsed).to.be.true;",
+                      "    ",
+                      "    console.log('✅ PT Session consumed');",
+                      "    console.log('Remaining:', jsonData.data.activeService.remainingSessions);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"memberId\": \"{{member_id}}\",\n  \"serviceType\": \"pt_package\",\n  \"notes\": \"PT Session: Leg day workout\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/gym/check-ins",
+                  "host": ["{{base_url}}"],
+                  "path": ["gym", "check-ins"]
+                },
+                "description": "Check-in and auto-use PT session."
+              },
+              "response": []
+            },
+            {
+              "name": "Step 3: Add Checkout Time",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"checkOutTime\": \"{{$isoTimestamp}}\",\n  \"notes\": \"PT Session completed - excellent progress\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/gym/check-ins/{{checkin_id}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["gym", "check-ins", "{{checkin_id}}"]
+                },
+                "description": "Mark checkout after session ends."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Scenario 3: Dashboard Statistics",
+          "item": [
+            {
+              "name": "Get Today's Check-Ins",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/gym/check-ins?startDate={{$isoTimestamp}}&limit=100",
+                  "host": ["{{base_url}}"],
+                  "path": ["gym", "check-ins"],
+                  "query": [
+                    {
+                      "key": "startDate",
+                      "value": "{{$isoTimestamp}}"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "100"
+                    }
+                  ]
+                },
+                "description": "Get all check-ins for today."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Overall Stats",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/gym/check-ins/stats",
+                  "host": ["{{base_url}}"],
+                  "path": ["gym", "check-ins", "stats"]
+                },
+                "description": "Display dashboard statistics."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Error Scenarios",
+      "item": [
+        {
+          "name": "No Active Membership",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns 400 error\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error message correct\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.code).to.include('NO_');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": \"invalid-member-id\",\n  \"notes\": \"Test error\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins"]
+            },
+            "description": "Try to check-in member without active service."
+          },
+          "response": []
+        },
+        {
+          "name": "No PT Sessions Remaining",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": \"{{member_id_depleted}}\",\n  \"serviceType\": \"pt_package\",\n  \"notes\": \"Test depleted package\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins"]
+            },
+            "description": "Try to check-in with depleted PT package."
+          },
+          "response": []
+        },
+        {
+          "name": "Inactive Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": \"{{inactive_member_id}}\",\n  \"notes\": \"Test inactive member\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/gym/check-ins",
+              "host": ["{{base_url}}"],
+              "path": ["gym", "check-ins"]
+            },
+            "description": "Try to check-in inactive member."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "member_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "checkin_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "member_id_depleted",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "inactive_member_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

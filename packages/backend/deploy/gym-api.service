@@ -1,0 +1,38 @@
+[Unit]
+Description=Gym Membership Management API
+Documentation=https://github.com/your-repo/gym-membership-backend
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/root/projects/gym-be
+ExecStart=/root/.nvm/versions/node/v22.19.0/bin/node src/server.js
+Restart=on-failure
+RestartSec=10
+
+# Environment
+Environment=NODE_ENV=production
+Environment=PATH=/root/.nvm/versions/node/v22.19.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=/root/projects/gym-be/.env.production
+
+# Logging
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=gym-api
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=false
+ReadWritePaths=/root/projects/gym-be/logs /root/projects/gym-be/uploads
+
+# Resource limits
+LimitNOFILE=65535
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

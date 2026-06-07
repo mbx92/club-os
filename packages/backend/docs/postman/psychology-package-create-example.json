@@ -1,0 +1,40 @@
+{
+  "info": {
+    "name": "Psychology Package Create Example",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Psychology Package",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_AUTH_TOKEN"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Personality Assessment Package\",\n  \"description\": \"Comprehensive personality assessment including multiple test types\",\n  \"packageType\": \"bundle\",\n  \"basePrice\": 250000,\n  \"discountType\": \"percentage\",\n  \"discountValue\": 10,\n  \"testTypeIds\": [\"UUID_OF_FIRST_TEST_TYPE\", \"UUID_OF_SECOND_TEST_TYPE\"],\n  \"validityDays\": 30,\n  \"isActive\": true,\n  \"metadata\": {\n    \"difficulty\": \"intermediate\",\n    \"targetAudience\": \"adults\",\n    \"tags\": [\"personality\", \"assessment\", \"comprehensive\"],\n    \"customFields\": {\n      \"specialInstructions\": \"This package includes a consultation session\",\n      \"estimatedCompletionTime\": \"90 minutes\",\n      \"language\": \"id\"\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{BASE_URL}}/api/psychology/packages",
+          "host": ["{{BASE_URL}}"],
+          "path": ["api", "psychology", "packages"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:3000"
+    }
+  ]
+}

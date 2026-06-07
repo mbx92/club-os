@@ -1,0 +1,2069 @@
+{
+	"info": {
+		"_postman_id": "psychology-module-2025",
+		"name": "Psychology Module API",
+		"description": "Complete API collection for Psychology Testing Module.\n\nSupports:\n- PAPI Kostick (90 questions, 20 scales)\n- EPPS (225 questions, 15 needs)\n- Dynamic test types (admin paste JSON questions)\n- Package & Price management\n- Invitation-based registration (self-service)\n- Hybrid scoring (frontend preview, backend verify)\n\n## Test Flow A: Admin Creates Patient\n1. Login as Admin\n2. Create Test Type (paste questions JSON)\n3. Create Package (single/bundle)\n4. Create Patient\n5. Create Order → Get Access Token\n6. Public: Start Session with Token\n7. Public: Submit Answers\n8. Admin: View & Verify Results\n\n## Test Flow B: Invitation Link (Self-Registration)\n1. Login as Admin\n2. Create Package\n3. Create Invitation (set maxUses, expiry)\n4. Share invitation link to candidates\n5. Candidate: GET /public/invite/:code (see package info)\n6. Candidate: POST /public/invite/:code/register (self-register)\n7. Candidate receives accessToken automatically\n8. Public: Use accessToken to take tests",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "psychology-module"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "0. Authentication",
+			"item": [
+				{
+					"name": "Login Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.token) {",
+									"    pm.environment.set(\"jwt_token\", res.token);",
+									"    pm.environment.set(\"authToken\", res.token);",
+									"    if (res.refreshToken) {",
+									"        pm.environment.set(\"refreshToken\", res.refreshToken);",
+									"    }",
+									"    if (res.user && res.user.tenantId) {",
+									"        pm.environment.set(\"tenantId\", res.user.tenantId);",
+									"    }",
+									"    if (res.user && res.user.id) {",
+									"        pm.environment.set(\"userId\", res.user.id);",
+									"    }",
+									"    pm.test(\"✅ Login successful\", function() {",
+									"        pm.expect(res.token).to.be.a('string');",
+									"    });",
+									"    console.log(\"✅ Token saved to environment\");",
+									"} else {",
+									"    pm.test(\"❌ Login failed\", function() {",
+									"        pm.expect.fail(\"No token in response\");",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@gym.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Login to get JWT token for subsequent requests"
+		},
+		{
+			"name": "1. Test Types (Admin)",
+			"item": [
+				{
+					"name": "Create PAPI Kostick Test Type",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.success && res.data && res.data.id) {",
+									"    pm.environment.set(\"papiTestTypeId\", res.data.id);",
+									"    pm.test(\"✅ PAPI Test Type created\", function() {",
+									"        pm.expect(res.data.code).to.equal('PAPI_KOSTICK');",
+									"    });",
+									"    console.log(\"✅ PAPI Test Type ID: \" + res.data.id);",
+									"} else {",
+									"    pm.test(\"Test type creation\", function() {",
+									"        pm.expect(res.success).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"PAPI Kostick\",\n  \"code\": \"PAPI_KOSTICK\",\n  \"description\": \"Personality and Preference Inventory - measures 20 personality dimensions\",\n  \"questionCount\": 90,\n  \"durationMinutes\": 45,\n  \"questions\": [\n    {\"id\": 1, \"textA\": \"Saya senang bekerja keras\", \"textB\": \"Saya suka mengatur orang lain\", \"scaleA\": \"G\", \"scaleB\": \"L\"},\n    {\"id\": 2, \"textA\": \"Saya mudah bergaul\", \"textB\": \"Saya suka bekerja sendiri\", \"scaleA\": \"S\", \"scaleB\": \"W\"},\n    {\"id\": 3, \"textA\": \"Saya memperhatikan detail\", \"textB\": \"Saya suka hal-hal baru\", \"scaleA\": \"D\", \"scaleB\": \"X\"},\n    {\"id\": 4, \"textA\": \"Saya mengambil keputusan cepat\", \"textB\": \"Saya butuh dukungan orang lain\", \"scaleA\": \"I\", \"scaleB\": \"R\"},\n    {\"id\": 5, \"textA\": \"Saya tenang menghadapi tekanan\", \"textB\": \"Saya bersemangat tinggi\", \"scaleA\": \"E\", \"scaleB\": \"V\"}\n  ],\n  \"scoringConfig\": {\n    \"scales\": [\"G\", \"E\", \"A\", \"N\", \"P\", \"X\", \"B\", \"O\", \"Z\", \"K\", \"F\", \"W\", \"C\", \"L\", \"I\", \"T\", \"V\", \"S\", \"R\", \"D\"],\n    \"maxPerScale\": 9\n  },\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/test-types",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"test-types"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create EPPS Test Type",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.success && res.data && res.data.id) {",
+									"    pm.environment.set(\"eppsTestTypeId\", res.data.id);",
+									"    pm.test(\"✅ EPPS Test Type created\", function() {",
+									"        pm.expect(res.data.code).to.equal('EPPS');",
+									"    });",
+									"    console.log(\"✅ EPPS Test Type ID: \" + res.data.id);",
+									"} else {",
+									"    pm.test(\"Test type creation\", function() {",
+									"        pm.expect(res.success).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Edwards Personal Preference Schedule\",\n  \"code\": \"EPPS\",\n  \"description\": \"Measures 15 psychological needs based on Henry Murray's theory\",\n  \"questionCount\": 225,\n  \"durationMinutes\": 60,\n  \"questions\": [\n    {\"id\": 1, \"textA\": \"Saya suka menyelesaikan tugas yang sulit\", \"textB\": \"Saya suka mengikuti aturan\", \"needA\": \"ach\", \"needB\": \"def\"},\n    {\"id\": 2, \"textA\": \"Saya suka kerapihan\", \"textB\": \"Saya suka menjadi pusat perhatian\", \"needA\": \"ord\", \"needB\": \"exh\"},\n    {\"id\": 3, \"textA\": \"Saya suka kebebasan\", \"textB\": \"Saya suka berteman\", \"needA\": \"aut\", \"needB\": \"aff\"},\n    {\"id\": 4, \"textA\": \"Saya suka memahami perasaan orang\", \"textB\": \"Saya suka dibantu orang lain\", \"needA\": \"int\", \"needB\": \"suc\"},\n    {\"id\": 5, \"textA\": \"Saya suka memimpin\", \"textB\": \"Saya mudah mengalah\", \"needA\": \"dom\", \"needB\": \"aba\"}\n  ],\n  \"scoringConfig\": {\n    \"needs\": [\"ach\", \"def\", \"ord\", \"exh\", \"aut\", \"aff\", \"int\", \"suc\", \"dom\", \"aba\", \"nur\", \"chg\", \"end\", \"het\", \"agg\"],\n    \"consistency\": [\"BD\", \"BH\", \"S\"]\n  },\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/test-types",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"test-types"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Test Types",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Get test types successful\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data).to.be.an('array');",
+									"});",
+									"console.log(\"Total test types: \" + res.data.length);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/test-types",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"test-types"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Test Type by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Get test type successful\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.id).to.equal(pm.environment.get('papiTestTypeId'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/test-types/{{papiTestTypeId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"test-types",
+								"{{papiTestTypeId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Test Type",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Update test type successful\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"durationMinutes\": 50,\n  \"description\": \"PAPI Kostick - Updated description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/test-types/{{papiTestTypeId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"test-types",
+								"{{papiTestTypeId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "CRUD operations for test types. Admin can paste JSON questions."
+		},
+		{
+			"name": "2. Packages (Admin)",
+			"item": [
+				{
+					"name": "Create Single Test Package",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.success && res.data && res.data.id) {",
+									"    pm.environment.set(\"singlePackageId\", res.data.id);",
+									"    pm.test(\"✅ Single package created\", function() {",
+									"        pm.expect(res.data.packageType).to.equal('single');",
+									"    });",
+									"    console.log(\"✅ Single Package ID: \" + res.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"PAPI Kostick Single\",\n  \"description\": \"Single PAPI Kostick test\",\n  \"packageType\": \"single\",\n  \"singlePrice\": 150000,\n  \"testTypeIds\": [\"{{papiTestTypeId}}\"],\n  \"validityDays\": 7,\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/packages",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"packages"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Bundle Package",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.success && res.data && res.data.id) {",
+									"    pm.environment.set(\"bundlePackageId\", res.data.id);",
+									"    pm.test(\"✅ Bundle package created\", function() {",
+									"        pm.expect(res.data.packageType).to.equal('bundle');",
+									"    });",
+									"    console.log(\"✅ Bundle Package ID: \" + res.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Complete Assessment Bundle\",\n  \"description\": \"PAPI Kostick + EPPS bundle with discount\",\n  \"packageType\": \"bundle\",\n  \"singlePrice\": 300000,\n  \"bundlePrice\": 250000,\n  \"discountPercent\": 16.67,\n  \"testTypeIds\": [\"{{papiTestTypeId}}\", \"{{eppsTestTypeId}}\"],\n  \"validityDays\": 14,\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/packages",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"packages"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Packages",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Get packages successful\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data).to.be.an('array');",
+									"});",
+									"console.log(\"Total packages: \" + res.data.length);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/packages",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"packages"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Package by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Get package successful\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.id).to.equal(pm.environment.get('bundlePackageId'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/packages/{{bundlePackageId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"packages",
+								"{{bundlePackageId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Calculate Package Price",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Price calculation successful\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.total).to.be.a('number');",
+									"});",
+									"console.log(\"Total price: Rp \" + res.data.total);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 1,\n  \"promoCode\": \"\",\n  \"isMember\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/packages/{{bundlePackageId}}/calculate-price",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"packages",
+								"{{bundlePackageId}}",
+								"calculate-price"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Package management - single tests or bundles"
+		},
+		{
+			"name": "3. Price Rules (Admin)",
+			"item": [
+				{
+					"name": "Create Promo Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.success && res.data && res.data.id) {",
+									"    pm.environment.set(\"promoRuleId\", res.data.id);",
+									"    pm.environment.set(\"promoCode\", res.data.code);",
+									"    pm.test(\"✅ Promo code created\", function() {",
+									"        pm.expect(res.data.ruleType).to.equal('promo_code');",
+									"    });",
+									"    console.log(\"✅ Promo Code: \" + res.data.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Welcome Discount\",\n  \"code\": \"WELCOME20\",\n  \"ruleType\": \"promo_code\",\n  \"discountType\": \"percentage\",\n  \"discountValue\": 20,\n  \"maxUsage\": 100,\n  \"validFrom\": \"2025-01-01T00:00:00Z\",\n  \"validUntil\": \"2025-12-31T23:59:59Z\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/price-rules",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"price-rules"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Bulk Discount",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.success && res.data && res.data.id) {",
+									"    pm.environment.set(\"bulkRuleId\", res.data.id);",
+									"    pm.test(\"✅ Bulk discount created\", function() {",
+									"        pm.expect(res.data.ruleType).to.equal('bulk_discount');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Bulk Order Discount (10+)\",\n  \"ruleType\": \"bulk_discount\",\n  \"discountType\": \"percentage\",\n  \"discountValue\": 15,\n  \"minQuantity\": 10,\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/price-rules",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"price-rules"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Member Discount",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.success && res.data && res.data.id) {",
+									"    pm.environment.set(\"memberRuleId\", res.data.id);",
+									"    pm.test(\"✅ Member discount created\", function() {",
+									"        pm.expect(res.data.ruleType).to.equal('member_discount');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Gym Member Discount\",\n  \"ruleType\": \"member_discount\",\n  \"discountType\": \"percentage\",\n  \"discountValue\": 10,\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/price-rules",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"price-rules"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Price Rules",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Get price rules successful\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data).to.be.an('array');",
+									"});",
+									"console.log(\"Total price rules: \" + res.data.length);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/price-rules",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"price-rules"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Promo Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Promo code is valid\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.valid).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"WELCOME20\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/price-rules/validate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"price-rules",
+								"validate"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Price rules - promo codes, bulk discounts, member discounts"
+		},
+		{
+			"name": "4. Patients (Admin)",
+			"item": [
+				{
+					"name": "Create Patient",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.success && res.data && res.data.id) {",
+									"    pm.environment.set(\"patientId\", res.data.id);",
+									"    pm.test(\"✅ Patient created\", function() {",
+									"        pm.expect(res.data.email).to.include('@');",
+									"    });",
+									"    console.log(\"✅ Patient ID: \" + res.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phone\": \"081234567890\",\n  \"dateOfBirth\": \"1990-05-15\",\n  \"gender\": \"male\",\n  \"address\": \"Jl. Sudirman No. 123, Jakarta\",\n  \"education\": \"S1\",\n  \"occupation\": \"Software Engineer\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/patients",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"patients"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Patients",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Get patients successful\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data).to.be.an('array');",
+									"});",
+									"console.log(\"Total patients: \" + res.data.length);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/patients",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"patients"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Patient by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Get patient successful\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.id).to.equal(pm.environment.get('patientId'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/patients/{{patientId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"patients",
+								"{{patientId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Patients",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Search patients successful\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/patients?search=john",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"patients"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "john"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Patient/candidate management"
+		},
+		{
+			"name": "5. Orders (Admin)",
+			"item": [
+				{
+					"name": "Create Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.success && res.data && res.data.id) {",
+									"    pm.environment.set(\"orderId\", res.data.id);",
+									"    pm.environment.set(\"orderNumber\", res.data.orderNumber);",
+									"    pm.test(\"✅ Order created\", function() {",
+									"        pm.expect(res.data.paymentStatus).to.equal('pending');",
+									"    });",
+									"    console.log(\"✅ Order ID: \" + res.data.id);",
+									"    console.log(\"✅ Order Number: \" + res.data.orderNumber);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"packageId\": \"{{bundlePackageId}}\",\n  \"promoCode\": \"WELCOME20\",\n  \"notes\": \"Employee assessment for hiring process\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"orders"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Orders",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Get orders successful\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data).to.be.an('array');",
+									"});",
+									"console.log(\"Total orders: \" + res.data.length);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"orders"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Get order successful\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.id).to.equal(pm.environment.get('orderId'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/orders/{{orderId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"orders",
+								"{{orderId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Process Payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.success && res.data) {",
+									"    if (res.data.accessToken) {",
+									"        pm.environment.set(\"accessToken\", res.data.accessToken);",
+									"    }",
+									"    pm.test(\"✅ Payment processed\", function() {",
+									"        pm.expect(res.data.paymentStatus).to.equal('paid');",
+									"    });",
+									"    console.log(\"✅ Access Token: \" + res.data.accessToken);",
+									"    console.log(\"✅ Access Expires: \" + res.data.accessExpiresAt);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"paymentMethod\": \"cash\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/orders/{{orderId}}/pay",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"orders",
+								"{{orderId}}",
+								"pay"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order QR Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ QR code generated\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.qrCode).to.include('data:image');",
+									"});",
+									"console.log(\"QR Code available for display\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/orders/{{orderId}}/qr",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"orders",
+								"{{orderId}}",
+								"qr"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Order management - create, pay, get access token"
+		},
+		{
+			"name": "6. Public Access (No Auth)",
+			"item": [
+				{
+					"name": "Validate Access Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Token is valid\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.valid).to.be.true;",
+									"});",
+									"if (res.data.sessions && res.data.sessions.length > 0) {",
+									"    pm.environment.set(\"sessionId\", res.data.sessions[0].id);",
+									"    console.log(\"✅ First Session ID: \" + res.data.sessions[0].id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accessToken\": \"{{accessToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/public/validate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"public",
+								"validate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Test Questions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Questions retrieved\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.questions).to.be.an('array');",
+									"});",
+									"console.log(\"Total questions: \" + res.data.questions.length);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Access-Token",
+								"value": "{{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/psychology/public/sessions/{{sessionId}}/questions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"public",
+								"sessions",
+								"{{sessionId}}",
+								"questions"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Start Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Session started\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.status).to.equal('in_progress');",
+									"});",
+									"console.log(\"Session started at: \" + res.data.startedAt);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Access-Token",
+								"value": "{{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/public/sessions/{{sessionId}}/start",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"public",
+								"sessions",
+								"{{sessionId}}",
+								"start"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Save Progress (Auto-save)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Progress saved\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"});",
+									"console.log(\"Answers saved: \" + res.data.answeredCount);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "X-Access-Token",
+								"value": "{{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"answers\": [\n    {\"id\": 1, \"answer\": \"A\"},\n    {\"id\": 2, \"answer\": \"B\"},\n    {\"id\": 3, \"answer\": \"A\"}\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/public/sessions/{{sessionId}}/progress",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"public",
+								"sessions",
+								"{{sessionId}}",
+								"progress"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Submit Answers (Complete)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Answers submitted\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.status).to.equal('completed');",
+									"});",
+									"console.log(\"Session completed at: \" + res.data.completedAt);",
+									"if (res.data.previewScores) {",
+									"    console.log(\"Preview scores available\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Access-Token",
+								"value": "{{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"answers\": [\n    {\"id\": 1, \"answer\": \"A\"},\n    {\"id\": 2, \"answer\": \"B\"},\n    {\"id\": 3, \"answer\": \"A\"},\n    {\"id\": 4, \"answer\": \"B\"},\n    {\"id\": 5, \"answer\": \"A\"}\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/public/sessions/{{sessionId}}/submit",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"public",
+								"sessions",
+								"{{sessionId}}",
+								"submit"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Public endpoints - no JWT required, uses access token"
+		},
+		{
+			"name": "7. Sessions & Results (Admin)",
+			"item": [
+				{
+					"name": "Get All Sessions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Get sessions successful\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data).to.be.an('array');",
+									"});",
+									"console.log(\"Total sessions: \" + res.data.length);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/sessions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"sessions"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Session by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Get session successful\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.id).to.equal(pm.environment.get('sessionId'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/sessions/{{sessionId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"sessions",
+								"{{sessionId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify & Calculate Scores",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Scores verified\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.verifiedAt).to.not.be.null;",
+									"});",
+									"console.log(\"Scores verified at: \" + res.data.verifiedAt);",
+									"if (res.data.scores) {",
+									"    console.log(\"Scores: \" + JSON.stringify(res.data.scores));",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/sessions/{{sessionId}}/verify",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"sessions",
+								"{{sessionId}}",
+								"verify"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Session Result (Full)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Result retrieved\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.session).to.exist;",
+									"});",
+									"console.log(\"Patient: \" + res.data.patient.name);",
+									"console.log(\"Test: \" + res.data.testType.name);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/results/{{sessionId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"results",
+								"{{sessionId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Print Data",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Print data retrieved\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.printUrl).to.exist;",
+									"});",
+									"console.log(\"Print URL: \" + res.data.printUrl);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/results/{{sessionId}}/print",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"results",
+								"{{sessionId}}",
+								"print"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Session management and result viewing"
+		},
+		{
+			"name": "8. Reports & Analytics (Admin)",
+			"item": [
+				{
+					"name": "Get Dashboard Stats",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Dashboard stats retrieved\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"});",
+									"console.log(\"Total orders: \" + res.data.totalOrders);",
+									"console.log(\"Total revenue: \" + res.data.totalRevenue);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/reports/dashboard",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"reports",
+								"dashboard"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Patient History",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Patient history retrieved\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.orders).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/patients/{{patientId}}/history",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								
+								"psychology",
+								"patients",
+								"{{patientId}}",
+								"history"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Reports and analytics endpoints"
+		},
+		{
+			"name": "9. Invitations (Admin)",
+			"item": [
+				{
+					"name": "Create Invitation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.success && res.data) {",
+									"    pm.environment.set(\"invitationId\", res.data.id);",
+									"    pm.environment.set(\"invitationCode\", res.data.invitationCode);",
+									"    pm.test(\"✅ Invitation created\", function() {",
+									"        pm.expect(res.success).to.be.true;",
+									"        pm.expect(res.data.invitationCode).to.be.a('string');",
+									"    });",
+									"    console.log(\"✅ Invitation Code: \" + res.data.invitationCode);",
+									"    console.log(\"✅ Invitation Link: \" + pm.environment.get('base_url') + \"/psychology/public/invite/\" + res.data.invitationCode);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"packageId\": \"{{packageId}}\",\n  \"maxUses\": 50,\n  \"expiresAt\": \"2025-12-31T23:59:59.000Z\",\n  \"testExpiryHours\": 48,\n  \"notes\": \"Recruitment batch Desember 2025\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/invitations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"psychology",
+								"invitations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Invitations",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Invitations retrieved\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data).to.be.an('array');",
+									"});",
+									"console.log(\"Total invitations: \" + res.data.length);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/invitations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"psychology",
+								"invitations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Invitation by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Invitation retrieved\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.id).to.exist;",
+									"});",
+									"console.log(\"Uses: \" + res.data.usedCount + \"/\" + res.data.maxUses);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/invitations/{{invitationId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"psychology",
+								"invitations",
+								"{{invitationId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Invitation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Invitation updated\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"});",
+									"console.log(\"Updated successfully\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"maxUses\": 100,\n  \"notes\": \"Updated: diperluas kapasitas\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/invitations/{{invitationId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"psychology",
+								"invitations",
+								"{{invitationId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Toggle Invitation Active",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Invitation toggled\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"});",
+									"console.log(\"Is Active: \" + res.data.isActive);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/invitations/{{invitationId}}/toggle",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"psychology",
+								"invitations",
+								"{{invitationId}}",
+								"toggle"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Invitation Stats",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Stats retrieved\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.stats).to.exist;",
+									"});",
+									"console.log(\"Registered: \" + res.data.stats.registered);",
+									"console.log(\"Completed: \" + res.data.stats.completed);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/invitations/{{invitationId}}/stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"psychology",
+								"invitations",
+								"{{invitationId}}",
+								"stats"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Invitation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Invitation deleted\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"});",
+									"pm.environment.unset(\"invitationId\");",
+									"pm.environment.unset(\"invitationCode\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/invitations/{{invitationId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"psychology",
+								"invitations",
+								"{{invitationId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Invitation management - create invitation links for group registration"
+		},
+		{
+			"name": "10. Public Registration (No Auth)",
+			"item": [
+				{
+					"name": "Get Invitation Info",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"pm.test(\"✅ Invitation info retrieved\", function() {",
+									"    pm.expect(res.success).to.be.true;",
+									"    pm.expect(res.data.valid).to.be.true;",
+									"});",
+									"console.log(\"Package: \" + res.data.package.name);",
+									"console.log(\"Tests included: \" + res.data.package.testTypes.map(t => t.name).join(', '));",
+									"console.log(\"Remaining slots: \" + res.data.remainingSlots);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/psychology/public/invite/{{invitationCode}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"psychology",
+								"public",
+								"invite",
+								"{{invitationCode}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register via Invitation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let res = pm.response.json();",
+									"if (res.success && res.data) {",
+									"    pm.environment.set(\"accessToken\", res.data.accessToken);",
+									"    pm.environment.set(\"patientId\", res.data.patient.id);",
+									"    pm.environment.set(\"orderId\", res.data.order.id);",
+									"    pm.test(\"✅ Registration successful\", function() {",
+									"        pm.expect(res.success).to.be.true;",
+									"        pm.expect(res.data.accessToken).to.be.a('string');",
+									"    });",
+									"    console.log(\"✅ Patient: \" + res.data.patient.name);",
+									"    console.log(\"✅ Access Token: \" + res.data.accessToken);",
+									"    console.log(\"✅ Expires at: \" + res.data.order.tokenExpiresAt);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phone\": \"08123456789\",\n  \"nik\": \"3201011234567890\",\n  \"birthDate\": \"1995-05-15\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/psychology/public/invite/{{invitationCode}}/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"psychology",
+								"public",
+								"invite",
+								"{{invitationCode}}",
+								"register"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Public registration endpoints - candidates register themselves via invitation link"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Auto-set base_url if not set",
+					"if (!pm.environment.get('base_url')) {",
+					"    pm.environment.set('base_url', 'http://localhost:8000');",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Log response time",
+					"console.log('Response time: ' + pm.response.responseTime + 'ms');"
+				]
+			}
+		}
+	]
+}

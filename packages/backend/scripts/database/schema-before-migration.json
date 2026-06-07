@@ -1,0 +1,3489 @@
+{
+  "generatedAt": "2025-11-26T13:37:51.857Z",
+  "database": "gym_dev",
+  "environment": "development",
+  "tables": [
+    {
+      "name": "ActiveServices",
+      "columnCount": 24,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "memberId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Members.id"
+        },
+        {
+          "name": "servicePlanId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "ServicePlans.id"
+        },
+        {
+          "name": "serviceType",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "startDate",
+          "type": "DATE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "endDate",
+          "type": "DATE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "totalSessions",
+          "type": "INTEGER(32,0)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "remainingSessions",
+          "type": "INTEGER(32,0)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "status",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": "'active'::\"enum_ActiveServices_status\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "autoRenew",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "false",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "purchaseTransactionId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Transactions.id"
+        },
+        {
+          "name": "purchaseDate",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "assignedTrainerId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Trainers.id"
+        },
+        {
+          "name": "pricePaid",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "currency",
+          "type": "CHARACTER VARYING(3)",
+          "nullable": false,
+          "default": "'IDR'::character varying",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "voucherId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Vouchers.id"
+        },
+        {
+          "name": "voucherDiscount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "metadata",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'{}'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "version",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "deletedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "CheckIns",
+      "columnCount": 10,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "memberId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Members.id"
+        },
+        {
+          "name": "checkInTime",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "checkOutTime",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "checkedInBy",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Users.id"
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "activeServiceId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "ActiveServices.id"
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "columnCount": 14,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "subscriptionId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Subscriptions.id"
+        },
+        {
+          "name": "invoiceNumber",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "issueDate",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "dueDate",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "amount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "tax",
+          "type": "NUMERIC(10,2)",
+          "nullable": true,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "total",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "status",
+          "type": "USER-DEFINED",
+          "nullable": true,
+          "default": "'draft'::\"enum_Invoices_status\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "items",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'[]'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "Locations",
+      "columnCount": 18,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "name",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "code",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "address",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "city",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "province",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "postalCode",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "country",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": "'Indonesia'::character varying",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "phone",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "email",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "locationType",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": "'main'::\"enum_Locations_locationType\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "latitude",
+          "type": "NUMERIC(10,8)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "longitude",
+          "type": "NUMERIC(11,8)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isActive",
+          "type": "BOOLEAN",
+          "nullable": false,
+          "default": "true",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "deletedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "Logs",
+      "columnCount": 15,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "userId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Users.id"
+        },
+        {
+          "name": "level",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": "'info'::\"enum_Logs_level\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "action",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "message",
+          "type": "TEXT",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "metadata",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'{}'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "ipAddress",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "userAgent",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "method",
+          "type": "CHARACTER VARYING(10)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "path",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "statusCode",
+          "type": "INTEGER(32,0)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "duration",
+          "type": "INTEGER(32,0)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "errorStack",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "Members",
+      "columnCount": 20,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "userId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Users.id"
+        },
+        {
+          "name": "firstName",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "lastName",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "email",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "phone",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "dateOfBirth",
+          "type": "DATE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "gender",
+          "type": "USER-DEFINED",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "address",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "emergencyContactName",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "emergencyContactPhone",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isActive",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "true",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "membershipStatus",
+          "type": "USER-DEFINED",
+          "nullable": true,
+          "default": "'expired'::\"enum_Members_membershipStatus\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "photoUrl",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "joinDate",
+          "type": "DATE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "deletedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "MembershipPaymentRefunds",
+      "columnCount": 12,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "paymentId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "MembershipPayments.id"
+        },
+        {
+          "name": "amount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "reason",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "refundMethod",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "transactionId",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "status",
+          "type": "USER-DEFINED",
+          "nullable": true,
+          "default": "'pending'::\"enum_MembershipPaymentRefunds_status\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "refundDate",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "processedBy",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Users.id"
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "MembershipPayments",
+      "columnCount": 16,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "membershipId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Memberships.id"
+        },
+        {
+          "name": "memberId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Members.id"
+        },
+        {
+          "name": "amount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "paymentMethod",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "transactionId",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "status",
+          "type": "USER-DEFINED",
+          "nullable": true,
+          "default": "'pending'::\"enum_MembershipPayments_status\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "paymentDate",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "dueDate",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "processedBy",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Users.id"
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "voucherId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Vouchers.id"
+        },
+        {
+          "name": "voucherDiscount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "MembershipTypes",
+      "columnCount": 12,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "name",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "duration",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "price",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "maxCheckIns",
+          "type": "INTEGER(32,0)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "accessHours",
+          "type": "JSON",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "facilities",
+          "type": "JSON",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isActive",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "true",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "Memberships",
+      "columnCount": 13,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "memberId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Members.id"
+        },
+        {
+          "name": "membershipTypeId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "MembershipTypes.id"
+        },
+        {
+          "name": "startDate",
+          "type": "DATE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "endDate",
+          "type": "DATE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "price",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "paymentStatus",
+          "type": "USER-DEFINED",
+          "nullable": true,
+          "default": "'pending'::\"enum_Memberships_paymentStatus\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "autoRenew",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "false",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "status",
+          "type": "USER-DEFINED",
+          "nullable": true,
+          "default": "'active'::\"enum_Memberships_status\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "columnCount": 14,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "amount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "paymentMethod",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "transactionId",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "status",
+          "type": "USER-DEFINED",
+          "nullable": true,
+          "default": "'pending'::\"enum_Payments_status\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "processedBy",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Users.id"
+        },
+        {
+          "name": "paymentDate",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "subscriptionId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Subscriptions.id"
+        },
+        {
+          "name": "invoiceId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Invoices.id"
+        },
+        {
+          "name": "paymentType",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": "'membership'::\"enum_Payments_paymentType\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "ProductCategories",
+      "columnCount": 12,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "name",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "parentId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "ProductCategories.id"
+        },
+        {
+          "name": "color",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "icon",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "sortOrder",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isActive",
+          "type": "BOOLEAN",
+          "nullable": false,
+          "default": "true",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "deletedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "columnCount": 22,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "name",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "sku",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "barcode",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "category",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "price",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "cost",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "taxRate",
+          "type": "NUMERIC(5,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "stock",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "minStock",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "unit",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": "'pcs'::character varying",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isActive",
+          "type": "BOOLEAN",
+          "nullable": false,
+          "default": "true",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isTrackStock",
+          "type": "BOOLEAN",
+          "nullable": false,
+          "default": "true",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "image",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "productDetails",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'{}'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdBy",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Users.id"
+        },
+        {
+          "name": "updatedBy",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Users.id"
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "deletedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "columnCount": 7,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "name",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "permissions",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'{}'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isActive",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "true",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "Sequences",
+      "columnCount": 10,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": "nextval('\"Sequences_id_seq\"'::regclass)",
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "name",
+          "type": "CHARACTER VARYING(50)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "prefix",
+          "type": "CHARACTER VARYING(20)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "currentValue",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "step",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": "1",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "padLength",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": "6",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "resetPeriod",
+          "type": "USER-DEFINED",
+          "nullable": true,
+          "default": "'monthly'::\"enum_Sequences_resetPeriod\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "lastResetDate",
+          "type": "DATE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "ServicePlans",
+      "columnCount": 21,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "serviceType",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "name",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "price",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "currency",
+          "type": "CHARACTER VARYING(3)",
+          "nullable": false,
+          "default": "'IDR'::character varying",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "durationType",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "duration",
+          "type": "INTEGER(32,0)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "sessions",
+          "type": "INTEGER(32,0)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "validityDays",
+          "type": "INTEGER(32,0)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "accessControl",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'{}'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isActive",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "true",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isPopular",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "false",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "displayOrder",
+          "type": "INTEGER(32,0)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isBundle",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "false",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "bundledServices",
+          "type": "JSON",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "version",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "deletedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "SubscriptionPlans",
+      "columnCount": 12,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "name",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "price",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "duration",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": "30",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "maxUsers",
+          "type": "INTEGER(32,0)",
+          "nullable": true,
+          "default": "1",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "maxMembers",
+          "type": "INTEGER(32,0)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "features",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'{}'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isActive",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "true",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "sortOrder",
+          "type": "INTEGER(32,0)",
+          "nullable": true,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "Subscriptions",
+      "columnCount": 12,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "planId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "SubscriptionPlans.id"
+        },
+        {
+          "name": "startDate",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "endDate",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "status",
+          "type": "USER-DEFINED",
+          "nullable": true,
+          "default": "'pending'::\"enum_Subscriptions_status\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "autoRenew",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "false",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "price",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "paymentMethod",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "Tenants",
+      "columnCount": 14,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "name",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "domain",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "address",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "phone",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "email",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "logo",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "settings",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'{}'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isActive",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "true",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "subscriptionId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Subscriptions.id"
+        },
+        {
+          "name": "trialEndDate",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isOnTrial",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "false",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "TrainerCommissions",
+      "columnCount": 15,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "trainerId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Trainers.id"
+        },
+        {
+          "name": "transactionId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Transactions.id"
+        },
+        {
+          "name": "classId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "baseAmount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "commissionType",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "commissionRate",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "commissionAmount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "status",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": "'pending'::\"enum_TrainerCommissions_status\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "paidAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "paymentMethod",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "Trainers",
+      "columnCount": 22,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "userId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Users.id"
+        },
+        {
+          "name": "firstName",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "lastName",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "email",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "phone",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "dateOfBirth",
+          "type": "DATE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "gender",
+          "type": "USER-DEFINED",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "specializations",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'[]'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "certifications",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'[]'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "bio",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "photoUrl",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "commissionType",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": "'percentage'::\"enum_Trainers_commissionType\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "commissionValue",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "commissionNotes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "availability",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'{}'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isActive",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "true",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "hireDate",
+          "type": "DATE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "deletedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "TransactionItems",
+      "columnCount": 14,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "transactionId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Transactions.id"
+        },
+        {
+          "name": "itemId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "itemName",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "quantity",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": "1",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "unitPrice",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "subtotal",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "total",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "itemDetails",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'{}'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "deletedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "itemType",
+          "type": "USER-DEFINED",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "TransactionPayments",
+      "columnCount": 14,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "transactionId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Transactions.id"
+        },
+        {
+          "name": "paymentMethod",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "amount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "currency",
+          "type": "CHARACTER VARYING(3)",
+          "nullable": false,
+          "default": "'IDR'::character varying",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "paymentDate",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "status",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": "'pending'::\"enum_TransactionPayments_status\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "receiptNumber",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "paymentDetails",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'{}'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdBy",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Users.id"
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "deletedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "columnCount": 20,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "transactionNumber",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "transactionDate",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "customerId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "customerType",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": "'non-member'::\"enum_Transactions_customerType\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "subtotal",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "tax",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "totalAmount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "status",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": "'pending'::\"enum_Transactions_status\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdBy",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Users.id"
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "deletedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "voucherId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Vouchers.id"
+        },
+        {
+          "name": "voucherDiscount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "version",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "paidAmount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "changeAmount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "columnCount": 14,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "isSuperAdmin",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "false",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "email",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "password",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "firstName",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "lastName",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "phone",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isActive",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "default": "true",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "lastLogin",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "roleId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Roles.id"
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": "now()",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "refreshToken",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "VoucherUsages",
+      "columnCount": 13,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "voucherId",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Vouchers.id"
+        },
+        {
+          "name": "userId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Users.id"
+        },
+        {
+          "name": "memberId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Members.id"
+        },
+        {
+          "name": "transactionId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Transactions.id"
+        },
+        {
+          "name": "membershipPaymentId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "MembershipPayments.id"
+        },
+        {
+          "name": "discountAmount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "originalAmount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "finalAmount",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "usageDetails",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'{}'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "deletedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    },
+    {
+      "name": "Vouchers",
+      "columnCount": 25,
+      "columns": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": true,
+          "foreignKey": null
+        },
+        {
+          "name": "tenantId",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Tenants.id"
+        },
+        {
+          "name": "scope",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": "'tenant'::\"enum_Vouchers_scope\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "code",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "name",
+          "type": "CHARACTER VARYING(255)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "type",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "value",
+          "type": "NUMERIC(10,2)",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "maxDiscountAmount",
+          "type": "NUMERIC(10,2)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "minPurchaseAmount",
+          "type": "NUMERIC(10,2)",
+          "nullable": true,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "applicableTo",
+          "type": "USER-DEFINED",
+          "nullable": false,
+          "default": "'all'::\"enum_Vouchers_applicableTo\"",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "applicableItems",
+          "type": "JSON",
+          "nullable": true,
+          "default": "'[]'::json",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "startDate",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "endDate",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "usageLimit",
+          "type": "INTEGER(32,0)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "usageCount",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "userUsageLimit",
+          "type": "INTEGER(32,0)",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isActive",
+          "type": "BOOLEAN",
+          "nullable": false,
+          "default": "true",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "isPublic",
+          "type": "BOOLEAN",
+          "nullable": false,
+          "default": "true",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdBy",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Users.id"
+        },
+        {
+          "name": "updatedBy",
+          "type": "UUID",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": "Users.id"
+        },
+        {
+          "name": "version",
+          "type": "INTEGER(32,0)",
+          "nullable": false,
+          "default": "0",
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "createdAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": false,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        },
+        {
+          "name": "deletedAt",
+          "type": "TIMESTAMP WITH TIME ZONE",
+          "nullable": true,
+          "default": null,
+          "isPrimaryKey": false,
+          "foreignKey": null
+        }
+      ]
+    }
+  ]
+}

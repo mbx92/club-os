@@ -1,0 +1,21 @@
+{
+  "name": "Personality Assessment Package",
+  "description": "Comprehensive personality assessment including multiple test types",
+  "packageType": "bundle",
+  "basePrice": 250000,
+  "discountType": "percentage",
+  "discountValue": 10,
+  "testTypeIds": ["UUID_OF_FIRST_TEST_TYPE", "UUID_OF_SECOND_TEST_TYPE"],
+  "validityDays": 30,
+  "isActive": true,
+  "metadata": {
+    "difficulty": "intermediate",
+    "targetAudience": "adults",
+    "tags": ["personality", "assessment", "comprehensive"],
+    "customFields": {
+      "specialInstructions": "This package includes a consultation session",
+      "estimatedCompletionTime": "90 minutes",
+      "language": "id"
+    }
+  }
+}

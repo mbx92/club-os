@@ -1,0 +1,595 @@
+{
+	"info": {
+		"_postman_id": "printer-settings-collection",
+		"name": "Printer Settings (Core)",
+		"description": "Thermal printer configuration management stored in tenant.settings.printers JSONB.\n\nSupports:\n- Receipt printers (58mm, 80mm)\n- Kitchen printers\n- Label printers\n- Network, USB, Bluetooth, Serial connections\n- Network scanning for auto-discovery\n- ESC/POS protocol support\n\n**Feature Gate**: `printing.thermalPrinting` (Professional/Enterprise only)\n\n**Base URL**: Set in environment variable `{{base_url}}`\n**Authentication**: JWT token in `{{jwt_token}}`",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get All Printers",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/system/printers?printerType=&connectionType=&isActive=&isDefault=&search=",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"system",
+						"printers"
+					],
+					"query": [
+						{
+							"key": "printerType",
+							"value": "",
+							"description": "Filter by type: receipt, kitchen, label, invoice, report"
+						},
+						{
+							"key": "connectionType",
+							"value": "",
+							"description": "Filter by connection: network, usb, bluetooth, serial"
+						},
+						{
+							"key": "isActive",
+							"value": "",
+							"description": "Filter by active status: true, false"
+						},
+						{
+							"key": "isDefault",
+							"value": "",
+							"description": "Filter default printers: true, false"
+						},
+						{
+							"key": "search",
+							"value": "",
+							"description": "Search by name, model, or IP address"
+						}
+					]
+				},
+				"description": "Get all printer configurations for the authenticated tenant.\n\n**Permissions**: `read:PrinterSettings`\n**Feature**: `printing.thermalPrinting`"
+			},
+			"response": [
+				{
+					"name": "Success - Empty",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/system/printers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"system",
+								"printers"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [],
+					"cookie": [],
+					"body": "{\n    \"success\": true,\n    \"data\": [],\n    \"pagination\": {\n        \"total\": 0\n    }\n}"
+				},
+				{
+					"name": "Success - With Data",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/system/printers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"system",
+								"printers"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [],
+					"cookie": [],
+					"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": \"uuid-here\",\n            \"name\": \"Receipt Printer Main\",\n            \"printerType\": \"receipt\",\n            \"connectionType\": \"network\",\n            \"ipAddress\": \"192.168.1.100\",\n            \"port\": 9100,\n            \"model\": \"Epson TM-T82\",\n            \"manufacturer\": \"Epson\",\n            \"paperSize\": \"80mm\",\n            \"isActive\": true,\n            \"isDefault\": true,\n            \"receiptTemplate\": {},\n            \"statistics\": {\n                \"totalPrintJobs\": 150,\n                \"successfulJobs\": 145,\n                \"failedJobs\": 5,\n                \"lastPrintJob\": \"2025-11-27T10:30:00Z\"\n            },\n            \"lastHealthCheck\": \"2025-11-27T10:00:00Z\",\n            \"healthStatus\": \"healthy\",\n            \"createdAt\": \"2025-11-20T08:00:00Z\",\n            \"updatedAt\": \"2025-11-27T10:30:00Z\"\n        }\n    ],\n    \"pagination\": {\n        \"total\": 1\n    }\n}"
+				}
+			]
+		},
+		{
+			"name": "Get Printer by ID",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/system/printers/:id",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"system",
+						"printers",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "{{printer_id}}",
+							"description": "Printer UUID"
+						}
+					]
+				},
+				"description": "Get single printer configuration by ID.\n\n**Permissions**: `read:PrinterSettings`\n**Feature**: `printing.thermalPrinting`"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Printer",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 201) {",
+							"    const response = pm.response.json();",
+							"    if (response.data && response.data.id) {",
+							"        pm.environment.set('printer_id', response.data.id);",
+							"        console.log('Saved printer_id:', response.data.id);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Receipt Printer Main\",\n    \"printerType\": \"receipt\",\n    \"connectionType\": \"network\",\n    \"ipAddress\": \"192.168.1.100\",\n    \"port\": 9100,\n    \"model\": \"Epson TM-T82\",\n    \"manufacturer\": \"Epson\",\n    \"paperSize\": \"80mm\",\n    \"isActive\": true,\n    \"isDefault\": true,\n    \"receiptTemplate\": {\n        \"header\": {\n            \"showLogo\": true,\n            \"showBusinessName\": true,\n            \"showAddress\": true,\n            \"showPhone\": true\n        },\n        \"body\": {\n            \"fontSize\": \"normal\",\n            \"showItemCode\": false,\n            \"showDiscount\": true,\n            \"showTax\": true\n        },\n        \"footer\": {\n            \"showThankYou\": true,\n            \"customMessage\": \"Terima kasih atas kunjungan Anda!\",\n            \"showSocialMedia\": false\n        }\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/system/printers",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"system",
+						"printers"
+					]
+				},
+				"description": "Create new printer configuration.\n\n**Required fields**:\n- `name`: Printer display name\n- `connectionType`: network, usb, bluetooth, serial\n- `ipAddress`: Required for network printers\n\n**Optional fields**:\n- `printerType`: receipt (default), kitchen, label, invoice, report\n- `port`: Network port (default: 9100)\n- `model`: Printer model\n- `manufacturer`: Printer manufacturer\n- `paperSize`: 58mm, 80mm (default), A4\n- `isActive`: true (default), false\n- `isDefault`: false (default), true\n- `receiptTemplate`: Custom template settings (JSONB)\n\n**Permissions**: `create:PrinterSettings`\n**Feature**: `printing.thermalPrinting`"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Kitchen Printer",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Kitchen Printer\",\n    \"printerType\": \"kitchen\",\n    \"connectionType\": \"network\",\n    \"ipAddress\": \"192.168.1.101\",\n    \"port\": 9100,\n    \"model\": \"Star TSP650II\",\n    \"manufacturer\": \"Star Micronics\",\n    \"paperSize\": \"80mm\",\n    \"isActive\": true,\n    \"isDefault\": true\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/system/printers",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"system",
+						"printers"
+					]
+				},
+				"description": "Create kitchen printer for restaurant orders.\n\n**Kitchen Printer Features**:\n- Large text for kitchen staff visibility\n- Order item grouping\n- Time stamp on each order\n- Order status tracking"
+			},
+			"response": []
+		},
+		{
+			"name": "Update Printer",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Receipt Printer Main - Updated\",\n    \"isActive\": true,\n    \"isDefault\": true,\n    \"receiptTemplate\": {\n        \"header\": {\n            \"showLogo\": true,\n            \"showBusinessName\": true,\n            \"showAddress\": true,\n            \"showPhone\": true\n        },\n        \"body\": {\n            \"fontSize\": \"large\",\n            \"showItemCode\": true,\n            \"showDiscount\": true,\n            \"showTax\": true\n        },\n        \"footer\": {\n            \"showThankYou\": true,\n            \"customMessage\": \"Terima kasih! Visit us again!\",\n            \"showSocialMedia\": true\n        }\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/system/printers/:id",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"system",
+						"printers",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "{{printer_id}}",
+							"description": "Printer UUID"
+						}
+					]
+				},
+				"description": "Update printer configuration. Supports partial updates.\n\n**Note**: Setting `isDefault: true` will automatically set other printers of the same type to `isDefault: false`.\n\n**Permissions**: `update:PrinterSettings`\n**Feature**: `printing.thermalPrinting`"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Printer",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/system/printers/:id",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"system",
+						"printers",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "{{printer_id}}",
+							"description": "Printer UUID"
+						}
+					]
+				},
+				"description": "Delete printer configuration.\n\n**Note**: This removes the printer from `tenant.settings.printers` array.\n\n**Permissions**: `delete:PrinterSettings`\n**Feature**: `printing.thermalPrinting`"
+			},
+			"response": []
+		},
+		{
+			"name": "Test Printer Connection",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/system/printers/:id/test",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"system",
+						"printers",
+						":id",
+						"test"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "{{printer_id}}",
+							"description": "Printer UUID"
+						}
+					]
+				},
+				"description": "Test printer connection via TCP socket.\n\n**Only for network printers**. Tests:\n- TCP port connectivity\n- ESC/POS protocol response\n- Printer manufacturer detection\n- Printer model detection\n\n**Permissions**: `update:PrinterSettings`\n**Feature**: `printing.thermalPrinting`"
+			},
+			"response": [
+				{
+					"name": "Success - Connected",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/system/printers/:id/test",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"system",
+								"printers",
+								":id",
+								"test"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{printer_id}}"
+								}
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [],
+					"cookie": [],
+					"body": "{\n    \"success\": true,\n    \"connected\": true,\n    \"details\": {\n        \"isValid\": true,\n        \"ip\": \"192.168.1.100\",\n        \"port\": 9100,\n        \"printerInfo\": {\n            \"manufacturer\": \"EPSON\",\n            \"model\": \"TM-T82\"\n        },\n        \"portsOpen\": [\n            9100,\n            515,\n            631\n        ],\n        \"responseTime\": 45\n    }\n}"
+				},
+				{
+					"name": "Error - Not Connected",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/system/printers/:id/test",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"system",
+								"printers",
+								":id",
+								"test"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{printer_id}}"
+								}
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [],
+					"cookie": [],
+					"body": "{\n    \"success\": true,\n    \"connected\": false,\n    \"details\": {\n        \"isValid\": false,\n        \"ip\": \"192.168.1.100\",\n        \"port\": 9100,\n        \"printerInfo\": null,\n        \"portsOpen\": [],\n        \"error\": \"Connection timeout\"\n    }\n}"
+				}
+			]
+		},
+		{
+			"name": "Get Printer Statistics",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/system/printers/statistics?printerType=",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"system",
+						"printers",
+						"statistics"
+					],
+					"query": [
+						{
+							"key": "printerType",
+							"value": "",
+							"description": "Filter by printer type (optional)"
+						}
+					]
+				},
+				"description": "Get printer usage statistics.\n\n**Returns**:\n- Total printers count\n- Active/inactive counts\n- Count by printer type\n- Count by connection type\n- Total print jobs statistics\n\n**Permissions**: `read:PrinterSettings`\n**Feature**: `printing.thermalPrinting`"
+			},
+			"response": [
+				{
+					"name": "Success",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/system/printers/statistics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"system",
+								"printers",
+								"statistics"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [],
+					"cookie": [],
+					"body": "{\n    \"success\": true,\n    \"data\": {\n        \"total\": 3,\n        \"active\": 2,\n        \"inactive\": 1,\n        \"byType\": {\n            \"receipt\": 2,\n            \"kitchen\": 1\n        },\n        \"byConnection\": {\n            \"network\": 3\n        },\n        \"totalPrintJobs\": 1250,\n        \"successfulJobs\": 1200,\n        \"failedJobs\": 50\n    }\n}"
+				}
+			]
+		},
+		{
+			"name": "Scan Network for Printers",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/system/printers/scan?ipRange=&strictMode=true",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"system",
+						"printers",
+						"scan"
+					],
+					"query": [
+						{
+							"key": "ipRange",
+							"value": "",
+							"description": "Specific IP or range to scan (e.g., 192.168.1.100 or 192.168.1.0/24). Leave empty for auto-detect."
+						},
+						{
+							"key": "strictMode",
+							"value": "true",
+							"description": "Enable strict ESC/POS validation (default: true). Set to false to show all devices with open printer ports."
+						}
+					]
+				},
+				"description": "Scan network for thermal printers.\n\n**Auto-detect mode** (no ipRange): Scans all local network interfaces\n**Manual mode** (with ipRange): Scans specific IP or CIDR range\n\n**Strict Mode** (default: true):\n- Only returns devices that respond to ESC/POS protocol\n- Filters out virtual servers, web servers, etc.\n- More accurate but slower\n\n**Non-strict Mode** (strictMode: false):\n- Returns all devices with open printer ports (9100, 515, 631)\n- Faster but may include false positives\n\n**Tested Ports**:\n- 9100: Raw/JetDirect protocol\n- 515: LPD (Line Printer Daemon)\n- 631: IPP (Internet Printing Protocol)\n- 80: HTTP (web interface)\n\n**Permissions**: `create:PrinterSettings`\n**Feature**: `printing.thermalPrinting`\n\n**Note**: This can take 30-60 seconds for full network scan."
+			},
+			"response": [
+				{
+					"name": "Success - Found Printers",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/system/printers/scan?strictMode=true",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"system",
+								"printers",
+								"scan"
+							],
+							"query": [
+								{
+									"key": "strictMode",
+									"value": "true"
+								}
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [],
+					"cookie": [],
+					"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"ip\": \"192.168.1.100\",\n            \"portsOpen\": [9100, 515, 631, 80],\n            \"printerInfo\": {\n                \"manufacturer\": \"EPSON\",\n                \"model\": \"TM-T82\"\n            },\n            \"isValid\": true\n        },\n        {\n            \"ip\": \"192.168.1.101\",\n            \"portsOpen\": [9100, 631],\n            \"printerInfo\": {\n                \"manufacturer\": \"Star Micronics\",\n                \"model\": \"TSP650II\"\n            },\n            \"isValid\": true\n        }\n    ],\n    \"message\": \"Found 2 printer(s)\"\n}"
+				}
+			]
+		},
+		{
+			"name": "Quick Scan Printers",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{jwt_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/system/printers/scan/quick",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"system",
+						"printers",
+						"scan",
+						"quick"
+					]
+				},
+				"description": "Quick scan for printers in common IP ranges.\n\n**Scanned ranges**:\n- x.x.x.100 - x.x.x.110\n- x.x.x.200 - x.x.x.210\n- x.x.x.250 - x.x.x.254\n\n**Much faster** than full network scan (5-10 seconds vs 30-60 seconds).\n\nRecommended for:\n- Most office/gym networks\n- Standard printer configurations\n- Quick printer discovery\n\n**Permissions**: `create:PrinterSettings`\n**Feature**: `printing.thermalPrinting`"
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "printer_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

@@ -1,0 +1,409 @@
+{
+  "info": {
+    "name": "Psychology Utils API",
+    "description": "Utility endpoints for psychology module maintenance and troubleshooting",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "psychology-utils"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "jwt_token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Recalculate Scores",
+      "item": [
+        {
+          "name": "Recalculate Today Sessions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dryRun\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/recalculate-scores",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "recalculate-scores"]
+            },
+            "description": "Recalculate scores for today's sessions"
+          },
+          "response": []
+        },
+        {
+          "name": "Recalculate Today Sessions (Dry Run)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dryRun\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/recalculate-scores",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "recalculate-scores"]
+            },
+            "description": "Preview recalculation for today's sessions without making changes"
+          },
+          "response": []
+        },
+        {
+          "name": "Recalculate Specific Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"9b29ffc5-753f-4195-bc78-c50298e9c2a5\",\n  \"dryRun\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/recalculate-scores",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "recalculate-scores"]
+            },
+            "description": "Recalculate scores for a specific session by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Recalculate Specific Session (Dry Run)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"9b29ffc5-753f-4195-bc78-c50298e9c2a5\",\n  \"dryRun\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/recalculate-scores",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "recalculate-scores"]
+            },
+            "description": "Preview recalculation for a specific session"
+          },
+          "response": []
+        },
+        {
+          "name": "Recalculate By Date",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2025-12-11\",\n  \"dryRun\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/recalculate-scores",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "recalculate-scores"]
+            },
+            "description": "Recalculate scores for sessions on a specific date (YYYY-MM-DD)"
+          },
+          "response": []
+        },
+        {
+          "name": "Recalculate By Date (Dry Run)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2025-12-11\",\n  \"dryRun\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/recalculate-scores",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "recalculate-scores"]
+            },
+            "description": "Preview recalculation for sessions on a specific date"
+          },
+          "response": []
+        },
+        {
+          "name": "Recalculate By Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": [\"completed\", \"verified\"],\n  \"dryRun\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/recalculate-scores",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "recalculate-scores"]
+            },
+            "description": "Recalculate scores for sessions with specific status"
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for recalculating session scores with various filters"
+    },
+    {
+      "name": "Fix Question Count",
+      "item": [
+        {
+          "name": "Fix All Test Types",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dryRun\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/fix-question-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "fix-question-count"]
+            },
+            "description": "Fix questionCount for all test types (exclude instructions)"
+          },
+          "response": []
+        },
+        {
+          "name": "Fix All Test Types (Dry Run)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dryRun\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/fix-question-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "fix-question-count"]
+            },
+            "description": "Preview questionCount fixes without making changes"
+          },
+          "response": []
+        },
+        {
+          "name": "Fix Specific Test Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"testTypeId\": \"uuid-test-type-id\",\n  \"dryRun\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/fix-question-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "fix-question-count"]
+            },
+            "description": "Fix questionCount for a specific test type by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Fix Specific Test Type (Dry Run)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"testTypeId\": \"uuid-test-type-id\",\n  \"dryRun\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/fix-question-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "fix-question-count"]
+            },
+            "description": "Preview questionCount fix for a specific test type"
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for fixing questionCount to exclude instruction items"
+    },
+    {
+      "name": "Session Statistics",
+      "item": [
+        {
+          "name": "Get All Session Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/session-stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "session-stats"]
+            },
+            "description": "Get overall session statistics for current tenant"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Session Stats By Date Range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/session-stats?startDate=2025-12-01&endDate=2025-12-12",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "session-stats"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-12-01",
+                  "description": "Start date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-12",
+                  "description": "End date (YYYY-MM-DD)"
+                }
+              ]
+            },
+            "description": "Get session statistics filtered by date range"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Session Stats From Date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/session-stats?startDate=2025-12-01",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "session-stats"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-12-01",
+                  "description": "Start date (YYYY-MM-DD)"
+                }
+              ]
+            },
+            "description": "Get session statistics from a specific date onwards"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Session Stats Until Date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/psychology/utils/session-stats?endDate=2025-12-12",
+              "host": ["{{baseUrl}}"],
+              "path": ["psychology", "utils", "session-stats"],
+              "query": [
+                {
+                  "key": "endDate",
+                  "value": "2025-12-12",
+                  "description": "End date (YYYY-MM-DD)"
+                }
+              ]
+            },
+            "description": "Get session statistics up to a specific date"
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for viewing session statistics and analytics"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Pre-request script for all requests",
+          "// You can add common logic here"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Test script for all requests",
+          "pm.test('Status code should be 2xx', function () {",
+          "    pm.response.to.have.status(200);",
+          "});"
+        ]
+      }
+    }
+  ]
+}

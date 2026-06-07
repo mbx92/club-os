@@ -1,0 +1,912 @@
+{
+  "info": {
+    "name": "Finance Module - Gym Management",
+    "description": "Complete financial management module with expense tracking, categories, and comprehensive reports.\n\n**Features:**\n- Expense Management (CRUD)\n- Expense Categories\n- Financial Reports (P&L, Revenue, Expense)\n- Multi-status workflow (draft → pending → approved → paid)\n\n**Date:** December 22, 2025\n**Version:** 1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tenantId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "expenseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Expense Management",
+      "item": [
+        {
+          "name": "Create Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('expenseId', response.data.id);",
+                  "    pm.test('Expense created successfully', () => {",
+                  "        pm.expect(response.success).to.be.true;",
+                  "        pm.expect(response.data).to.have.property('id');",
+                  "        pm.expect(response.data).to.have.property('expenseNumber');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"{{categoryId}}\",\n  \"title\": \"Monthly Office Rent\",\n  \"description\": \"Office space rental for December 2025\",\n  \"amount\": 15000000,\n  \"taxAmount\": 1500000,\n  \"expenseDate\": \"2025-12-22\",\n  \"dueDate\": \"2025-12-31\",\n  \"paymentMethod\": \"transfer\",\n  \"vendor\": \"PT Property Management\",\n  \"status\": \"pending\",\n  \"notes\": \"Payment due end of month\",\n  \"tags\": [\"rent\", \"fixed-cost\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses"]
+            },
+            "description": "Create a new expense record.\n\n**Fields:**\n- `categoryId` (required): Expense category UUID\n- `title` (required): Expense title\n- `amount` (required): Base amount\n- `taxAmount`: Tax/VAT amount\n- `expenseDate` (required): Date of expense\n- `dueDate`: Payment due date\n- `status`: draft|pending|approved|paid|cancelled\n- `paymentMethod`: cash|transfer|credit_card|debit_card|check|other\n- `vendor`: Vendor/supplier name\n- `isRecurring`: Boolean for recurring expense\n- `recurringFrequency`: daily|weekly|monthly|quarterly|yearly"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Expenses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get expenses successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses?page=1&limit=20&status=pending&sortBy=expenseDate&sortOrder=DESC",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "Filter by status: draft|pending|approved|paid|cancelled",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryId",
+                  "value": "{{categoryId}}",
+                  "description": "Filter by category",
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-12-01",
+                  "description": "Filter from date (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31",
+                  "description": "Filter to date (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "vendor",
+                  "value": "PT Property",
+                  "description": "Search by vendor name",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "rent",
+                  "description": "Search in title/description",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "expenseDate",
+                  "description": "Sort field: expenseDate|amount|createdAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "DESC",
+                  "description": "ASC or DESC"
+                }
+              ]
+            },
+            "description": "Get all expenses with filtering and pagination.\n\n**Query Parameters:**\n- `page`: Page number (default: 1)\n- `limit`: Items per page (default: 20)\n- `status`: Filter by status\n- `categoryId`: Filter by category\n- `startDate` & `endDate`: Date range filter\n- `vendor`: Filter by vendor name\n- `search`: Search in title/description\n- `sortBy`: Field to sort by\n- `sortOrder`: ASC or DESC"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Expense by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get expense detail successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response.data).to.have.property('id');",
+                  "    pm.expect(response.data).to.have.property('expenseNumber');",
+                  "    pm.expect(response.data).to.have.property('ExpenseCategory');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses", "{{expenseId}}"]
+            },
+            "description": "Get expense details by ID.\n\n**Response includes:**\n- Expense details\n- Category information\n- Creator/approver details\n- Audit trail"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Update expense successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response.message).to.include('updated');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Monthly Office Rent - Updated\",\n  \"amount\": 16000000,\n  \"taxAmount\": 1600000,\n  \"notes\": \"Price increased from January 2026\",\n  \"tags\": [\"rent\", \"fixed-cost\", \"increased\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses", "{{expenseId}}"]
+            },
+            "description": "Update expense details.\n\n**Notes:**\n- Can only update if status is 'draft' or 'pending'\n- Approved/paid expenses cannot be edited\n- Uses optimistic locking (version field)"
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Approve expense successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response.data.status).to.equal('approved');",
+                  "    pm.expect(response.data).to.have.property('approvedAt');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Approved for payment\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses/{{expenseId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses", "{{expenseId}}", "approve"]
+            },
+            "description": "Approve pending expense.\n\n**Workflow:**\n1. Expense must be in 'pending' status\n2. User must have 'update Expense' permission\n3. Status changes to 'approved'\n4. Sets approvedBy and approvedAt fields\n\n**Optional fields:**\n- `notes`: Approval notes"
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Expense as Paid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Mark as paid successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response.data.status).to.equal('paid');",
+                  "    pm.expect(response.data).to.have.property('paidDate');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paidDate\": \"2025-12-22\",\n  \"paymentMethod\": \"transfer\",\n  \"referenceNumber\": \"TRF-2025-001234\",\n  \"notes\": \"Paid via bank transfer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses/{{expenseId}}/pay",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses", "{{expenseId}}", "pay"]
+            },
+            "description": "Mark expense as paid.\n\n**Requirements:**\n- Expense must be 'approved'\n- Status changes to 'paid'\n\n**Fields:**\n- `paidDate`: Payment date (default: today)\n- `paymentMethod`: Payment method used\n- `referenceNumber`: Payment reference/transaction number\n- `notes`: Payment notes"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Delete expense successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response.message).to.include('deleted');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses", "{{expenseId}}"]
+            },
+            "description": "Delete expense.\n\n**Notes:**\n- Can only delete if status is 'draft'\n- Approved/paid expenses cannot be deleted\n- Use soft delete (sets deletedAt timestamp)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Recurring Expense",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"{{categoryId}}\",\n  \"title\": \"Monthly Employee Salary\",\n  \"description\": \"Regular monthly salary payment\",\n  \"amount\": 50000000,\n  \"taxAmount\": 0,\n  \"expenseDate\": \"2025-12-22\",\n  \"paymentMethod\": \"transfer\",\n  \"vendor\": \"Employee Payroll\",\n  \"status\": \"pending\",\n  \"isRecurring\": true,\n  \"recurringFrequency\": \"monthly\",\n  \"recurringEndDate\": \"2026-12-31\",\n  \"tags\": [\"salary\", \"recurring\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses"]
+            },
+            "description": "Create a recurring expense.\n\n**Recurring Fields:**\n- `isRecurring`: true\n- `recurringFrequency`: daily|weekly|monthly|quarterly|yearly\n- `recurringEndDate`: When recurring stops\n\n**Note:** System will auto-generate future expense records based on frequency."
+          },
+          "response": []
+        }
+      ],
+      "description": "Complete expense management with CRUD operations and approval workflow."
+    },
+    {
+      "name": "Expense Categories",
+      "item": [
+        {
+          "name": "Create Expense Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('categoryId', response.data.id);",
+                  "    pm.test('Category created successfully', () => {",
+                  "        pm.expect(response.success).to.be.true;",
+                  "        pm.expect(response.data).to.have.property('id');",
+                  "        pm.expect(response.data.name).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Office Rent\",\n  \"description\": \"Monthly office space rental costs\",\n  \"type\": \"fixed\",\n  \"color\": \"#FF5733\",\n  \"icon\": \"🏢\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expense-categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expense-categories"]
+            },
+            "description": "Create new expense category.\n\n**Fields:**\n- `name` (required): Category name\n- `description`: Description\n- `type` (required): operational|fixed|variable|one_time\n- `color`: Hex color code for UI (#FF5733)\n- `icon`: Emoji or icon identifier\n\n**Category Types:**\n- **operational**: Regular operational costs (utilities, supplies)\n- **fixed**: Fixed monthly costs (rent, salaries)\n- **variable**: Variable costs (marketing, materials)\n- **one_time**: One-time expenses (equipment purchase)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Categories",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get categories successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/expense-categories?type=fixed&isActive=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expense-categories"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "fixed",
+                  "description": "Filter by type",
+                  "disabled": true
+                },
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "description": "Filter active categories",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get all expense categories.\n\n**Query Parameters:**\n- `type`: Filter by type (operational|fixed|variable|one_time)\n- `isActive`: Filter active categories (true|false)\n\n**Response includes:**\n- Category details\n- Usage statistics (total expenses, total amount)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Update category successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Office Rent & Utilities\",\n  \"description\": \"Monthly office space rental and utilities\",\n  \"color\": \"#3498DB\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expense-categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expense-categories", "{{categoryId}}"]
+            },
+            "description": "Update expense category.\n\n**Updatable fields:**\n- `name`\n- `description`\n- `color`\n- `icon`\n- `isActive`\n\n**Note:** Cannot change `type` after creation"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Delete category successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/expense-categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expense-categories", "{{categoryId}}"]
+            },
+            "description": "Delete expense category.\n\n**Notes:**\n- Cannot delete if category has expenses\n- Use soft delete (sets deletedAt)\n- Consider setting `isActive: false` instead"
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk Create Categories",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categories\": [\n    {\n      \"name\": \"Employee Salaries\",\n      \"type\": \"fixed\",\n      \"color\": \"#E74C3C\",\n      \"icon\": \"💼\"\n    },\n    {\n      \"name\": \"Marketing & Advertising\",\n      \"type\": \"variable\",\n      \"color\": \"#9B59B6\",\n      \"icon\": \"📢\"\n    },\n    {\n      \"name\": \"Utilities (Electric, Water)\",\n      \"type\": \"operational\",\n      \"color\": \"#F39C12\",\n      \"icon\": \"⚡\"\n    },\n    {\n      \"name\": \"Office Supplies\",\n      \"type\": \"operational\",\n      \"color\": \"#16A085\",\n      \"icon\": \"📎\"\n    },\n    {\n      \"name\": \"Equipment Purchase\",\n      \"type\": \"one_time\",\n      \"color\": \"#34495E\",\n      \"icon\": \"🔧\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/expense-categories/bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expense-categories", "bulk"]
+            },
+            "description": "Bulk create multiple expense categories at once.\n\n**Common Categories:**\n- Employee Salaries (fixed)\n- Office Rent (fixed)\n- Utilities (operational)\n- Marketing (variable)\n- Supplies (operational)\n- Equipment (one_time)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Expense category management for organizing expenses."
+    },
+    {
+      "name": "Financial Reports",
+      "item": [
+        {
+          "name": "Profit & Loss Report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('P&L report successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response.data).to.have.property('totalRevenue');",
+                  "    pm.expect(response.data).to.have.property('totalExpenses');",
+                  "    pm.expect(response.data).to.have.property('netProfit');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/reports/profit-loss?startDate=2025-12-01&endDate=2025-12-31&groupBy=month",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "reports", "profit-loss"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-12-01",
+                  "description": "Start date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31",
+                  "description": "End date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "groupBy",
+                  "value": "month",
+                  "description": "day|week|month|year",
+                  "disabled": true
+                },
+                {
+                  "key": "locationId",
+                  "value": "1",
+                  "description": "Filter by location",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get comprehensive Profit & Loss report.\n\n**Query Parameters:**\n- `startDate` (required): Report start date\n- `endDate` (required): Report end date\n- `groupBy`: Grouping (day|week|month|year)\n- `locationId`: Filter by location\n\n**Response includes:**\n- **Revenue Breakdown:**\n  - Membership sales\n  - POS sales\n  - Restaurant sales\n  - Class bookings\n  - Other income\n- **Expense Breakdown:**\n  - By category\n  - By type (fixed, variable, operational)\n- **Net Profit/Loss**\n- **Profit Margin %**\n- **Trend data (if groupBy specified)**"
+          },
+          "response": []
+        },
+        {
+          "name": "Revenue Report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Revenue report successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response.data).to.have.property('totalRevenue');",
+                  "    pm.expect(response.data).to.have.property('breakdown');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/reports/revenue?startDate=2025-12-01&endDate=2025-12-31&moduleType=all&groupBy=week",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "reports", "revenue"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-12-01",
+                  "description": "Start date"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31",
+                  "description": "End date"
+                },
+                {
+                  "key": "moduleType",
+                  "value": "all",
+                  "description": "all|membership|pos|restaurant|class",
+                  "disabled": true
+                },
+                {
+                  "key": "groupBy",
+                  "value": "week",
+                  "description": "day|week|month|year",
+                  "disabled": true
+                },
+                {
+                  "key": "locationId",
+                  "value": "1",
+                  "description": "Filter by location",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get detailed revenue report.\n\n**Query Parameters:**\n- `startDate` & `endDate`: Date range\n- `moduleType`: Filter by module (all|membership|pos|restaurant|class)\n- `groupBy`: Time grouping\n- `locationId`: Location filter\n\n**Response includes:**\n- **Total Revenue**\n- **Revenue by Module:**\n  - Membership revenue\n  - POS revenue\n  - Restaurant revenue\n  - Class revenue\n- **Payment Method Breakdown**\n- **Top Revenue Products/Services**\n- **Growth comparison vs previous period**"
+          },
+          "response": []
+        },
+        {
+          "name": "Expense Report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expense report successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "    pm.expect(response.data).to.have.property('totalExpenses');",
+                  "    pm.expect(response.data).to.have.property('byCategory');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/reports/expenses?startDate=2025-12-01&endDate=2025-12-31&status=paid&groupBy=category",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "reports", "expenses"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-12-01",
+                  "description": "Start date"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31",
+                  "description": "End date"
+                },
+                {
+                  "key": "status",
+                  "value": "paid",
+                  "description": "Filter by status",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryId",
+                  "value": "{{categoryId}}",
+                  "description": "Filter by category",
+                  "disabled": true
+                },
+                {
+                  "key": "groupBy",
+                  "value": "category",
+                  "description": "category|type|month|vendor",
+                  "disabled": true
+                },
+                {
+                  "key": "locationId",
+                  "value": "1",
+                  "description": "Filter by location",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get detailed expense analysis report.\n\n**Query Parameters:**\n- `startDate` & `endDate`: Date range\n- `status`: Filter by status (pending|approved|paid)\n- `categoryId`: Filter by category\n- `groupBy`: Grouping (category|type|month|vendor)\n- `locationId`: Location filter\n\n**Response includes:**\n- **Total Expenses**\n- **Breakdown by:**\n  - Category (Salaries, Rent, Utilities, etc.)\n  - Type (Fixed, Variable, Operational, One-time)\n  - Status (Pending, Approved, Paid)\n  - Vendor\n- **Top Expense Categories**\n- **Overdue Expenses**\n- **Pending Approvals**\n- **Monthly Trend**"
+          },
+          "response": []
+        },
+        {
+          "name": "Cash Flow Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/reports/cash-flow?startDate=2025-12-01&endDate=2025-12-31&groupBy=month",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "reports", "cash-flow"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-12-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31"
+                },
+                {
+                  "key": "groupBy",
+                  "value": "month",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get cash flow report showing money in vs money out.\n\n**Response includes:**\n- Opening balance\n- Total inflow (revenue)\n- Total outflow (expenses)\n- Net cash flow\n- Closing balance\n- Trend over time"
+          },
+          "response": []
+        }
+      ],
+      "description": "Comprehensive financial reports and analytics."
+    },
+    {
+      "name": "Dashboard Integration",
+      "item": [
+        {
+          "name": "Finance Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/finance?period=month",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "finance"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "month",
+                  "description": "today|week|month|year"
+                }
+              ]
+            },
+            "description": "Get finance summary for dashboard.\n\n**Response includes:**\n- Total revenue (current period)\n- Total expenses (current period)\n- Net profit\n- Profit margin %\n- Pending approvals count\n- Overdue expenses count\n- Top expense categories\n- Revenue vs expense chart data"
+          },
+          "response": []
+        },
+        {
+          "name": "Pending Approvals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses?status=pending&sortBy=createdAt&sortOrder=ASC&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "ASC"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get list of expenses pending approval.\n\nUseful for dashboard notifications and admin alerts."
+          },
+          "response": []
+        },
+        {
+          "name": "Overdue Expenses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/expenses?status=approved&overdue=true&sortBy=dueDate&sortOrder=ASC",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance", "expenses"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "approved"
+                },
+                {
+                  "key": "overdue",
+                  "value": "true"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "dueDate"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "ASC"
+                }
+              ]
+            },
+            "description": "Get list of overdue expenses that need payment.\n\nFilters expenses where:\n- Status is 'approved'\n- Due date has passed\n- Not yet marked as paid"
+          },
+          "response": []
+        }
+      ],
+      "description": "Finance data for dashboard and overview widgets."
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-set tenant header if available",
+          "if (pm.variables.get('tenantId')) {",
+          "    pm.request.headers.add({",
+          "        key: 'X-Tenant-ID',",
+          "        value: pm.variables.get('tenantId')",
+          "    });",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test - check response time",
+          "pm.test('Response time is less than 2000ms', () => {",
+          "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+          "});",
+          "",
+          "// Log errors for debugging",
+          "if (pm.response.code >= 400) {",
+          "    console.error('Error Response:', pm.response.json());",
+          "}"
+        ]
+      }
+    }
+  ]
+}

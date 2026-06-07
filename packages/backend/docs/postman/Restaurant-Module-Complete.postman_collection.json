@@ -1,0 +1,1367 @@
+{
+	"info": {
+		"_postman_id": "restaurant-module-complete-2025",
+		"name": "Restaurant Module - Complete",
+		"description": "Complete API collection for Restaurant Module - Gym Membership Multi-Tenant SaaS Backend\n\n**Environment Requirements:**\n- `baseUrl` - Already includes /api/v1 (e.g., http://localhost:8000/api/v1)\n- `jwt_token` - JWT token from login\n\n**Modules Included:**\n- Products (7 endpoints)\n- Categories (7 endpoints)\n- Tables (11 endpoints)\n- Locations (9 endpoints)\n- Stock Movements (10 endpoints)\n- Orders (17 endpoints)\n- Queue Management (3 endpoints)\n- Combined Billing (3 endpoints)\n- Reports (5 endpoints)\n\n**Total: 72 endpoints**",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Products",
+			"item": [
+				{
+					"name": "Get All Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/products?search=&categoryId=&locationId=&lowStock=",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "products"],
+							"query": [
+								{"key": "search", "value": "", "description": "Search by product name"},
+								{"key": "categoryId", "value": "", "description": "Filter by category ID"},
+								{"key": "locationId", "value": "", "description": "Filter by location ID"},
+								{"key": "lowStock", "value": "", "description": "Filter low stock products (true/false)"}
+							]
+						},
+						"description": "Get all products with optional filters"
+					}
+				},
+				{
+					"name": "Get Low Stock Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/products/low-stock",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "products", "low-stock"]
+						},
+						"description": "Get products with low stock levels"
+					}
+				},
+				{
+					"name": "Get Product by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/products/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "products", ":id"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Product ID (UUID)"}
+							]
+						},
+						"description": "Get product by ID with stock movements"
+					}
+				},
+				{
+					"name": "Create Product",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Nasi Goreng Spesial\",\n  \"sku\": \"NGS-001\",\n  \"categoryId\": \"uuid-category-id\",\n  \"description\": \"Nasi goreng dengan telur dan ayam\",\n  \"price\": 25000,\n  \"costPrice\": 15000,\n  \"unit\": \"porsi\",\n  \"trackStock\": true,\n  \"stockQuantity\": 100,\n  \"lowStockThreshold\": 10,\n  \"locationId\": \"uuid-location-id\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "products"]
+						},
+						"description": "Create new product"
+					}
+				},
+				{
+					"name": "Update Product",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Nasi Goreng Spesial Updated\",\n  \"price\": 28000,\n  \"description\": \"Nasi goreng dengan telur, ayam, dan udang\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/products/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "products", ":id"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Product ID (UUID)"}
+							]
+						},
+						"description": "Update product details"
+					}
+				},
+				{
+					"name": "Delete Product",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/products/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "products", ":id"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Product ID (UUID)"}
+							]
+						},
+						"description": "Delete product (soft delete)"
+					}
+				},
+				{
+					"name": "Adjust Stock",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"adjustment\": 50,\n  \"reason\": \"Stock replenishment\",\n  \"locationId\": \"uuid-location-id\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/products/:id/adjust-stock",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "products", ":id", "adjust-stock"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Product ID (UUID)"}
+							]
+						},
+						"description": "Adjust product stock quantity (positive for add, negative for subtract)"
+					}
+				}
+			],
+			"description": "Product management endpoints"
+		},
+		{
+			"name": "Categories",
+			"item": [
+				{
+					"name": "Get All Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/categories?tree=false&parentId=&includeCount=true",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "categories"],
+							"query": [
+								{"key": "tree", "value": "false", "description": "Return hierarchical tree (true/false)"},
+								{"key": "parentId", "value": "", "description": "Filter by parent category ID"},
+								{"key": "includeCount", "value": "true", "description": "Include product count"}
+							]
+						},
+						"description": "Get all categories (flat list or tree structure)"
+					}
+				},
+				{
+					"name": "Get Category Tree",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/categories/tree",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "categories", "tree"]
+						},
+						"description": "Get category tree structure"
+					}
+				},
+				{
+					"name": "Get Category by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/categories/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "categories", ":id"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Category ID (UUID)"}
+							]
+						},
+						"description": "Get category by ID with full path"
+					}
+				},
+				{
+					"name": "Create Category",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Makanan Utama\",\n  \"description\": \"Kategori makanan utama\",\n  \"parentId\": null,\n  \"displayOrder\": 1,\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/categories",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "categories"]
+						},
+						"description": "Create new category"
+					}
+				},
+				{
+					"name": "Update Category",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Makanan Utama Updated\",\n  \"description\": \"Kategori makanan utama - updated\",\n  \"displayOrder\": 2\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/categories/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "categories", ":id"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Category ID (UUID)"}
+							]
+						},
+						"description": "Update category"
+					}
+				},
+				{
+					"name": "Delete Category",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/categories/:id?moveProductsTo=",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "categories", ":id"],
+							"query": [
+								{"key": "moveProductsTo", "value": "", "description": "Category ID to move products to"}
+							],
+							"variable": [
+								{"key": "id", "value": "", "description": "Category ID (UUID)"}
+							]
+						},
+						"description": "Delete category. Use moveProductsTo query param to move products to another category."
+					}
+				},
+				{
+					"name": "Reorder Categories",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"orders\": [\n    {\"id\": \"uuid-category-1\", \"displayOrder\": 1},\n    {\"id\": \"uuid-category-2\", \"displayOrder\": 2},\n    {\"id\": \"uuid-category-3\", \"displayOrder\": 3}\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/categories/reorder",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "categories", "reorder"]
+						},
+						"description": "Reorder categories (update displayOrder)"
+					}
+				}
+			],
+			"description": "Product category management endpoints"
+		},
+		{
+			"name": "Tables",
+			"item": [
+				{
+					"name": "Get All Tables",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/tables?locationId=&status=&section=",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "tables"],
+							"query": [
+								{"key": "locationId", "value": "", "description": "Filter by location ID"},
+								{"key": "status", "value": "", "description": "Filter by status: available, occupied, reserved, cleaning"},
+								{"key": "section", "value": "", "description": "Filter by section"}
+							]
+						},
+						"description": "Get all tables with filters"
+					}
+				},
+				{
+					"name": "Get Table Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/tables/statistics?locationId=&startDate=&endDate=",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "tables", "statistics"],
+							"query": [
+								{"key": "locationId", "value": "", "description": "Filter by location"},
+								{"key": "startDate", "value": "", "description": "Start date (YYYY-MM-DD)"},
+								{"key": "endDate", "value": "", "description": "End date (YYYY-MM-DD)"}
+							]
+						},
+						"description": "Get table occupancy statistics"
+					}
+				},
+				{
+					"name": "Get Table Layout",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/tables/layout/:locationId",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "tables", "layout", ":locationId"],
+							"variable": [
+								{"key": "locationId", "value": "", "description": "Location ID (UUID)"}
+							]
+						},
+						"description": "Get table layout for specific location"
+					}
+				},
+				{
+					"name": "Get Table by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/tables/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "tables", ":id"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Table ID (UUID)"}
+							]
+						},
+						"description": "Get table by ID with current order"
+					}
+				},
+				{
+					"name": "Create Table",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tableNumber\": \"T-01\",\n  \"locationId\": \"uuid-location-id\",\n  \"capacity\": 4,\n  \"section\": \"Indoor\",\n  \"positionX\": 100,\n  \"positionY\": 100,\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/tables",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "tables"]
+						},
+						"description": "Create new table"
+					}
+				},
+				{
+					"name": "Update Table",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tableNumber\": \"T-01-Updated\",\n  \"capacity\": 6,\n  \"section\": \"VIP\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/tables/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "tables", ":id"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Table ID (UUID)"}
+							]
+						},
+						"description": "Update table details"
+					}
+				},
+				{
+					"name": "Delete Table",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/tables/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "tables", ":id"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Table ID (UUID)"}
+							]
+						},
+						"description": "Delete table"
+					}
+				},
+				{
+					"name": "Occupy Table",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"orderId\": \"uuid-order-id\",\n  \"numberOfGuests\": 4\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/tables/:id/occupy",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "tables", ":id", "occupy"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Table ID (UUID)"}
+							]
+						},
+						"description": "Occupy table (start order)"
+					}
+				},
+				{
+					"name": "Release Table",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/tables/:id/release",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "tables", ":id", "release"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Table ID (UUID)"}
+							]
+						},
+						"description": "Release table (finish order)"
+					}
+				},
+				{
+					"name": "Reserve Table",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reservedFor\": \"John Doe\",\n  \"reservationTime\": \"2024-12-15T19:00:00Z\",\n  \"numberOfGuests\": 4,\n  \"customerName\": \"John Doe\",\n  \"customerPhone\": \"08123456789\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/tables/:id/reserve",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "tables", ":id", "reserve"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Table ID (UUID)"}
+							]
+						},
+						"description": "Reserve table"
+					}
+				},
+				{
+					"name": "Set Table for Cleaning",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/tables/:id/cleaning",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "tables", ":id", "cleaning"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Table ID (UUID)"}
+							]
+						},
+						"description": "Set table for cleaning"
+					}
+				}
+			],
+			"description": "Restaurant table management endpoints"
+		},
+		{
+			"name": "Locations",
+			"item": [
+				{
+					"name": "Get All Locations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/locations",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "locations"]
+						},
+						"description": "Get all locations with filters"
+					}
+				},
+				{
+					"name": "Get Locations with Stock",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/locations/with-stock",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "locations", "with-stock"]
+						},
+						"description": "Get locations with stock counts"
+					}
+				},
+				{
+					"name": "Get Location by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/locations/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "locations", ":id"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Location ID (UUID)"}
+							]
+						},
+						"description": "Get location by ID with products and tables"
+					}
+				},
+				{
+					"name": "Get Stock Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/locations/:id/stock-summary",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "locations", ":id", "stock-summary"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Location ID (UUID)"}
+							]
+						},
+						"description": "Get stock summary for location"
+					}
+				},
+				{
+					"name": "Calculate Distance Between Locations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/locations/distance/:fromId/:toId",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "locations", "distance", ":fromId", ":toId"],
+							"variable": [
+								{"key": "fromId", "value": "", "description": "From Location ID (UUID)"},
+								{"key": "toId", "value": "", "description": "To Location ID (UUID)"}
+							]
+						},
+						"description": "Calculate distance between two locations"
+					}
+				},
+				{
+					"name": "Create Location",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Lantai 1 - Main Hall\",\n  \"address\": \"Jl. Sudirman No. 123\",\n  \"description\": \"Area utama restoran\",\n  \"latitude\": -6.2088,\n  \"longitude\": 106.8456,\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/locations",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "locations"]
+						},
+						"description": "Create new location"
+					}
+				},
+				{
+					"name": "Update Location",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Lantai 1 - Main Hall Updated\",\n  \"description\": \"Area utama restoran - updated\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/locations/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "locations", ":id"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Location ID (UUID)"}
+							]
+						},
+						"description": "Update location details"
+					}
+				},
+				{
+					"name": "Toggle Location Active",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/locations/:id/toggle",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "locations", ":id", "toggle"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Location ID (UUID)"}
+							]
+						},
+						"description": "Toggle location active status"
+					}
+				},
+				{
+					"name": "Delete Location",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/locations/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "locations", ":id"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Location ID (UUID)"}
+							]
+						},
+						"description": "Delete location (soft delete)"
+					}
+				}
+			],
+			"description": "Location management endpoints"
+		},
+		{
+			"name": "Stock Movements",
+			"item": [
+				{
+					"name": "Get All Movements",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/stock-movements?productId=&locationId=&movementType=&startDate=&endDate=&page=1&limit=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "stock-movements"],
+							"query": [
+								{"key": "productId", "value": "", "description": "Filter by product ID"},
+								{"key": "locationId", "value": "", "description": "Filter by location ID"},
+								{"key": "movementType", "value": "", "description": "Filter by type: stock_in, stock_out, adjustment, transfer, sale"},
+								{"key": "startDate", "value": "", "description": "Start date (YYYY-MM-DD)"},
+								{"key": "endDate", "value": "", "description": "End date (YYYY-MM-DD)"},
+								{"key": "page", "value": "1", "description": "Page number"},
+								{"key": "limit", "value": "20", "description": "Items per page"}
+							]
+						},
+						"description": "Get all stock movements with filters"
+					}
+				},
+				{
+					"name": "Get Stock Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/stock-movements/report?reportType=current&locationId=&categoryId=&startDate=&endDate=",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "stock-movements", "report"],
+							"query": [
+								{"key": "reportType", "value": "current", "description": "Report type: current, low-stock, movements"},
+								{"key": "locationId", "value": "", "description": "Filter by location"},
+								{"key": "categoryId", "value": "", "description": "Filter by category"},
+								{"key": "startDate", "value": "", "description": "Required for movements type (YYYY-MM-DD)"},
+								{"key": "endDate", "value": "", "description": "Required for movements type (YYYY-MM-DD)"}
+							]
+						},
+						"description": "Get stock report (current, low-stock, or movements)"
+					}
+				},
+				{
+					"name": "Get Stock Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/stock-movements/summary?startDate=2024-01-01&endDate=2024-12-31",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "stock-movements", "summary"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01", "description": "Start date (YYYY-MM-DD)"},
+								{"key": "endDate", "value": "2024-12-31", "description": "End date (YYYY-MM-DD)"}
+							]
+						},
+						"description": "Get stock movement summary by date range"
+					}
+				},
+				{
+					"name": "Get Most Moved Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/stock-movements/most-moved?limit=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "stock-movements", "most-moved"],
+							"query": [
+								{"key": "limit", "value": "10", "description": "Number of products to return"}
+							]
+						},
+						"description": "Get most moved products"
+					}
+				},
+				{
+					"name": "Get Product History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/stock-movements/product/:productId",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "stock-movements", "product", ":productId"],
+							"variable": [
+								{"key": "productId", "value": "", "description": "Product ID (UUID)"}
+							]
+						},
+						"description": "Get stock movement history for a product"
+					}
+				},
+				{
+					"name": "Get Movement by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/stock-movements/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "stock-movements", ":id"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Movement ID (UUID)"}
+							]
+						},
+						"description": "Get stock movement by ID"
+					}
+				},
+				{
+					"name": "Record Stock In",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"productId\": \"uuid-product-id\",\n  \"locationId\": \"uuid-location-id\",\n  \"quantity\": 100,\n  \"unitCost\": 5000,\n  \"reference\": \"PO-2024-001\",\n  \"notes\": \"Purchase from supplier\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/stock-movements/stock-in",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "stock-movements", "stock-in"]
+						},
+						"description": "Record stock in (receive inventory)"
+					}
+				},
+				{
+					"name": "Record Stock Out",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"productId\": \"uuid-product-id\",\n  \"locationId\": \"uuid-location-id\",\n  \"quantity\": 10,\n  \"reason\": \"damage\",\n  \"notes\": \"Damaged during storage\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/stock-movements/stock-out",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "stock-movements", "stock-out"]
+						},
+						"description": "Record stock out (dispatch inventory)"
+					}
+				},
+				{
+					"name": "Record Stock Adjustment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"productId\": \"uuid-product-id\",\n  \"locationId\": \"uuid-location-id\",\n  \"quantity\": -5,\n  \"reason\": \"Stock count correction\",\n  \"notes\": \"Adjustment after physical count\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/stock-movements/adjustment",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "stock-movements", "adjustment"]
+						},
+						"description": "Record stock adjustment (positive or negative)"
+					}
+				},
+				{
+					"name": "Bulk Stock In",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"locationId\": \"uuid-location-id\",\n  \"reference\": \"PO-2024-002\",\n  \"items\": [\n    {\n      \"productId\": \"uuid-product-1\",\n      \"quantity\": 50,\n      \"unitCost\": 5000\n    },\n    {\n      \"productId\": \"uuid-product-2\",\n      \"quantity\": 30,\n      \"unitCost\": 8000\n    }\n  ],\n  \"notes\": \"Bulk purchase from supplier\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/stock-movements/bulk-stock-in",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "stock-movements", "bulk-stock-in"]
+						},
+						"description": "Bulk stock in (multiple products)"
+					}
+				}
+			],
+			"description": "Stock movement management endpoints"
+		},
+		{
+			"name": "Orders",
+			"item": [
+				{
+					"name": "Get All Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders?status=&tableId=&locationId=&orderType=&startDate=&endDate=&page=1&limit=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders"],
+							"query": [
+								{"key": "status", "value": "", "description": "Filter by status: pending, confirmed, preparing, ready, served, completed, cancelled"},
+								{"key": "tableId", "value": "", "description": "Filter by table ID"},
+								{"key": "locationId", "value": "", "description": "Filter by location ID"},
+								{"key": "orderType", "value": "", "description": "Filter by type: dine-in, takeaway, delivery"},
+								{"key": "startDate", "value": "", "description": "Start date (YYYY-MM-DD)"},
+								{"key": "endDate", "value": "", "description": "End date (YYYY-MM-DD)"},
+								{"key": "page", "value": "1", "description": "Page number"},
+								{"key": "limit", "value": "20", "description": "Items per page"}
+							]
+						},
+						"description": "Get all restaurant orders with filters"
+					}
+				},
+				{
+					"name": "Get Kitchen Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/kitchen",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", "kitchen"]
+						},
+						"description": "Get kitchen display orders (confirmed/preparing status)"
+					}
+				},
+				{
+					"name": "Get Queue List",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/queue?locationId=&status=",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", "queue"],
+							"query": [
+								{"key": "locationId", "value": "", "description": "Filter by location"},
+								{"key": "status", "value": "", "description": "Filter by status: paid, preparing, ready"}
+							]
+						},
+						"description": "Get active queue list (for kitchen/counter staff)"
+					}
+				},
+				{
+					"name": "Get Orders by Table",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/table/:tableId",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", "table", ":tableId"],
+							"variable": [
+								{"key": "tableId", "value": "", "description": "Table ID (UUID)"}
+							]
+						},
+						"description": "Get orders by table"
+					}
+				},
+				{
+					"name": "Get Order by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", ":id"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Order ID (UUID)"}
+							]
+						},
+						"description": "Get order by ID with full details"
+					}
+				},
+				{
+					"name": "Create Order (Dine-in/Postpaid)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tableId\": \"uuid-table-id\",\n  \"locationId\": \"uuid-location-id\",\n  \"orderType\": \"dine-in\",\n  \"numberOfGuests\": 4,\n  \"items\": [\n    {\n      \"productId\": \"uuid-product-1\",\n      \"quantity\": 2,\n      \"notes\": \"Extra spicy\"\n    },\n    {\n      \"productId\": \"uuid-product-2\",\n      \"quantity\": 1,\n      \"notes\": \"\"\n    }\n  ],\n  \"notes\": \"Customer birthday\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders"]
+						},
+						"description": "Create new restaurant order (postpaid - bayar setelah makan)"
+					}
+				},
+				{
+					"name": "Create Direct Order (Prepaid/Takeaway)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"locationId\": \"uuid-location-id\",\n  \"orderType\": \"takeaway\",\n  \"customerName\": \"John Doe\",\n  \"customerPhone\": \"08123456789\",\n  \"items\": [\n    {\n      \"productId\": \"uuid-product-1\",\n      \"quantity\": 2,\n      \"notes\": \"No onion\"\n    },\n    {\n      \"productId\": \"uuid-product-2\",\n      \"quantity\": 1\n    }\n  ],\n  \"payments\": [\n    {\n      \"method\": \"cash\",\n      \"amount\": 75000\n    }\n  ],\n  \"voucherCode\": \"\",\n  \"notes\": \"\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/direct",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", "direct"]
+						},
+						"description": "Create direct order with immediate payment (prepaid - bayar dulu di kasir). Returns queueNumber (e.g., A-001)."
+					}
+				},
+				{
+					"name": "Add Items to Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"items\": [\n    {\n      \"productId\": \"uuid-product-id\",\n      \"quantity\": 1,\n      \"notes\": \"Extra cheese\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/:id/items",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", ":id", "items"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Order ID (UUID)"}
+							]
+						},
+						"description": "Add items to existing order"
+					}
+				},
+				{
+					"name": "Update Order Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"preparing\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/:id/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", ":id", "status"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Order ID (UUID)"}
+							]
+						},
+						"description": "Update order status (pending, confirmed, preparing, ready, served, completed)"
+					}
+				},
+				{
+					"name": "Validate Voucher",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"DISCOUNT10\",\n  \"amount\": 100000\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/validate-voucher",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", "validate-voucher"]
+						},
+						"description": "Validate voucher and calculate discount"
+					}
+				},
+				{
+					"name": "Complete Order (Checkout)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"payments\": [\n    {\n      \"method\": \"cash\",\n      \"amount\": 50000\n    },\n    {\n      \"method\": \"e_wallet\",\n      \"amount\": 25000,\n      \"reference\": \"GOPAY-123456\"\n    }\n  ],\n  \"voucherCode\": \"\",\n  \"customerName\": \"John Doe\",\n  \"customerPhone\": \"08123456789\",\n  \"notes\": \"Thank you for visiting\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/:id/complete",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", ":id", "complete"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Order ID (UUID)"}
+							]
+						},
+						"description": "Complete order with payments (checkout). Supports split payment with multiple methods."
+					}
+				},
+				{
+					"name": "Split Bill (Equal)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"splitType\": \"equal\",\n  \"splits\": 3\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/:id/split",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", ":id", "split"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Order ID (UUID)"}
+							]
+						},
+						"description": "Split order into equal parts"
+					}
+				},
+				{
+					"name": "Split Bill (By Items)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"splitType\": \"by_items\",\n  \"splits\": [\n    {\n      \"itemIds\": [\"uuid-item-1\", \"uuid-item-2\"],\n      \"customerName\": \"John\"\n    },\n    {\n      \"itemIds\": [\"uuid-item-3\"],\n      \"customerName\": \"Jane\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/:id/split",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", ":id", "split"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Order ID (UUID)"}
+							]
+						},
+						"description": "Split order by items assignment"
+					}
+				},
+				{
+					"name": "Merge Bills",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"orderIds\": [\n    \"uuid-order-1\",\n    \"uuid-order-2\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/merge",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", "merge"]
+						},
+						"description": "Merge multiple orders into one"
+					}
+				},
+				{
+					"name": "Print Receipt",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/:id/print?type=receipt",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", ":id", "print"],
+							"query": [
+								{"key": "type", "value": "receipt", "description": "Print type: receipt or kitchen"}
+							],
+							"variable": [
+								{"key": "id", "value": "", "description": "Order ID (UUID)"}
+							]
+						},
+						"description": "Print receipt or kitchen ticket for order"
+					}
+				},
+				{
+					"name": "Open Cash Drawer",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/drawer/open",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", "drawer", "open"]
+						},
+						"description": "Open cash drawer"
+					}
+				}
+			],
+			"description": "Order management endpoints"
+		},
+		{
+			"name": "Queue Management",
+			"item": [
+				{
+					"name": "Get Queue Display (Public)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/queue-display?tenantId=uuid-tenant-id&locationId=",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "queue-display"],
+							"query": [
+								{"key": "tenantId", "value": "uuid-tenant-id", "description": "Tenant ID (required)"},
+								{"key": "locationId", "value": "", "description": "Filter by location (optional)"}
+							]
+						},
+						"description": "Get queue display data for customer-facing monitor.\n\n**PUBLIC endpoint** - no auth required.\n\nReturns:\n- preparing: Orders being prepared\n- ready: Orders ready for pickup\n- lastCalled: Last called queue numbers"
+					},
+					"auth": {
+						"type": "noauth"
+					}
+				},
+				{
+					"name": "Update Queue Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"preparing\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/queue/:id/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", "queue", ":id", "status"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Order ID (UUID)"}
+							]
+						},
+						"description": "Update queue order status.\n\nValid transitions:\n- paid → preparing\n- preparing → ready\n- ready → completed"
+					}
+				},
+				{
+					"name": "Call Queue Number",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/orders/queue/:id/call",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "orders", "queue", ":id", "call"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Order ID (UUID)"}
+							]
+						},
+						"description": "Call queue number for pickup.\n\nMarks queueCalledAt timestamp and sets status to 'ready'."
+					}
+				}
+			],
+			"description": "Queue management endpoints for prepaid orders (bayar dulu di kasir)"
+		},
+		{
+			"name": "Combined Billing",
+			"item": [
+				{
+					"name": "Create Combined Transaction",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerId\": \"uuid-member-id\",\n  \"customerType\": \"member\",\n  \"customerName\": \"John Doe\",\n  \"customerPhone\": \"08123456789\",\n  \"tableId\": \"uuid-table-id\",\n  \"locationId\": \"uuid-location-id\",\n  \"orderType\": \"dine-in\",\n  \"items\": [\n    {\n      \"type\": \"product\",\n      \"productId\": \"uuid-product-id\",\n      \"quantity\": 2,\n      \"notes\": \"Extra spicy\"\n    },\n    {\n      \"type\": \"membership\",\n      \"membershipTypeId\": \"uuid-membership-type-id\",\n      \"startDate\": \"2024-12-01\"\n    }\n  ],\n  \"payments\": [\n    {\n      \"method\": \"cash\",\n      \"amount\": 500000\n    },\n    {\n      \"method\": \"credit_card\",\n      \"amount\": 200000\n    }\n  ],\n  \"voucherCode\": \"DISCOUNT10\",\n  \"notes\": \"VIP member renewal + lunch\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/billing/combined",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "billing", "combined"]
+						},
+						"description": "Create combined transaction (membership + products in one bill).\n\n**Requires 'combinedBilling' feature** in subscription plan."
+					}
+				},
+				{
+					"name": "Get Transaction Receipt",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/billing/receipt/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "billing", "receipt", ":id"],
+							"variable": [
+								{"key": "id", "value": "", "description": "Transaction ID (UUID)"}
+							]
+						},
+						"description": "Get transaction receipt data with printer settings"
+					}
+				},
+				{
+					"name": "Validate Voucher for Billing",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"DISCOUNT10\",\n  \"subtotal\": 500000,\n  \"customerId\": \"uuid-member-id\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/billing/validate-voucher",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "billing", "validate-voucher"]
+						},
+						"description": "Validate voucher for combined billing"
+					}
+				}
+			],
+			"description": "Combined billing endpoints (membership + products in one transaction).\n\n**Feature-gated:** requires 'combinedBilling' feature in subscription plan."
+		},
+		{
+			"name": "Reports",
+			"item": [
+				{
+					"name": "Get Sales Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/reports/sales?startDate=2024-12-01&endDate=2024-12-31&locationId=&groupBy=day&orderType=",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "reports", "sales"],
+							"query": [
+								{"key": "startDate", "value": "2024-12-01", "description": "Start date (YYYY-MM-DD) - required"},
+								{"key": "endDate", "value": "2024-12-31", "description": "End date (YYYY-MM-DD) - required"},
+								{"key": "locationId", "value": "", "description": "Filter by location (optional)"},
+								{"key": "groupBy", "value": "day", "description": "Group by: day, week, month, hour"},
+								{"key": "orderType", "value": "", "description": "Filter by type: dine-in, takeaway, delivery"}
+							]
+						},
+						"description": "Get sales report with flexible grouping.\n\nReturns:\n- Total revenue\n- Order count\n- Average order value\n- Payment breakdown by method\n- Grouped data by period"
+					}
+				},
+				{
+					"name": "Get Product Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/reports/products?startDate=2024-12-01&endDate=2024-12-31&categoryId=&limit=10&sortBy=quantity",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "reports", "products"],
+							"query": [
+								{"key": "startDate", "value": "2024-12-01", "description": "Start date (YYYY-MM-DD) - required"},
+								{"key": "endDate", "value": "2024-12-31", "description": "End date (YYYY-MM-DD) - required"},
+								{"key": "categoryId", "value": "", "description": "Filter by category (optional)"},
+								{"key": "limit", "value": "10", "description": "Number of top products (default: 10)"},
+								{"key": "sortBy", "value": "quantity", "description": "Sort by: quantity, revenue"}
+							]
+						},
+						"description": "Get product performance report (top selling products).\n\nReturns:\n- Product name\n- Quantity sold\n- Revenue generated\n- Category"
+					}
+				},
+				{
+					"name": "Get Table Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/reports/tables?startDate=2024-12-01&endDate=2024-12-31&locationId=",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "reports", "tables"],
+							"query": [
+								{"key": "startDate", "value": "2024-12-01", "description": "Start date (YYYY-MM-DD) - required"},
+								{"key": "endDate", "value": "2024-12-31", "description": "End date (YYYY-MM-DD) - required"},
+								{"key": "locationId", "value": "", "description": "Filter by location (optional)"}
+							]
+						},
+						"description": "Get table performance report.\n\nReturns:\n- Table number\n- Turnover count\n- Total revenue\n- Average revenue per visit"
+					}
+				},
+				{
+					"name": "Get Daily Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/reports/daily-summary?date=2024-12-01&locationId=",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "reports", "daily-summary"],
+							"query": [
+								{"key": "date", "value": "2024-12-01", "description": "Date for summary (YYYY-MM-DD) - required"},
+								{"key": "locationId", "value": "", "description": "Filter by location (optional)"}
+							]
+						},
+						"description": "Get comprehensive daily summary report.\n\nReturns:\n- Total orders & revenue\n- Order breakdown by type\n- Top selling products\n- Payment method breakdown\n- Hourly sales distribution"
+					}
+				},
+				{
+					"name": "Get Stock Report (Alias)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/restaurant/stock-report?reportType=current&locationId=&categoryId=",
+							"host": ["{{baseUrl}}"],
+							"path": ["restaurant", "stock-report"],
+							"query": [
+								{"key": "reportType", "value": "current", "description": "Report type: current, low-stock, movements"},
+								{"key": "locationId", "value": "", "description": "Filter by location"},
+								{"key": "categoryId", "value": "", "description": "Filter by category"}
+							]
+						},
+						"description": "Get stock report (convenience alias for /stock-movements/report)"
+					}
+				}
+			],
+			"description": "Restaurant reporting endpoints"
+		}
+	]
+}

@@ -1,0 +1,463 @@
+<template>
+  <dialog ref="modal" class="modal">
+    <div class="modal-box w-11/12 max-w-3xl">
+      <form method="dialog">
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" @click="closeModal">✕</button>
+      </form>
+      
+      <h3 class="font-bold text-lg mb-4">
+        {{ isEditMode ? 'Edit Subscription Plan' : 'Create New Subscription Plan' }}
+      </h3>
+      
+      <form @submit.prevent="handleSubmit">
+        <div class="space-y-6">
+          <!-- Basic Information Section -->
+          <div>
+            <h4 class="font-semibold text-base mb-3">Basic Information</h4>
+            <div class="space-y-4">
+              <!-- Plan Name -->
+              <div class="form-control w-full">
+                <label class="label">
+                  <span class="label-text font-medium">Plan Name <span class="text-error">*</span></span>
+                </label>
+                <input
+                  v-model="formData.name"
+                  type="text"
+                  placeholder="e.g., Basic, Professional, Enterprise"
+                  class="input input-bordered w-full"
+                  :class="{ 'input-error': errors.name }"
+                  required
+                />
+                <label v-if="errors.name" class="label">
+                  <span class="label-text-alt text-error">{{ errors.name }}</span>
+                </label>
+              </div>
+
+              <!-- Description -->
+              <div class="form-control w-full">
+                <label class="label">
+                  <span class="label-text font-medium">Description</span>
+                </label>
+                <textarea
+                  v-model="formData.description"
+                  placeholder="Describe the plan features and benefits"
+                  class="textarea textarea-bordered h-20 w-full resize-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Pricing & Limits Section -->
+          <div>
+            <h4 class="font-semibold text-base mb-3">Pricing & Limits</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Price -->
+              <div class="form-control w-full">
+                <label class="label">
+                  <span class="label-text font-medium">Price (USD) <span class="text-error">*</span></span>
+                </label>
+                <input
+                  v-model.number="formData.price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="99.00"
+                  class="input input-bordered w-full"
+                  :class="{ 'input-error': errors.price }"
+                  required
+                />
+                <label v-if="errors.price" class="label">
+                  <span class="label-text-alt text-error">{{ errors.price }}</span>
+                </label>
+              </div>
+
+              <!-- Duration -->
+              <div class="form-control w-full">
+                <label class="label">
+                  <span class="label-text font-medium">Duration (Days) <span class="text-error">*</span></span>
+                </label>
+                <input
+                  v-model.number="formData.duration"
+                  type="number"
+                  min="1"
+                  placeholder="30"
+                  class="input input-bordered w-full"
+                  :class="{ 'input-error': errors.duration }"
+                  required
+                />
+                <label v-if="errors.duration" class="label">
+                  <span class="label-text-alt text-error">{{ errors.duration }}</span>
+                </label>
+              </div>
+
+              <!-- Max Users -->
+              <div class="form-control w-full">
+                <label class="label">
+                  <span class="label-text font-medium">Max Users</span>
+                  <span class="label-text-alt text-base-content/60">Optional</span>
+                </label>
+                <input
+                  v-model.number="formData.maxUsers"
+                  type="number"
+                  min="1"
+                  placeholder="Leave empty for unlimited"
+                  class="input input-bordered w-full"
+                  :class="{ 'input-error': errors.maxUsers }"
+                />
+                <label v-if="errors.maxUsers" class="label">
+                  <span class="label-text-alt text-error">{{ errors.maxUsers }}</span>
+                </label>
+              </div>
+
+              <!-- Max Members -->
+              <div class="form-control w-full">
+                <label class="label">
+                  <span class="label-text font-medium">Max Members</span>
+                  <span class="label-text-alt text-base-content/60">Optional</span>
+                </label>
+                <input
+                  v-model.number="formData.maxMembers"
+                  type="number"
+                  min="1"
+                  placeholder="Leave empty for unlimited"
+                  class="input input-bordered w-full"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings Section -->
+          <div>
+            <h4 class="font-semibold text-base mb-3">Settings</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Sort Order -->
+              <div class="form-control w-full">
+                <label class="label">
+                  <span class="label-text font-medium">Sort Order</span>
+                </label>
+                <input
+                  v-model.number="formData.sortOrder"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  class="input input-bordered w-full"
+                />
+                <label class="label">
+                  <span class="label-text-alt text-base-content/60">Lower numbers appear first</span>
+                </label>
+              </div>
+
+              <!-- Active Status -->
+              <div class="form-control w-full" v-if="isEditMode">
+                <label class="label">
+                  <span class="label-text font-medium">Status</span>
+                </label>
+                <label class="label cursor-pointer justify-start gap-3 border border-base-300 rounded-lg px-4 py-3 w-full">
+                  <input
+                    v-model="formData.isActive"
+                    type="checkbox"
+                    class="toggle toggle-primary"
+                  />
+                  <span class="label-text">{{ formData.isActive ? 'Active' : 'Inactive' }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Features Section -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="font-semibold text-base">Plan Features</h4>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline btn-primary"
+                @click="addFeature"
+              >
+                <IconPlus class="w-4 h-4 mr-1" />
+                Add Feature
+              </button>
+            </div>
+            
+            <!-- Common Features Presets -->
+            <div class="mb-4">
+              <label class="label">
+                <span class="label-text text-sm font-medium">Quick Add:</span>
+              </label>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="preset in commonFeatures"
+                  :key="preset.key"
+                  type="button"
+                  class="btn btn-xs btn-outline"
+                  @click="addPresetFeature(preset)"
+                  :disabled="featuresList.some(f => f.key === preset.key)"
+                >
+                  {{ preset.label }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Features List -->
+            <div class="space-y-2 mb-4">
+              <div
+                v-for="(feature, index) in featuresList"
+                :key="index"
+                class="flex gap-2 items-start p-3 bg-base-200 rounded-lg"
+              >
+                <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <input
+                    v-model="feature.key"
+                    type="text"
+                    placeholder="Feature key (e.g., memberManagement)"
+                    class="input input-bordered input-sm"
+                  />
+                  <select
+                    v-model="feature.value"
+                    class="select select-bordered select-sm"
+                  >
+                    <option :value="true">Enabled</option>
+                    <option :value="false">Disabled</option>
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-ghost btn-square text-error"
+                  @click="removeFeature(index)"
+                >
+                  <IconTrash class="w-4 h-4" />
+                </button>
+              </div>
+              
+              <div v-if="featuresList.length === 0" class="text-center py-8 text-base-content/60 bg-base-200 rounded-lg">
+                No features added yet. Click "Add Feature" or use quick add buttons above.
+              </div>
+            </div>
+
+            <!-- Features JSON Preview -->
+            <div v-if="featuresList.length > 0" class="collapse collapse-arrow bg-base-200">
+              <input type="checkbox" /> 
+              <div class="collapse-title text-sm font-medium">
+                JSON Preview ({{ Object.keys(featuresObject).length }} features)
+              </div>
+              <div class="collapse-content">
+                <div class="mockup-code text-xs">
+                  <pre><code>{{ JSON.stringify(featuresObject, null, 2) }}</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="modal-action">
+          <button
+            type="button"
+            class="btn btn-ghost"
+            @click="closeModal"
+            :disabled="loading"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            :disabled="loading"
+          >
+            <span v-if="loading" class="loading loading-spinner"></span>
+            {{ isEditMode ? 'Update Plan' : 'Create Plan' }}
+          </button>
+        </div>
+      </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button @click="closeModal">close</button>
+    </form>
+  </dialog>
+</template>
+
+<script setup>
+import { ref, computed, watch } from 'vue'
+import { IconPlus, IconTrash } from '@tabler/icons-vue'
+
+const props = defineProps({
+  plan: {
+    type: Object,
+    default: null
+  },
+  loading: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits(['submit', 'close'])
+
+const modal = ref(null)
+const errors = ref({})
+
+// Form data
+const formData = ref({
+  name: '',
+  description: '',
+  price: null,
+  duration: 30,
+  maxUsers: 1,
+  maxMembers: null,
+  sortOrder: 0,
+  isActive: true
+})
+
+// Features management
+const featuresList = ref([])
+
+const isEditMode = computed(() => !!props.plan)
+
+// Convert features list to object
+const featuresObject = computed(() => {
+  const features = {}
+  featuresList.value.forEach(feature => {
+    if (feature.key && feature.key.trim() !== '') {
+      features[feature.key.trim()] = feature.value
+    }
+  })
+  return features
+})
+
+// Common feature presets
+const commonFeatures = [
+  { key: 'memberManagement', label: 'Member Management' },
+  { key: 'classScheduling', label: 'Class Scheduling' },
+  { key: 'attendance', label: 'Attendance Tracking' },
+  { key: 'payments', label: 'Payment Processing' },
+  { key: 'reports', label: 'Basic Reports' },
+  { key: 'advancedReports', label: 'Advanced Reports' },
+  { key: 'multiLocation', label: 'Multi-Location' },
+  { key: 'customBranding', label: 'Custom Branding' },
+  { key: 'api', label: 'API Access' },
+  { key: 'prioritySupport', label: 'Priority Support' },
+  { key: 'smsNotifications', label: 'SMS Notifications' },
+  { key: 'emailMarketing', label: 'Email Marketing' }
+]
+
+// Initialize form with plan data if editing
+watch(() => props.plan, (newPlan) => {
+  if (newPlan) {
+    formData.value = {
+      name: newPlan.name || '',
+      description: newPlan.description || '',
+      price: parseFloat(newPlan.price) || null,
+      duration: newPlan.duration || 30,
+      maxUsers: newPlan.maxUsers || 1,
+      maxMembers: newPlan.maxMembers || null,
+      sortOrder: newPlan.sortOrder || 0,
+      isActive: newPlan.isActive ?? true
+    }
+    
+    // Convert features object to list
+    if (newPlan.features && typeof newPlan.features === 'object') {
+      featuresList.value = Object.entries(newPlan.features).map(([key, value]) => ({
+        key,
+        value
+      }))
+    } else {
+      featuresList.value = []
+    }
+  }
+}, { immediate: true })
+
+// Add new feature
+const addFeature = () => {
+  featuresList.value.push({ key: '', value: true })
+}
+
+// Remove feature
+const removeFeature = (index) => {
+  featuresList.value.splice(index, 1)
+}
+
+// Add preset feature
+const addPresetFeature = (preset) => {
+  // Check if feature already exists
+  const exists = featuresList.value.some(f => f.key === preset.key)
+  if (!exists) {
+    featuresList.value.push({ key: preset.key, value: true })
+  }
+}
+
+// Validate form
+const validateForm = () => {
+  errors.value = {}
+  
+  if (!formData.value.name || formData.value.name.trim() === '') {
+    errors.value.name = 'Plan name is required'
+  }
+  
+  if (!formData.value.price || formData.value.price <= 0) {
+    errors.value.price = 'Price must be greater than 0'
+  }
+  
+  if (formData.value.duration && formData.value.duration <= 0) {
+    errors.value.duration = 'Duration must be greater than 0'
+  }
+  
+  if (formData.value.maxUsers && formData.value.maxUsers <= 0) {
+    errors.value.maxUsers = 'Max users must be greater than 0'
+  }
+  
+  return Object.keys(errors.value).length === 0
+}
+
+// Handle form submission
+const handleSubmit = () => {
+  if (!validateForm()) {
+    return
+  }
+  
+  const submitData = {
+    ...formData.value,
+    features: featuresObject.value
+  }
+  
+  // Remove null/undefined maxMembers if not set
+  if (!submitData.maxMembers) {
+    submitData.maxMembers = null
+  }
+  
+  emit('submit', submitData)
+}
+
+// Open modal
+const openModal = () => {
+  errors.value = {}
+  modal.value?.showModal()
+}
+
+// Close modal
+const closeModal = () => {
+  modal.value?.close()
+  emit('close')
+}
+
+// Reset form
+const resetForm = () => {
+  formData.value = {
+    name: '',
+    description: '',
+    price: null,
+    duration: 30,
+    maxUsers: 1,
+    maxMembers: null,
+    sortOrder: 0,
+    isActive: true
+  }
+  featuresList.value = []
+  errors.value = {}
+}
+
+// Expose methods to parent
+defineExpose({
+  openModal,
+  closeModal,
+  resetForm
+})
+</script>

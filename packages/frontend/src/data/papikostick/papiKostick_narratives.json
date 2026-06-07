@@ -1,0 +1,182 @@
+{
+  "G": {
+    "name": "Hard Working (Pekerja Keras)",
+    "description": "Mengukur tingkat kesungguhan dan intensitas kerja seseorang.",
+    "levels": {
+      "low": "Cenderung bekerja dengan tempo yang santai dan tidak terlalu menekankan kesibukan dalam bekerja. Lebih mengutamakan keseimbangan hidup-kerja.",
+      "medium": "Memiliki etos kerja yang cukup baik dengan keseimbangan antara produktivitas dan relaksasi. Dapat bekerja keras saat diperlukan.",
+      "high": "Sangat berdedikasi dan bersemangat dalam bekerja. Cenderung menikmati kesibukan dan menunjukkan komitmen tinggi terhadap pekerjaan."
+    }
+  },
+  "L": {
+    "name": "Leadership Role (Peran Kepemimpinan)",
+    "description": "Mengukur kecenderungan untuk mengambil peran kepemimpinan dan memimpin orang lain.",
+    "levels": {
+      "low": "Lebih nyaman sebagai anggota tim daripada pemimpin. Tidak terlalu tertarik mengambil tanggung jawab kepemimpinan.",
+      "medium": "Dapat mengambil peran kepemimpinan jika diperlukan tetapi tidak secara aktif mencarinya. Fleksibel antara memimpin dan mengikuti.",
+      "high": "Memiliki keinginan kuat untuk memimpin dan mengarahkan orang lain. Nyaman mengambil tanggung jawab dan membuat keputusan untuk kelompok."
+    }
+  },
+  "I": {
+    "name": "Ease of Decision Making (Kemudahan Pengambilan Keputusan)",
+    "description": "Mengukur kecepatan dan kemudahan dalam mengambil keputusan.",
+    "levels": {
+      "low": "Cenderung berhati-hati dan membutuhkan waktu lebih lama untuk mengambil keputusan. Mempertimbangkan banyak faktor sebelum bertindak.",
+      "medium": "Memiliki keseimbangan antara kehati-hatian dan kecepatan dalam mengambil keputusan. Menyesuaikan dengan situasi.",
+      "high": "Dapat mengambil keputusan dengan cepat dan mudah. Percaya diri dengan pilihannya dan tidak ragu-ragu."
+    }
+  },
+  "T": {
+    "name": "Pace (Kecepatan Kerja)",
+    "description": "Mengukur tempo dan kecepatan dalam bekerja.",
+    "levels": {
+      "low": "Bekerja dengan tempo yang lebih lambat dan metodis. Mengutamakan ketelitian daripada kecepatan.",
+      "medium": "Memiliki tempo kerja yang seimbang antara kecepatan dan ketelitian. Dapat menyesuaikan pace sesuai kebutuhan.",
+      "high": "Bekerja dengan tempo tinggi dan cepat. Menyukai lingkungan kerja yang dinamis dan serba cepat."
+    }
+  },
+  "V": {
+    "name": "Vigorous Type (Tipe Bersemangat)",
+    "description": "Mengukur tingkat vitalitas, energi, dan ketahanan fisik.",
+    "levels": {
+      "low": "Memiliki tingkat energi yang lebih rendah. Mungkin lebih menyukai aktivitas yang tidak terlalu menuntut fisik.",
+      "medium": "Memiliki tingkat energi dan vitalitas yang cukup. Dapat menjaga stamina dengan baik dalam bekerja.",
+      "high": "Memiliki energi dan vitalitas tinggi. Bersemangat, aktif, dan mampu bekerja dalam waktu lama tanpa mudah lelah."
+    }
+  },
+  "R": {
+    "name": "Theoretical Type (Tipe Teoritis)",
+    "description": "Mengukur kecenderungan untuk berpikir analitis dan teoritis.",
+    "levels": {
+      "low": "Lebih berorientasi pada hal-hal praktis dan konkret. Tidak terlalu tertarik dengan teori atau konsep abstrak.",
+      "medium": "Memiliki keseimbangan antara pemikiran teoritis dan praktis. Dapat mengaplikasikan teori ke dalam praktik.",
+      "high": "Sangat analitis dan menyukai pemikiran konseptual. Tertarik dengan teori, perencanaan, dan analisis mendalam."
+    }
+  },
+  "D": {
+    "name": "Interest in Detail (Minat pada Detail)",
+    "description": "Mengukur perhatian dan ketelitian terhadap detail pekerjaan.",
+    "levels": {
+      "low": "Lebih fokus pada gambaran besar daripada detail kecil. Mungkin melewatkan hal-hal detail.",
+      "medium": "Memiliki perhatian yang cukup terhadap detail sambil tetap melihat gambaran besar.",
+      "high": "Sangat teliti dan memperhatikan detail kecil. Menyukai pekerjaan yang membutuhkan ketelitian tinggi."
+    }
+  },
+  "C": {
+    "name": "Organized Type (Tipe Terorganisir)",
+    "description": "Mengukur kecenderungan untuk mengatur dan menyusun pekerjaan secara sistematis.",
+    "levels": {
+      "low": "Lebih fleksibel dan spontan dalam bekerja. Tidak terlalu menekankan pada struktur dan keteraturan.",
+      "medium": "Memiliki keseimbangan antara keteraturan dan fleksibilitas. Dapat bekerja dengan atau tanpa struktur yang ketat.",
+      "high": "Sangat terorganisir dan sistematis. Menyukai keteraturan, perencanaan, dan struktur dalam pekerjaan."
+    }
+  },
+  "A": {
+    "name": "Need to Achieve (Kebutuhan Berprestasi)",
+    "description": "Mengukur dorongan untuk mencapai hasil dan sukses.",
+    "levels": {
+      "low": "Tidak terlalu terdorong oleh pencapaian atau kompetisi. Puas dengan hasil yang ada tanpa ambisi berlebihan.",
+      "medium": "Memiliki motivasi yang cukup untuk berprestasi dengan target yang realistis.",
+      "high": "Sangat ambisius dan terdorong untuk sukses. Menyukai tantangan dan berusaha keras untuk mencapai yang terbaik."
+    }
+  },
+  "N": {
+    "name": "Need to Finish Task (Kebutuhan Menyelesaikan Tugas)",
+    "description": "Mengukur ketekunan dan dorongan untuk menyelesaikan tugas yang telah dimulai.",
+    "levels": {
+      "low": "Mungkin kesulitan menyelesaikan tugas hingga tuntas. Mudah teralihkan atau kehilangan minat.",
+      "medium": "Dapat menyelesaikan tugas dengan baik meskipun kadang membutuhkan motivasi tambahan.",
+      "high": "Sangat tekun dan berkomitmen menyelesaikan setiap tugas. Tidak nyaman meninggalkan pekerjaan yang belum selesai."
+    }
+  },
+  "P": {
+    "name": "Need to Control Others (Kebutuhan Mengontrol Orang Lain)",
+    "description": "Mengukur keinginan untuk mengarahkan dan mengontrol orang lain.",
+    "levels": {
+      "low": "Tidak tertarik mengontrol atau mengarahkan orang lain. Lebih menghormati otonomi individu.",
+      "medium": "Dapat memberikan arahan jika diperlukan tetapi tidak dominan. Seimbang antara kontrol dan kebebasan.",
+      "high": "Suka mengambil kendali dan mengarahkan orang lain. Nyaman dalam posisi yang memiliki wewenang."
+    }
+  },
+  "X": {
+    "name": "Need to be Noticed (Kebutuhan Diperhatikan)",
+    "description": "Mengukur keinginan untuk mendapat perhatian dan diakui.",
+    "levels": {
+      "low": "Tidak memerlukan banyak perhatian dari orang lain. Nyaman bekerja di belakang layar.",
+      "medium": "Menikmati pengakuan tetapi tidak aktif mencarinya. Seimbang dalam kebutuhan perhatian.",
+      "high": "Menyukai menjadi pusat perhatian dan diakui. Ekspresif dan suka tampil di depan."
+    }
+  },
+  "B": {
+    "name": "Need to Belong (Kebutuhan Berkelompok)",
+    "description": "Mengukur keinginan untuk menjadi bagian dari kelompok.",
+    "levels": {
+      "low": "Lebih nyaman bekerja sendiri atau dalam kelompok kecil. Tidak terlalu membutuhkan afiliasi kelompok.",
+      "medium": "Dapat bekerja baik secara individu maupun dalam kelompok. Fleksibel dalam interaksi sosial.",
+      "high": "Sangat menyukai bekerja dalam kelompok dan menjadi bagian dari tim. Merasa tidak nyaman jika terisolasi."
+    }
+  },
+  "O": {
+    "name": "Need for Closeness (Kebutuhan Kedekatan)",
+    "description": "Mengukur kebutuhan akan hubungan personal yang dekat dan hangat.",
+    "levels": {
+      "low": "Menjaga jarak dalam hubungan profesional. Tidak terlalu membutuhkan kedekatan emosional di tempat kerja.",
+      "medium": "Memiliki hubungan yang cukup dekat dengan rekan kerja sambil menjaga batasan profesional.",
+      "high": "Sangat menghargai hubungan personal yang dekat. Membangun ikatan emosional yang kuat dengan orang lain."
+    }
+  },
+  "S": {
+    "name": "Social Extension (Pergaulan Sosial)",
+    "description": "Mengukur kemampuan dan kenyamanan dalam berinteraksi sosial.",
+    "levels": {
+      "low": "Introvert dan lebih menyukai interaksi terbatas. Membutuhkan waktu sendiri untuk mengisi energi.",
+      "medium": "Dapat bersosialisasi dengan baik tetapi juga membutuhkan waktu pribadi. Seimbang dalam interaksi sosial.",
+      "high": "Sangat ekstrovert dan menyukai interaksi sosial. Mudah bergaul dan nyaman dalam berbagai situasi sosial."
+    }
+  },
+  "Z": {
+    "name": "Need for Change (Kebutuhan Perubahan)",
+    "description": "Mengukur keinginan untuk variasi dan hal-hal baru.",
+    "levels": {
+      "low": "Menyukai rutinitas dan stabilitas. Tidak nyaman dengan perubahan yang terlalu sering.",
+      "medium": "Dapat menerima perubahan jika diperlukan tetapi juga menghargai stabilitas.",
+      "high": "Menyukai variasi dan perubahan. Cepat bosan dengan rutinitas dan selalu mencari hal baru."
+    }
+  },
+  "E": {
+    "name": "Emotional Stability (Stabilitas Emosi)",
+    "description": "Mengukur kemampuan mengendalikan dan menstabilkan emosi.",
+    "levels": {
+      "low": "Mungkin lebih mudah terpengaruh secara emosional. Perlu usaha lebih untuk mengelola stres.",
+      "medium": "Memiliki kontrol emosi yang cukup baik dengan beberapa fluktuasi normal.",
+      "high": "Sangat stabil secara emosional. Tenang, tidak mudah terganggu, dan dapat mengelola stres dengan baik."
+    }
+  },
+  "K": {
+    "name": "Aggressiveness (Agresif)",
+    "description": "Mengukur kecenderungan untuk bersikap asertif dan agresif.",
+    "levels": {
+      "low": "Lebih pasif dan menghindari konfrontasi. Cenderung mengalah dalam situasi konflik.",
+      "medium": "Dapat bersikap asertif jika diperlukan tetapi tidak agresif. Seimbang dalam menghadapi konflik.",
+      "high": "Sangat asertif dan tidak takut konfrontasi. Berani menyuarakan pendapat dan mempertahankan posisi."
+    }
+  },
+  "W": {
+    "name": "Need for Rules (Kebutuhan Aturan)",
+    "description": "Mengukur keinginan untuk mengikuti aturan dan struktur.",
+    "levels": {
+      "low": "Lebih mandiri dan tidak terlalu terikat dengan aturan. Suka mencari cara sendiri.",
+      "medium": "Menghormati aturan tetapi dapat fleksibel jika diperlukan. Seimbang antara struktur dan kebebasan.",
+      "high": "Sangat menyukai struktur dan aturan yang jelas. Lebih produktif dengan panduan yang rinci."
+    }
+  },
+  "F": {
+    "name": "Need to Support Superior (Kebutuhan Mendukung Atasan)",
+    "description": "Mengukur kecenderungan untuk loyal dan mendukung atasan.",
+    "levels": {
+      "low": "Lebih mandiri dan tidak terlalu membutuhkan approval dari atasan. Bekerja dengan otonomi tinggi.",
+      "medium": "Menghormati atasan dan dapat bekerja sama dengan baik sambil mempertahankan independensi.",
+      "high": "Sangat loyal dan supportif terhadap atasan. Menyukai hubungan yang baik dengan pimpinan."
+    }
+  }
+}

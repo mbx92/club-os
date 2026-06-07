@@ -1,0 +1,71 @@
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build & coverage
+coverage/
+dist/
+dist-ssr/
+build/
+
+# SQLite
+*.sqlite
+*.sqlite3
+
+# Jest cache
+.jest/
+.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Backend specific
+secrets/
+uploads/
+backups/
+db_bak
+*.sql
+*.json.backup
+tmp/
+*.tmp
+*.pdf
+
+# Swagger
+docs/swagger_output.json
+
+# Database schema exports
+database-schema.json
+*-schema.json
+
+# Frontend auto-generated
+src/auto-imports.d.ts
+src/components.d.ts
+
+# Backend auto-generated
+src/utils/routesMetadata.js
+
+# Exception: allow psychology logs page
+!src/pages/psychology/logs/

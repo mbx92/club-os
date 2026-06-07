@@ -1,0 +1,390 @@
+{
+  "testInfo": {
+    "code": "CFIT",
+    "name": "Culture Fair Intelligence Test - Form 2A",
+    "category": "cognitive",
+    "description": "Tes kecerdasan non-verbal untuk mengukur kemampuan berpikir logis, melihat pola, dan memecahkan masalah tanpa dipengaruhi bahasa.",
+    "totalQuestions": 46,
+    "totalExamples": 11,
+    "totalDuration": 750,
+    "hasTimedSubtests": true
+  },
+  "subtests": [
+    {
+      "id": 1,
+      "code": "series",
+      "name": "Series",
+      "description": "Pilih 1 gambar dari 5 pilihan yang paling tepat untuk melanjutkan urutan gambar.",
+      "instruction": "Pada bagian ini, Anda akan melihat serangkaian gambar yang mengikuti pola tertentu. Tugas Anda adalah memilih gambar yang paling tepat untuk melanjutkan pola tersebut dari 5 pilihan yang tersedia.",
+      "questionCount": 12,
+      "exampleCount": 3,
+      "timeLimit": 240,
+      "examples": [
+        {
+          "id": "ex1",
+          "imagePath": "/psychology/cfit/subtes1/contoh/contoh-1.png"
+        },
+        {
+          "id": "ex2",
+          "imagePath": "/psychology/cfit/subtes1/contoh/contoh-2.png"
+        },
+        {
+          "id": "ex3",
+          "imagePath": "/psychology/cfit/subtes1/contoh/contoh-3.png"
+        }
+      ],
+      "questions": [
+        {
+          "id": 1,
+          "imagePath": "/psychology/cfit/subtes1/1.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 2,
+          "imagePath": "/psychology/cfit/subtes1/2.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "D"
+        },
+        {
+          "id": 3,
+          "imagePath": "/psychology/cfit/subtes1/3.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "A"
+        },
+        {
+          "id": 4,
+          "imagePath": "/psychology/cfit/subtes1/4.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 5,
+          "imagePath": "/psychology/cfit/subtes1/5.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "B"
+        },
+        {
+          "id": 6,
+          "imagePath": "/psychology/cfit/subtes1/6.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "E"
+        },
+        {
+          "id": 7,
+          "imagePath": "/psychology/cfit/subtes1/7.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "B"
+        },
+        {
+          "id": 8,
+          "imagePath": "/psychology/cfit/subtes1/8.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 9,
+          "imagePath": "/psychology/cfit/subtes1/9.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 10,
+          "imagePath": "/psychology/cfit/subtes1/10.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 11,
+          "imagePath": "/psychology/cfit/subtes1/11.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "D"
+        },
+        {
+          "id": 12,
+          "imagePath": "/psychology/cfit/subtes1/12.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "code": "classification",
+      "name": "Classification",
+      "description": "Pilih 1 gambar yang berbeda dari lima gambar lainnya.",
+      "instruction": "Pada bagian ini, Anda akan melihat beberapa gambar. Tugas Anda adalah menemukan satu gambar yang berbeda atau tidak cocok dengan gambar lainnya.",
+      "questionCount": 14,
+      "exampleCount": 2,
+      "timeLimit": 180,
+      "examples": [
+        {
+          "id": "ex1",
+          "imagePath": "/psychology/cfit/subtes2/contoh/contoh-1.png"
+        },
+        {
+          "id": "ex2",
+          "imagePath": "/psychology/cfit/subtes2/contoh/contoh-2.png"
+        }
+      ],
+      "questions": [
+        {
+          "id": 1,
+          "imagePath": "/psychology/cfit/subtes2/1.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "B"
+        },
+        {
+          "id": 2,
+          "imagePath": "/psychology/cfit/subtes2/2.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 3,
+          "imagePath": "/psychology/cfit/subtes2/3.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "D"
+        },
+        {
+          "id": 4,
+          "imagePath": "/psychology/cfit/subtes2/4.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "A"
+        },
+        {
+          "id": 5,
+          "imagePath": "/psychology/cfit/subtes2/5.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 6,
+          "imagePath": "/psychology/cfit/subtes2/6.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 7,
+          "imagePath": "/psychology/cfit/subtes2/7.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "A"
+        },
+        {
+          "id": 8,
+          "imagePath": "/psychology/cfit/subtes2/8.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "E"
+        },
+        {
+          "id": 9,
+          "imagePath": "/psychology/cfit/subtes2/9.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "D"
+        },
+        {
+          "id": 10,
+          "imagePath": "/psychology/cfit/subtes2/10.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 11,
+          "imagePath": "/psychology/cfit/subtes2/11.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 12,
+          "imagePath": "/psychology/cfit/subtes2/12.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 13,
+          "imagePath": "/psychology/cfit/subtes2/13.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "A"
+        },
+        {
+          "id": 14,
+          "imagePath": "/psychology/cfit/subtes2/14.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "D"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "code": "matrices",
+      "name": "Matrices",
+      "description": "Pilih 1 gambar yang melengkapi kotak kosong di matriks.",
+      "instruction": "Pada bagian ini, Anda akan melihat matriks (kotak-kotak) dengan satu kotak yang kosong. Tugas Anda adalah menemukan gambar yang paling tepat untuk mengisi kotak kosong tersebut.",
+      "questionCount": 12,
+      "exampleCount": 3,
+      "timeLimit": 180,
+      "examples": [
+        {
+          "id": "ex1",
+          "imagePath": "/psychology/cfit/subtes3/contoh/contoh-1.png"
+        },
+        {
+          "id": "ex2",
+          "imagePath": "/psychology/cfit/subtes3/contoh/contoh-2.png"
+        },
+        {
+          "id": "ex3",
+          "imagePath": "/psychology/cfit/subtes3/contoh/contoh-3.png"
+        }
+      ],
+      "questions": [
+        {
+          "id": 1,
+          "imagePath": "/psychology/cfit/subtes3/1.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "A"
+        },
+        {
+          "id": 2,
+          "imagePath": "/psychology/cfit/subtes3/2.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 3,
+          "imagePath": "/psychology/cfit/subtes3/3.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "B"
+        },
+        {
+          "id": 4,
+          "imagePath": "/psychology/cfit/subtes3/4.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "E"
+        },
+        {
+          "id": 5,
+          "imagePath": "/psychology/cfit/subtes3/5.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 6,
+          "imagePath": "/psychology/cfit/subtes3/6.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "A"
+        },
+        {
+          "id": 7,
+          "imagePath": "/psychology/cfit/subtes3/7.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "B"
+        },
+        {
+          "id": 8,
+          "imagePath": "/psychology/cfit/subtes3/8.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "D"
+        },
+        {
+          "id": 9,
+          "imagePath": "/psychology/cfit/subtes3/9.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "E"
+        },
+        {
+          "id": 10,
+          "imagePath": "/psychology/cfit/subtes3/10.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "A"
+        },
+        {
+          "id": 11,
+          "imagePath": "/psychology/cfit/subtes3/11.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "B"
+        },
+        {
+          "id": 12,
+          "imagePath": "/psychology/cfit/subtes3/12.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "B"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "code": "topology",
+      "name": "Topology",
+      "description": "Pilih 1 gambar dari 5 pilihan yang memiliki bentuk dan hubungan yang sama dengan contoh.",
+      "instruction": "Pada bagian ini, Anda akan melihat sebuah gambar contoh yang menunjukkan hubungan titik-titik tertentu. Tugas Anda adalah menemukan gambar yang memiliki hubungan yang sama dengan gambar contoh.",
+      "questionCount": 8,
+      "exampleCount": 3,
+      "timeLimit": 150,
+      "examples": [
+        {
+          "id": "ex1",
+          "imagePath": "/psychology/cfit/subtes4/contoh/contoh-1.png"
+        },
+        {
+          "id": "ex2",
+          "imagePath": "/psychology/cfit/subtes4/contoh/contoh-2.png"
+        },
+        {
+          "id": "ex3",
+          "imagePath": "/psychology/cfit/subtes4/contoh/contoh-3.png"
+        }
+      ],
+      "questions": [
+        {
+          "id": 1,
+          "imagePath": "/psychology/cfit/subtes4/1.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 2,
+          "imagePath": "/psychology/cfit/subtes4/2.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "B"
+        },
+        {
+          "id": 3,
+          "imagePath": "/psychology/cfit/subtes4/3.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "A"
+        },
+        {
+          "id": 4,
+          "imagePath": "/psychology/cfit/subtes4/4.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "D"
+        },
+        {
+          "id": 5,
+          "imagePath": "/psychology/cfit/subtes4/5.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 6,
+          "imagePath": "/psychology/cfit/subtes4/6.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "C"
+        },
+        {
+          "id": 7,
+          "imagePath": "/psychology/cfit/subtes4/7.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "A"
+        },
+        {
+          "id": 8,
+          "imagePath": "/psychology/cfit/subtes4/8.png",
+          "options": ["A", "B", "C", "D", "E"],
+          "answer": "B"
+        }
+      ]
+    }
+  ]
+}

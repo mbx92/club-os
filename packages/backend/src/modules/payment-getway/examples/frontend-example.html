@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Midtrans Payment Example</title>
+  
+  <!-- Load Snap.js from Midtrans (Sandbox) -->
+  <script 
+    type="text/javascript"
+    src="https://app.sandbox.midtrans.com/snap/snap.js"
+    data-client-key="YOUR_CLIENT_KEY_HERE">
+  </script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 500px;
+      width: 100%;
+      padding: 40px;
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #444;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    
+    input:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .order-summary {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .order-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    
+    .order-item.total {
+      font-weight: bold;
+      font-size: 18px;
+      color: #667eea;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 2px solid #e0e0e0;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 20px;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .alert {
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    
+    .alert-info {
+      background: #e3f2fd;
+      color: #1565c0;
+      border-left: 4px solid #1565c0;
+    }
+    
+    .alert-success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border-left: 4px solid #2e7d32;
+    }
+    
+    .alert-error {
+      background: #ffebee;
+      color: #c62828;
+      border-left: 4px solid #c62828;
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .payment-methods {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .payment-method {
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>💳 Payment Demo</h1>
+    <p class="subtitle">Midtrans Payment Gateway Integration</p>
+    
+    <!-- Alert Messages -->
+    <div id="alert-container"></div>
+    
+    <!-- Order Form -->
+    <div class="form-group">
+      <label for="transaction-id">Transaction ID</label>
+      <input 
+        type="text" 
+        id="transaction-id" 
+        placeholder="Enter transaction UUID"
+        value="">
+    </div>
+    
+    <div class="form-group">
+      <label for="auth-token">Auth Token</label>
+      <input 
+        type="password" 
+        id="auth-token" 
+        placeholder="Your JWT token"
+        value="">
+    </div>
+    
+    <!-- Order Summary (will be populated) -->
+    <div class="order-summary" id="order-summary" style="display: none;">
+      <div class="order-item">
+        <span>Transaction Number:</span>
+        <span id="tx-number">-</span>
+      </div>
+      <div class="order-item">
+        <span>Customer:</span>
+        <span id="customer-name">-</span>
+      </div>
+      <div class="order-item">
+        <span>Items:</span>
+        <span id="items-count">-</span>
+      </div>
+      <div class="order-item total">
+        <span>Total:</span>
+        <span id="total-amount">Rp 0</span>
+      </div>
+    </div>
+    
+    <!-- Payment Methods Info -->
+    <div class="payment-methods">
+      <div class="payment-method">💳 Cards</div>
+      <div class="payment-method">🏦 Transfer</div>
+      <div class="payment-method">📱 E-Wallet</div>
+      <div class="payment-method">🏪 Indomaret</div>
+      <div class="payment-method">🛒 Alfamart</div>
+      <div class="payment-method">🔄 Installment</div>
+    </div>
+    
+    <!-- Payment Button -->
+    <button class="btn btn-primary" id="pay-button" onclick="handlePayment()">
+      Pay Now with Midtrans
+    </button>
+  </div>
+
+  <script>
+    // Configuration
+    const API_BASE_URL = 'http://localhost:3000/api/v1';
+    
+    let currentToken = '';
+    let currentTransactionId = '';
+    
+    /**
+     * Show alert message
+     */
+    function showAlert(message, type = 'info') {
+      const alertContainer = document.getElementById('alert-container');
+      const alertClass = `alert-${type}`;
+      
+      alertContainer.innerHTML = `
+        <div class="alert ${alertClass}">
+          ${message}
+        </div>
+      `;
+      
+      setTimeout(() => {
+        alertContainer.innerHTML = '';
+      }, 5000);
+    }
+    
+    /**
+     * Format currency
+     */
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0
+      }).format(amount);
+    }
+    
+    /**
+     * Get transaction details (optional)
+     */
+    async function getTransactionDetails(transactionId, token) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/transactions/${transactionId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const transaction = data.data;
+          
+          // Show order summary
+          document.getElementById('order-summary').style.display = 'block';
+          document.getElementById('tx-number').textContent = transaction.transactionNumber;
+          document.getElementById('customer-name').textContent = transaction.customerName || 'Guest';
+          document.getElementById('items-count').textContent = transaction.items?.length || 0;
+          document.getElementById('total-amount').textContent = formatCurrency(transaction.total);
+        }
+      } catch (error) {
+        console.log('Could not fetch transaction details:', error);
+      }
+    }
+    
+    /**
+     * Handle payment button click
+     */
+    async function handlePayment() {
+      const transactionId = document.getElementById('transaction-id').value.trim();
+      const authToken = document.getElementById('auth-token').value.trim();
+      const payButton = document.getElementById('pay-button');
+      
+      // Validation
+      if (!transactionId) {
+        showAlert('Please enter Transaction ID', 'error');
+        return;
+      }
+      
+      if (!authToken) {
+        showAlert('Please enter Auth Token', 'error');
+        return;
+      }
+      
+      // Store for later use
+      currentToken = authToken;
+      currentTransactionId = transactionId;
+      
+      // Disable button and show loading
+      payButton.disabled = true;
+      payButton.innerHTML = '<span class="loading"></span> Creating payment...';
+      
+      try {
+        // Optional: Get transaction details first
+        await getTransactionDetails(transactionId, authToken);
+        
+        // Create payment
+        const response = await fetch(`${API_BASE_URL}/payment/midtrans/create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            transactionId: transactionId
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to create payment');
+        }
+        
+        console.log('Payment created:', data.data);
+        
+        // Show Snap payment page
+        snap.pay(data.data.snapToken, {
+          onSuccess: function(result) {
+            console.log('Payment success:', result);
+            showAlert('✅ Payment successful! Transaction: ' + result.order_id, 'success');
+            payButton.disabled = false;
+            payButton.innerHTML = 'Pay Now with Midtrans';
+          },
+          
+          onPending: function(result) {
+            console.log('Payment pending:', result);
+            showAlert('⏳ Payment pending. Please complete the payment.', 'info');
+            payButton.disabled = false;
+            payButton.innerHTML = 'Pay Now with Midtrans';
+          },
+          
+          onError: function(result) {
+            console.log('Payment error:', result);
+            showAlert('❌ Payment failed: ' + (result.status_message || 'Unknown error'), 'error');
+            payButton.disabled = false;
+            payButton.innerHTML = 'Pay Now with Midtrans';
+          },
+          
+          onClose: function() {
+            console.log('Payment popup closed');
+            showAlert('Payment window closed', 'info');
+            payButton.disabled = false;
+            payButton.innerHTML = 'Pay Now with Midtrans';
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error:', error);
+        showAlert('Error: ' + error.message, 'error');
+        payButton.disabled = false;
+        payButton.innerHTML = 'Pay Now with Midtrans';
+      }
+    }
+    
+    /**
+     * Check payment status
+     */
+    async function checkPaymentStatus(transactionNumber) {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/payment/midtrans/status/${transactionNumber}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${currentToken}`
+            }
+          }
+        );
+        
+        const data = await response.json();
+        console.log('Payment status:', data.data);
+        
+        return data.data;
+      } catch (error) {
+        console.error('Error checking status:', error);
+        return null;
+      }
+    }
+    
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('🚀 Midtrans Payment Demo Initialized');
+      console.log('📝 Instructions:');
+      console.log('1. Enter your transaction UUID');
+      console.log('2. Enter your JWT auth token');
+      console.log('3. Click "Pay Now" to initiate payment');
+      console.log('');
+      console.log('🧪 Test Cards (Sandbox):');
+      console.log('✅ Success: 4811 1111 1111 1114');
+      console.log('❌ Denied:  4911 1111 1111 1113');
+    });
+  </script>
+</body>
+</html>

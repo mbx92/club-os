@@ -1,0 +1,476 @@
+{
+  "info": {
+    "name": "Member API",
+    "description": "Collection untuk testing Member Management API dengan auto-create user account",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "gym-membership-backend"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Get All Members",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members?page=1&limit=10&sortBy=createdAt&sortOrder=DESC&search=&membershipStatus=all&isActive=all",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "Page number (default: 1)"
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "description": "Items per page (default: 10)"
+            },
+            {
+              "key": "sortBy",
+              "value": "createdAt",
+              "description": "Sort field: firstName, lastName, joinDate, membershipStatus, createdAt"
+            },
+            {
+              "key": "sortOrder",
+              "value": "DESC",
+              "description": "Sort order: ASC or DESC"
+            },
+            {
+              "key": "search",
+              "value": "",
+              "description": "Search by name, email, or phone",
+              "disabled": true
+            },
+            {
+              "key": "membershipStatus",
+              "value": "all",
+              "description": "Filter: active, inactive, suspended, expired, all"
+            },
+            {
+              "key": "isActive",
+              "value": "all",
+              "description": "Filter: true, false, all"
+            }
+          ]
+        },
+        "description": "Get paginated list of members with search, filter, and sort capabilities"
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Members - Active Only",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members?membershipStatus=active&isActive=true",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members"],
+          "query": [
+            {
+              "key": "membershipStatus",
+              "value": "active"
+            },
+            {
+              "key": "isActive",
+              "value": "true"
+            }
+          ]
+        },
+        "description": "Get only active members"
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Members - Search",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members?search=john",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members"],
+          "query": [
+            {
+              "key": "search",
+              "value": "john"
+            }
+          ]
+        },
+        "description": "Search members by name, email, or phone"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Member by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members/:memberId",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members", ":memberId"],
+          "variable": [
+            {
+              "key": "memberId",
+              "value": "{{memberId}}",
+              "description": "Member UUID"
+            }
+          ]
+        },
+        "description": "Get detailed information of a specific member including user account and memberships"
+      },
+      "response": []
+    },
+    {
+      "name": "Create Member - Email Only",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Save memberId for subsequent requests",
+              "if (pm.response.code === 201) {",
+              "    const response = pm.response.json();",
+              "    pm.environment.set('memberId', response.member.id);",
+              "    pm.environment.set('memberUserId', response.user.id);",
+              "    console.log('Member created with ID:', response.member.id);",
+              "    console.log('User created with ID:', response.user.id);",
+              "    console.log('Login credentials:', response.credentials);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"dateOfBirth\": \"1990-05-15\",\n  \"gender\": \"male\",\n  \"address\": \"123 Main Street, Jakarta\",\n  \"photoUrl\": \"https://example.com/photos/john.jpg\",\n  \"emergencyContact\": \"Jane Doe\",\n  \"emergencyPhone\": \"+628123456789\",\n  \"joinDate\": \"2025-11-23\",\n  \"membershipStatus\": \"active\",\n  \"isActive\": true,\n  \"notes\": \"New member registration\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members"]
+        },
+        "description": "Create new member with email. Auto-creates user account with default password.\n\nResponse includes:\n- member: Created member data\n- user: Created user account\n- credentials: Login credentials (email + password)"
+      },
+      "response": []
+    },
+    {
+      "name": "Create Member - Phone Only",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    const response = pm.response.json();",
+              "    pm.environment.set('memberId', response.member.id);",
+              "    console.log('Member created with phone login');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"phone\": \"+6281234567890\",\n  \"dateOfBirth\": \"1992-08-20\",\n  \"gender\": \"female\",\n  \"address\": \"456 Park Avenue, Surabaya\",\n  \"emergencyContact\": \"John Smith\",\n  \"emergencyPhone\": \"+628987654321\",\n  \"joinDate\": \"2025-11-23\",\n  \"membershipStatus\": \"active\",\n  \"isActive\": true\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members"]
+        },
+        "description": "Create member with phone only (no email). User can login using phone number."
+      },
+      "response": []
+    },
+    {
+      "name": "Create Member - Both Email & Phone",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    const response = pm.response.json();",
+              "    pm.environment.set('memberId', response.member.id);",
+              "    console.log('Member can login with email OR phone');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Michael\",\n  \"lastName\": \"Johnson\",\n  \"email\": \"michael.j@example.com\",\n  \"phone\": \"+6281298765432\",\n  \"dateOfBirth\": \"1988-03-10\",\n  \"gender\": \"male\",\n  \"address\": \"789 Beach Road, Bali\",\n  \"photoUrl\": \"https://example.com/photos/michael.jpg\",\n  \"emergencyContact\": \"Sarah Johnson\",\n  \"emergencyPhone\": \"+628123456789\",\n  \"membershipStatus\": \"active\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members"]
+        },
+        "description": "Create member with both email and phone. User can login with either one."
+      },
+      "response": []
+    },
+    {
+      "name": "Create Member - Minimal Data",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Test\",\n  \"lastName\": \"Member\",\n  \"email\": \"test.member@example.com\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members"]
+        },
+        "description": "Create member with minimal required fields: firstName, lastName, and email (or phone)"
+      },
+      "response": []
+    },
+    {
+      "name": "Update Member",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"John Updated\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe.updated@example.com\",\n  \"phone\": \"+6281234567899\",\n  \"address\": \"123 Main Street, Updated Address\",\n  \"membershipStatus\": \"active\",\n  \"isActive\": true,\n  \"notes\": \"Member information updated\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members/:memberId",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members", ":memberId"],
+          "variable": [
+            {
+              "key": "memberId",
+              "value": "{{memberId}}",
+              "description": "Member UUID"
+            }
+          ]
+        },
+        "description": "Update member information. Also updates associated user account email/phone if changed."
+      },
+      "response": []
+    },
+    {
+      "name": "Update Member - Change Status",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"membershipStatus\": \"suspended\",\n  \"isActive\": false,\n  \"notes\": \"Membership suspended due to payment issue\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members/:memberId",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members", ":memberId"],
+          "variable": [
+            {
+              "key": "memberId",
+              "value": "{{memberId}}"
+            }
+          ]
+        },
+        "description": "Partial update - change membership status and deactivate account"
+      },
+      "response": []
+    },
+    {
+      "name": "Reset Member Password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const response = pm.response.json();",
+              "    console.log('New password:', response.newPassword);",
+              "    console.log('Share this password with the member securely');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members/:memberId/reset-password",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members", ":memberId", "reset-password"],
+          "variable": [
+            {
+              "key": "memberId",
+              "value": "{{memberId}}",
+              "description": "Member UUID"
+            }
+          ]
+        },
+        "description": "Reset member's password. Generates new random password and returns it in response.\n\n⚠️ Important: Save the new password and share it with the member securely."
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Member (Soft Delete)",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members/:memberId",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members", ":memberId"],
+          "variable": [
+            {
+              "key": "memberId",
+              "value": "{{memberId}}",
+              "description": "Member UUID"
+            }
+          ]
+        },
+        "description": "Soft delete member (sets deletedAt timestamp). Also deactivates associated user account.\n\nMember data is not physically deleted and can be recovered if needed."
+      },
+      "response": []
+    },
+    {
+      "name": "Test - Create Member Without Email or Phone (Error)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Invalid\",\n  \"lastName\": \"Member\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members"]
+        },
+        "description": "❌ Should fail: Either email or phone is required\n\nExpected response: 400 Bad Request"
+      },
+      "response": []
+    },
+    {
+      "name": "Test - Create Member with Duplicate Email (Error)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Duplicate\",\n  \"lastName\": \"Test\",\n  \"email\": \"john.doe@example.com\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members"]
+        },
+        "description": "❌ Should fail if email already exists in tenant\n\nExpected response: 400 Bad Request"
+      },
+      "response": []
+    },
+    {
+      "name": "Test - Get Non-existent Member (Error)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/gym/members/00000000-0000-0000-0000-000000000000",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "gym", "members", "00000000-0000-0000-0000-000000000000"]
+        },
+        "description": "❌ Should fail: Member not found\n\nExpected response: 404 Not Found"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "memberId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "memberUserId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

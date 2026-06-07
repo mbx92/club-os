@@ -1,0 +1,683 @@
+{
+  "info": {
+    "name": "Log Management API",
+    "description": "API endpoints for log management system with tenant isolation, filtering, statistics, and auto-cleanup",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Logs",
+      "item": [
+        {
+          "name": "Get All Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/logs?page=1&limit=50&level=all&sortBy=createdAt&sortOrder=DESC",
+              "host": ["{{base_url}}"],
+              "path": ["logs"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Records per page (default: 50)"
+                },
+                {
+                  "key": "level",
+                  "value": "all",
+                  "description": "Filter by level: info|warn|error|security|audit|debug|all"
+                },
+                {
+                  "key": "action",
+                  "value": "",
+                  "description": "Filter by action (e.g., LOGIN, CREATE_USER)",
+                  "disabled": true
+                },
+                {
+                  "key": "userId",
+                  "value": "",
+                  "description": "Filter by user ID",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search in message and action",
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-11-20",
+                  "description": "Start date (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-11-24",
+                  "description": "End date (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "filterTenantId",
+                  "value": "",
+                  "description": "Filter by tenant (Super Admin only)",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "Sort field: createdAt|level|action|statusCode"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "DESC",
+                  "description": "Sort order: ASC|DESC"
+                }
+              ]
+            },
+            "description": "Get all logs with pagination and advanced filtering. Admin/Owner can only see their tenant logs. Super Admin can filter by tenant."
+          },
+          "response": [
+            {
+              "name": "Success - All Logs",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/logs?page=1&limit=50",
+                  "host": ["{{base_url}}"],
+                  "path": ["logs"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"data\": [\n    {\n      \"id\": \"uuid-1\",\n      \"level\": \"audit\",\n      \"action\": \"CREATE_USER\",\n      \"message\": \"User created successfully\",\n      \"tenantId\": \"tenant-uuid\",\n      \"userId\": \"user-uuid\",\n      \"ipAddress\": \"192.168.1.1\",\n      \"userAgent\": \"Mozilla/5.0...\",\n      \"method\": \"POST\",\n      \"path\": \"/api/v1/users\",\n      \"statusCode\": 201,\n      \"duration\": 45,\n      \"metadata\": {\n        \"user\": { \"email\": \"admin@gym.com\" },\n        \"request\": { \"body\": {...} }\n      },\n      \"errorStack\": null,\n      \"createdAt\": \"2025-11-24T10:30:00.000Z\",\n      \"tenant\": {\n        \"id\": \"tenant-uuid\",\n        \"name\": \"Gym ABC\"\n      },\n      \"user\": {\n        \"id\": \"user-uuid\",\n        \"email\": \"admin@gym.com\",\n        \"fullName\": \"Admin User\"\n      }\n    }\n  ],\n  \"pagination\": {\n    \"currentPage\": 1,\n    \"totalPages\": 10,\n    \"totalRecords\": 500,\n    \"limit\": 50,\n    \"hasNextPage\": true,\n    \"hasPrevPage\": false\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Logs - Filter by Level (Error)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/logs?level=error&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["logs"],
+              "query": [
+                {
+                  "key": "level",
+                  "value": "error"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get only error-level logs"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Logs - Filter by Action",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/logs?action=LOGIN",
+              "host": ["{{base_url}}"],
+              "path": ["logs"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "LOGIN"
+                }
+              ]
+            },
+            "description": "Filter logs by specific action (e.g., LOGIN, CREATE_USER, UPDATE_PAYMENT)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Logs - Date Range",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/logs?startDate=2025-11-20&endDate=2025-11-24",
+              "host": ["{{base_url}}"],
+              "path": ["logs"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-11-20"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-11-24"
+                }
+              ]
+            },
+            "description": "Get logs within date range"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Logs - Search",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/logs?search=login",
+              "host": ["{{base_url}}"],
+              "path": ["logs"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "login"
+                }
+              ]
+            },
+            "description": "Search logs by message or action text"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/logs/:logId",
+              "host": ["{{base_url}}"],
+              "path": ["logs", ":logId"],
+              "variable": [
+                {
+                  "key": "logId",
+                  "value": "{{log_id}}",
+                  "description": "Log UUID"
+                }
+              ]
+            },
+            "description": "Get detailed information for a single log entry"
+          },
+          "response": [
+            {
+              "name": "Success - Single Log",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/logs/:logId",
+                  "host": ["{{base_url}}"],
+                  "path": ["logs", ":logId"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"uuid-1\",\n    \"level\": \"audit\",\n    \"action\": \"CREATE_USER\",\n    \"message\": \"User created successfully\",\n    \"tenantId\": \"tenant-uuid\",\n    \"userId\": \"user-uuid\",\n    \"ipAddress\": \"192.168.1.1\",\n    \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64)...\",\n    \"method\": \"POST\",\n    \"path\": \"/api/v1/users\",\n    \"statusCode\": 201,\n    \"duration\": 45,\n    \"metadata\": {\n      \"user\": {\n        \"email\": \"admin@gym.com\",\n        \"role\": \"admin\"\n      },\n      \"request\": {\n        \"body\": {\n          \"email\": \"newuser@gym.com\",\n          \"fullName\": \"New User\"\n        }\n      }\n    },\n    \"errorStack\": null,\n    \"createdAt\": \"2025-11-24T10:30:00.000Z\",\n    \"tenant\": {\n      \"id\": \"tenant-uuid\",\n      \"name\": \"Gym ABC\"\n    },\n    \"user\": {\n      \"id\": \"user-uuid\",\n      \"email\": \"admin@gym.com\",\n      \"fullName\": \"Admin User\"\n    }\n  }\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Endpoints for retrieving and filtering logs"
+    },
+    {
+      "name": "Statistics",
+      "item": [
+        {
+          "name": "Get Log Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/logs/stats",
+              "host": ["{{base_url}}"],
+              "path": ["logs", "stats"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-11-20",
+                  "description": "Start date for stats calculation",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-11-24",
+                  "description": "End date for stats calculation",
+                  "disabled": true
+                },
+                {
+                  "key": "filterTenantId",
+                  "value": "",
+                  "description": "Tenant filter (Super Admin only)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get comprehensive log statistics including counts by level, date trends, top users, and top actions"
+          },
+          "response": [
+            {
+              "name": "Success - Statistics",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/logs/stats",
+                  "host": ["{{base_url}}"],
+                  "path": ["logs", "stats"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"totalLogs\": 5420,\n    \"logsByLevel\": [\n      { \"level\": \"info\", \"count\": 3200 },\n      { \"level\": \"audit\", \"count\": 1500 },\n      { \"level\": \"error\", \"count\": 120 },\n      { \"level\": \"security\", \"count\": 300 },\n      { \"level\": \"warn\", \"count\": 250 },\n      { \"level\": \"debug\", \"count\": 50 }\n    ],\n    \"logsByDate\": [\n      { \"date\": \"2025-11-18\", \"count\": 850 },\n      { \"date\": \"2025-11-19\", \"count\": 920 },\n      { \"date\": \"2025-11-20\", \"count\": 780 },\n      { \"date\": \"2025-11-21\", \"count\": 840 },\n      { \"date\": \"2025-11-22\", \"count\": 910 },\n      { \"date\": \"2025-11-23\", \"count\": 670 },\n      { \"date\": \"2025-11-24\", \"count\": 450 }\n    ],\n    \"topUsers\": [\n      {\n        \"userId\": \"user-uuid-1\",\n        \"user\": {\n          \"email\": \"admin@gym.com\",\n          \"fullName\": \"Admin User\"\n        },\n        \"count\": 450\n      },\n      {\n        \"userId\": \"user-uuid-2\",\n        \"user\": {\n          \"email\": \"manager@gym.com\",\n          \"fullName\": \"Manager User\"\n        },\n        \"count\": 320\n      }\n    ],\n    \"topActions\": [\n      { \"action\": \"LOGIN\", \"count\": 320 },\n      { \"action\": \"CREATE_USER\", \"count\": 85 },\n      { \"action\": \"UPDATE_PAYMENT\", \"count\": 72 },\n      { \"action\": \"CREATE_MEMBER\", \"count\": 65 },\n      { \"action\": \"UPDATE_TENANT_SETTINGS\", \"count\": 45 }\n    ]\n  }\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Statistical analysis and metrics for logs"
+    },
+    {
+      "name": "Export",
+      "item": [
+        {
+          "name": "Export Logs to JSON",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/logs/export?level=error&startDate=2025-11-20",
+              "host": ["{{base_url}}"],
+              "path": ["logs", "export"],
+              "query": [
+                {
+                  "key": "level",
+                  "value": "error",
+                  "description": "Filter by level"
+                },
+                {
+                  "key": "action",
+                  "value": "",
+                  "description": "Filter by action",
+                  "disabled": true
+                },
+                {
+                  "key": "userId",
+                  "value": "",
+                  "description": "Filter by user",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search text",
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": "2025-11-20",
+                  "description": "Start date"
+                },
+                {
+                  "key": "endDate",
+                  "value": "",
+                  "description": "End date",
+                  "disabled": true
+                },
+                {
+                  "key": "filterTenantId",
+                  "value": "",
+                  "description": "Tenant filter (Super Admin)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Export filtered logs to JSON file (max 10,000 records). File will be downloaded with filename: logs-export-{timestamp}.json"
+          },
+          "response": []
+        }
+      ],
+      "description": "Export logs for backup or analysis"
+    },
+    {
+      "name": "Cleanup & Delete",
+      "item": [
+        {
+          "name": "Manual Cleanup - Delete Old Logs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"days\": 7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/logs/cleanup",
+              "host": ["{{base_url}}"],
+              "path": ["logs", "cleanup"]
+            },
+            "description": "Manually delete logs older than specified days. Default is 7 days. This operation is also run automatically daily at 2:00 AM."
+          },
+          "response": [
+            {
+              "name": "Success - Cleanup",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"days\": 7\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/logs/cleanup",
+                  "host": ["{{base_url}}"],
+                  "path": ["logs", "cleanup"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Successfully deleted 1250 logs older than 7 days\",\n  \"deletedCount\": 1250\n}"
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Super Admin (All Tenants)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"days\": 7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/logs/cleanup",
+              "host": ["{{base_url}}"],
+              "path": ["logs", "cleanup"]
+            },
+            "description": "Super Admin: Cleanup logs for ALL tenants (no filterTenantId specified)"
+          },
+          "response": []
+        },
+        {
+          "name": "Cleanup - Specific Tenant (Super Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"days\": 7,\n  \"filterTenantId\": \"{{tenant_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/logs/cleanup",
+              "host": ["{{base_url}}"],
+              "path": ["logs", "cleanup"]
+            },
+            "description": "Super Admin: Cleanup logs for specific tenant only"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Specific Logs",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"logIds\": [\n    \"{{log_id_1}}\",\n    \"{{log_id_2}}\",\n    \"{{log_id_3}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/logs",
+              "host": ["{{base_url}}"],
+              "path": ["logs"]
+            },
+            "description": "Delete specific logs by their IDs. Provide an array of log UUIDs."
+          },
+          "response": [
+            {
+              "name": "Success - Delete",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"logIds\": [\"uuid-1\", \"uuid-2\"]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/logs",
+                  "host": ["{{base_url}}"],
+                  "path": ["logs"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Successfully deleted 2 log(s)\",\n  \"deletedCount\": 2\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Manual log cleanup and deletion operations"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "log_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "log_id_1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "log_id_2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "log_id_3",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tenant_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

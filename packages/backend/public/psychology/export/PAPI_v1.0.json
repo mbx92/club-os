@@ -1,0 +1,652 @@
+{
+  "code": "PAPI",
+  "name": "Papikostick",
+  "description": "Tes PAPI-Kostick adalah alat ukur kepribadian yang digunakan untuk menilai perilaku dan gaya kerja seseorang di lingkungan profesional dengan mengukur 20 aspek kepribadian yang terbagi menjadi 10 needs (kebutuhan) dan 10 roles (peran). Tes ini terdiri dari 90 pasang pernyataan terkait situasi kerja, yang mengharuskan responden memilih salah satu yang paling menggambarkan dirinya, dengan format forced choice (pilihan terpaksa). ",
+  "category": "aptitude",
+  "estimatedDuration": 5,
+  "questions": [
+    {
+      "id": 1,
+      "textA": "Saya seorang pekerja giat",
+      "textB": "Saya Bukan Seorang Pemurung",
+      "scaleA": "G",
+      "scaleB": "E"
+    },
+    {
+      "id": 2,
+      "textA": "Saya suka bekerja lebih baik dari yang lain",
+      "textB": "Saya melakukan pekerjaan hingga tuntas",
+      "scaleA": "A",
+      "scaleB": "N"
+    },
+    {
+      "id": 3,
+      "textA": "Saya suka memberi orang petunjuk bagaimana melakukan sesuatu.",
+      "textB": "Saya senang memberitahukan orang apa yang harus dikerjakan",
+      "scaleA": "P",
+      "scaleB": "A"
+    },
+    {
+      "id": 4,
+      "textA": "Saya suka melakukan atau mengatakan hal-hal lucu.",
+      "textB": "Saya senang memberitahukan orang apa yang harus dikerjakan",
+      "scaleA": "X",
+      "scaleB": "P"
+    },
+    {
+      "id": 5,
+      "textA": "Saya suka menggabungkan diri dalam kelompok",
+      "textB": "Saya ingin diperhatikan dalam kelompok.",
+      "scaleA": "B",
+      "scaleB": "X"
+    },
+    {
+      "id": 6,
+      "textA": "Saya suka Menjalin persahabatan",
+      "textB": "Saya suka menggabungkan diri dalam suatu kelompok",
+      "scaleA": "O",
+      "scaleB": "B"
+    },
+    {
+      "id": 7,
+      "textA": "Jika saya rasa perlu, saya bisa cepat menyesuaikan diri",
+      "textB": "Saya berusaha Menjalin persahabatan",
+      "scaleA": "Z",
+      "scaleB": "O"
+    },
+    {
+      "id": 8,
+      "textA": "Saya akan membalas jika saya di sakiti",
+      "textB": "Saya suka melakukan hal-hal baru dan berbeda",
+      "scaleA": "K",
+      "scaleB": "Z"
+    },
+    {
+      "id": 9,
+      "textA": "Saya ingin atasan menyukai saya",
+      "textB": "Saya suka memberitahukan orang jika mereka bersalah.",
+      "scaleA": "F",
+      "scaleB": "K"
+    },
+    {
+      "id": 10,
+      "textA": "Saya suka mengikuti petunjuk yang di berikan kepada saya",
+      "textB": "Saya suka membuat atasan senang",
+      "scaleA": "W",
+      "scaleB": "F"
+    },
+    {
+      "id": 11,
+      "textA": "Saya berusaha keras sekali",
+      "textB": "Saya seorang yang rapih",
+      "scaleA": "G",
+      "scaleB": "C"
+    },
+    {
+      "id": 12,
+      "textA": "Saya dapat membuat orang melakukan apa yang saya inginkan",
+      "textB": "Saya tidak mudah marah.",
+      "scaleA": "L",
+      "scaleB": "E"
+    },
+    {
+      "id": 13,
+      "textA": "Saya suka memberitahu kelompok apa yang harus mereka kerjakan.",
+      "textB": "Saya selalu melakukan pekerjaan sampai tuntas.",
+      "scaleA": "P",
+      "scaleB": "N"
+    },
+    {
+      "id": 14,
+      "textA": "Saya ingin menjadi orang yang menarik dan mengasyikan.",
+      "textB": "Saya ingin menjadi orang yang sangat berhasil",
+      "scaleA": "X",
+      "scaleB": "A"
+    },
+    {
+      "id": 15,
+      "textA": "Saya ingin dapat menyesuaikan diri dengan kelompok-kelompok",
+      "textB": "Saya suka membantu orang mengambil keputusan",
+      "scaleA": "B",
+      "scaleB": "P"
+    },
+    {
+      "id": 16,
+      "textA": "Saya cemas bila seseorang tidak menyukai saya",
+      "textB": "Saya suka orang memperhatikan saya",
+      "scaleA": "O",
+      "scaleB": "X"
+    },
+    {
+      "id": 17,
+      "textA": "Saya suka mencoba hal-hal baru",
+      "textB": "Saya lebih suka bekerja sama daripada bekerja Sendiri",
+      "scaleA": "Z",
+      "scaleB": "B"
+    },
+    {
+      "id": 18,
+      "textA": "Kadang-kadang saya menyalahkan orang lain jika ada yang tidak beres.",
+      "textB": "Saya merasa terganggu bila ada yang tidak menyukai saya.",
+      "scaleA": "K",
+      "scaleB": "O"
+    },
+    {
+      "id": 19,
+      "textA": "Saya suka menyenangkan atasan",
+      "textB": "Saya suka mencoba pekerjaan – pekerjaan yang baru dan berbeda.",
+      "scaleA": "F",
+      "scaleB": "Z"
+    },
+    {
+      "id": 20,
+      "textA": "Saya menyukai petunjuk-petujuk yang rinci dalam menyelesaikan pekerjaan",
+      "textB": "Akan saya katakan kepada orang-orang yang bersangkutan bila mereka menjengkelkan saya",
+      "scaleA": "W",
+      "scaleB": "K"
+    },
+    {
+      "id": 21,
+      "textA": "Saya selalu berusaha keras",
+      "textB": "Saya suka Melaksanakan Setiap langkah dengan hati-hati",
+      "scaleA": "G",
+      "scaleB": "D"
+    },
+    {
+      "id": 22,
+      "textA": "Saya akan menjadi seorang pemimpin yang baik",
+      "textB": "Saya dapat mengorganisir suatu pekerjaan dengan baik.",
+      "scaleA": "L",
+      "scaleB": "C"
+    },
+    {
+      "id": 23,
+      "textA": "saya mudah tersinggung",
+      "textB": "Saya lambat dalam membuat keputusan",
+      "scaleA": "I",
+      "scaleB": "E"
+    },
+    {
+      "id": 24,
+      "textA": "Saya suka mengerjakan beberapa pekerjaan sekaligus",
+      "textB": "Bila saya dalam kelompok, saya lebih sering sebagai pendengar.",
+      "scaleA": "X",
+      "scaleB": "N"
+    },
+    {
+      "id": 25,
+      "textA": "Saya sangat senang bila mendapat undangan",
+      "textB": "Saya ingin lebih baik dari yang lain dalam mengerjakan sesuatu.",
+      "scaleA": "B",
+      "scaleB": "A"
+    },
+    {
+      "id": 26,
+      "textA": "Saya suka Menjalin persahabatan",
+      "textB": "Saya suka menasehati orang lain",
+      "scaleA": "O",
+      "scaleB": "P"
+    },
+    {
+      "id": 27,
+      "textA": "Saya suka melakukan hal-hal baru dan berbeda",
+      "textB": "Saya suka memberitahu bagaimana saya berhasil dalam melakukan sesuatu",
+      "scaleA": "Z",
+      "scaleB": "X"
+    },
+    {
+      "id": 28,
+      "textA": "Bila pendapat saya benar, saya akan pertahankan",
+      "textB": "Saya ingin diterima dan diakui dalam kelompok",
+      "scaleA": "K",
+      "scaleB": "B"
+    },
+    {
+      "id": 29,
+      "textA": "Saya tak mau menjadi lain dari yang lain",
+      "textB": "Saya berusaha dekat dengan orang-orang",
+      "scaleA": "F",
+      "scaleB": "O"
+    },
+    {
+      "id": 30,
+      "textA": "Saya senang memberitahu orang bagaimana melakukan suatu pekerjaan",
+      "textB": "Saya berusaha dekat dengan orang – orang",
+      "scaleA": "W",
+      "scaleB": "Z"
+    },
+    {
+      "id": 31,
+      "textA": "Saya bekerja keras",
+      "textB": "Saya banyak berfikir dan membuat perencanaan",
+      "scaleA": "G",
+      "scaleB": "R"
+    },
+    {
+      "id": 32,
+      "textA": "Saya memimpin kelompok",
+      "textB": "Saya tertarik dengan hal-hal yang lebih detail",
+      "scaleA": "L",
+      "scaleB": "D"
+    },
+    {
+      "id": 33,
+      "textA": "Saya mengambil Keputusan dengan mudah dan cepat",
+      "textB": "Saya menyimpan barang-barang dengan rapih dan teratur",
+      "scaleA": "I",
+      "scaleB": "C"
+    },
+    {
+      "id": 34,
+      "textA": "Saya melakukan pekerjaan dengan cepat",
+      "textB": "Saya tidak sering marah atau sedih",
+      "scaleA": "T",
+      "scaleB": "E"
+    },
+    {
+      "id": 35,
+      "textA": "Saya ingin menjadi bagian dari kelompok",
+      "textB": "Saya hanya ingin melakukan pekerjaan pada satu waktu",
+      "scaleA": "B",
+      "scaleB": "N"
+    },
+    {
+      "id": 36,
+      "textA": "Saya berusaha Menjalin persahabatan",
+      "textB": "Saya berusaha keras menjadi yang terbaik",
+      "scaleA": "O",
+      "scaleB": "A"
+    },
+    {
+      "id": 37,
+      "textA": "Saya suka mode terbaru untuk pakaian",
+      "textB": "Saya suka di beri tanggungjawab.",
+      "scaleA": "Z",
+      "scaleB": "P"
+    },
+    {
+      "id": 38,
+      "textA": "Saya menyukai perdebatan",
+      "textB": "Saya senang mendapat perhatian",
+      "scaleA": "K",
+      "scaleB": "X"
+    },
+    {
+      "id": 39,
+      "textA": "Saya suka menyenangkan atasan",
+      "textB": "Saya tertarik menjadi bagian dalam kelompok",
+      "scaleA": "F",
+      "scaleB": "B"
+    },
+    {
+      "id": 40,
+      "textA": "Saya sangat memperhatikan peraturan",
+      "textB": "Saya ingin orang mengenal saya dengan baik",
+      "scaleA": "W",
+      "scaleB": "O"
+    },
+    {
+      "id": 41,
+      "textA": "Saya berusaha keras sekali",
+      "textB": "Saya sangat ramah",
+      "scaleA": "G",
+      "scaleB": "S"
+    },
+    {
+      "id": 42,
+      "textA": "Orang berpendapat saya memimpin dengan baik",
+      "textB": "Saya berfikir lama dan berhati – hati",
+      "scaleA": "L",
+      "scaleB": "R"
+    },
+    {
+      "id": 43,
+      "textA": "Bila ada kesempatan, saya akan memanfaatkan nya.",
+      "textB": "Saya senang menangani hal-hal kecil",
+      "scaleA": "I",
+      "scaleB": "D"
+    },
+    {
+      "id": 44,
+      "textA": "Orang berpendapat bahwa saya bekerja cepat",
+      "textB": "Orang berpendapat bahwa saya rapi dan teratur",
+      "scaleA": "T",
+      "scaleB": "C"
+    },
+    {
+      "id": 45,
+      "textA": "Saya senang mengikuti pertandingan dan berolahraga.",
+      "textB": "Saya memiliki kepribadian yang menyenangkan",
+      "scaleA": "V",
+      "scaleB": "E"
+    },
+    {
+      "id": 46,
+      "textA": "Saya senang jika orang dekat dan bersahabat dengan saya",
+      "textB": "Saya selalu berusaha menyelesaikan sesuatu yang telah saya mulai",
+      "scaleA": "O",
+      "scaleB": "N"
+    },
+    {
+      "id": 47,
+      "textA": "Saya senang bereksperimen dan mencoba hal-hal baru",
+      "textB": "Saya suka mengerjakan pekerjaan yang sulit-sulit",
+      "scaleA": "Z",
+      "scaleB": "A"
+    },
+    {
+      "id": 48,
+      "textA": "Saya suka diperlakukan dengan adil",
+      "textB": "Saya suka memberitahu orang lain bagaimana Melaksanakan sesuatu.",
+      "scaleA": "K",
+      "scaleB": "P"
+    },
+    {
+      "id": 49,
+      "textA": "Saya suka melakukan apa yang diharapkan orang dari saya.",
+      "textB": "Saya suka jika orang perduli terhadap saya",
+      "scaleA": "F",
+      "scaleB": "X"
+    },
+    {
+      "id": 50,
+      "textA": "Saya suka diterangkan tugas saya sedetail-detailnya",
+      "textB": "Saya senang berada bersama orang-orang",
+      "scaleA": "W",
+      "scaleB": "B"
+    },
+    {
+      "id": 51,
+      "textA": "Saya selalu berusaha menyelesaikan pekerjaan dengan sempurna.",
+      "textB": "Orang mengatakan bahwa saya hampir-hampir tidak pernah lelah.",
+      "scaleA": "G",
+      "scaleB": "V"
+    },
+    {
+      "id": 52,
+      "textA": "Saya tipe pemimpin",
+      "textB": "Saya mudah bergaul",
+      "scaleA": "L",
+      "scaleB": "S"
+    },
+    {
+      "id": 53,
+      "textA": "Saya gunakan kesempatan",
+      "textB": "Saya banyak sekali berfikir",
+      "scaleA": "I",
+      "scaleB": "R"
+    },
+    {
+      "id": 54,
+      "textA": "Saya bekerja dengan tempo yang tinggi dan mantap",
+      "textB": "Saya senang menangani detail suatu pekerjaan",
+      "scaleA": "T",
+      "scaleB": "D"
+    },
+    {
+      "id": 55,
+      "textA": "Saya memiliki banyak tenaga untuk kegiatan dan berolahraga.",
+      "textB": "Saya mengatur dan menyimpan barang dengan teratur dan rapi.",
+      "scaleA": "V",
+      "scaleB": "C"
+    },
+    {
+      "id": 56,
+      "textA": "Saya dapat bergaul baik dengan semua orang",
+      "textB": "Saya orang yang berwatak tenang",
+      "scaleA": "S",
+      "scaleB": "E"
+    },
+    {
+      "id": 57,
+      "textA": "Saya ingin bertemu dengan orang-orang baru dan melakukan hal-hal baru.",
+      "textB": "Saya selalu ingin menyelesaikan pekerjaan yang telah saya mulai",
+      "scaleA": "Z",
+      "scaleB": "N"
+    },
+    {
+      "id": 58,
+      "textA": "Saya biasanya mempertahankan pendapat yang saya yakini.",
+      "textB": "Saya biasanya suka bekerja keras.",
+      "scaleA": "K",
+      "scaleB": "A"
+    },
+    {
+      "id": 59,
+      "textA": "Saya menyambut baik saran-saran dari orang yang saya kagumi.",
+      "textB": "Saya suka bertanggung jawab terhadap orang lain",
+      "scaleA": "F",
+      "scaleB": "P"
+    },
+    {
+      "id": 60,
+      "textA": "Saya membiarkan diri saya dipengaruhi dengan kuat oleh orang lain",
+      "textB": "Saya senang bila memperoleh banyak perhatian",
+      "scaleA": "W",
+      "scaleB": "X"
+    },
+    {
+      "id": 61,
+      "textA": "Biasanya saya bekerja keras sekali.",
+      "textB": "Biasanya saya bekerja cepat",
+      "scaleA": "G",
+      "scaleB": "T"
+    },
+    {
+      "id": 62,
+      "textA": "Apabila saya bicara, kelompok diam dan mendengarkan",
+      "textB": "Saya trampil menggunakan perkakas",
+      "scaleA": "L",
+      "scaleB": "V"
+    },
+    {
+      "id": 63,
+      "textA": "Saya lambat dalam membuat persahabatan",
+      "textB": "Saya lambat dalam mengambil Keputusan",
+      "scaleA": "I",
+      "scaleB": "S"
+    },
+    {
+      "id": 64,
+      "textA": "Biasanya saya makan dengan cepat",
+      "textB": "Saya suka membaca",
+      "scaleA": "T",
+      "scaleB": "R"
+    },
+    {
+      "id": 65,
+      "textA": "Saya suka pekerjaan Dimana saya banyak bergerak",
+      "textB": "Saya suka pekerjaan yang harus dilaksanakan dengan hati-hati",
+      "scaleA": "V",
+      "scaleB": "D"
+    },
+    {
+      "id": 66,
+      "textA": "Saya mudah membuat sebanyak mungkin teman",
+      "textB": "Saya mudah menemukan kembali barang-barang yang saya simpan",
+      "scaleA": "S",
+      "scaleB": "C"
+    },
+    {
+      "id": 67,
+      "textA": "Saya membuat rencana jauh-jauh sebelumnya",
+      "textB": "Saya selalu menyenangkan",
+      "scaleA": "R",
+      "scaleB": "E"
+    },
+    {
+      "id": 68,
+      "textA": "Saya menjunjung tinggi nama baik saya",
+      "textB": "Saya terus menekuni suatu masalah sampai tuntas",
+      "scaleA": "K",
+      "scaleB": "N"
+    },
+    {
+      "id": 69,
+      "textA": "Saya suka menyenangkan orang-orang yang saya kagumi",
+      "textB": "Saya ingin sukses",
+      "scaleA": "F",
+      "scaleB": "A"
+    },
+    {
+      "id": 70,
+      "textA": "Saya suka orang lain mengambil Keputusan untuk kelompok",
+      "textB": "Saya suka mengambil Keputusan untuk kelompok",
+      "scaleA": "W",
+      "scaleB": "P"
+    },
+    {
+      "id": 71,
+      "textA": "Saya selalu berusaha keras",
+      "textB": "Saya mengambil Keputusan secara cepat dan mudah",
+      "scaleA": "G",
+      "scaleB": "I"
+    },
+    {
+      "id": 72,
+      "textA": "Kelompok biasanya melakukan apa yang saya inginkan",
+      "textB": "Saya biasanya bekerja cepat-cepat",
+      "scaleA": "L",
+      "scaleB": "T"
+    },
+    {
+      "id": 73,
+      "textA": "Saya sering merasa lelah",
+      "textB": "Saya lambat dalam mengabil Keputusan",
+      "scaleA": "I",
+      "scaleB": "V"
+    },
+    {
+      "id": 74,
+      "textA": "Saya bekerja cepat",
+      "textB": "Saya mudah berteman",
+      "scaleA": "T",
+      "scaleB": "S"
+    },
+    {
+      "id": 75,
+      "textA": "Saya biasanya mempunyai gairah dan tenaga",
+      "textB": "Saya banyak menghabiskan waktu untuk berfikir",
+      "scaleA": "V",
+      "scaleB": "R"
+    },
+    {
+      "id": 76,
+      "textA": "Saya sangat ramah terhadap orang",
+      "textB": "Saya suka pekerjaan yang memerlukan ketelitian",
+      "scaleA": "S",
+      "scaleB": "D"
+    },
+    {
+      "id": 77,
+      "textA": "Saya banyak berfikir dan membuat perencanaan",
+      "textB": "Saya menyimpan sesuatu pada tempatnya",
+      "scaleA": "R",
+      "scaleB": "C"
+    },
+    {
+      "id": 78,
+      "textA": "Saya suka pekerjaan yang menuntut perhatian terhadap hal detail.",
+      "textB": "Saya tidak mudah marah",
+      "scaleA": "D",
+      "scaleB": "E"
+    },
+    {
+      "id": 79,
+      "textA": "Saya suka menuruti orang yang saya kagumi",
+      "textB": "Saya selalu menyelesaikan pekerjaan yang saya telah saya mulai",
+      "scaleA": "F",
+      "scaleB": "N"
+    },
+    {
+      "id": 80,
+      "textA": "Saya suka petunjuk – petunjuk yang jelas",
+      "textB": "Saya suka bekerja keras.",
+      "scaleA": "W",
+      "scaleB": "A"
+    },
+    {
+      "id": 81,
+      "textA": "Saya mngejar apa yang saya inginkan",
+      "textB": "Saya seorang pemimpin yang baik",
+      "scaleA": "G",
+      "scaleB": "L"
+    },
+    {
+      "id": 82,
+      "textA": "Saya dapat membuat orang lain bekerja keras",
+      "textB": "Saya adalah type orang yang tak kenal susah",
+      "scaleA": "L",
+      "scaleB": "I"
+    },
+    {
+      "id": 83,
+      "textA": "Saya mengambil Keputusan dengan cepat",
+      "textB": "Saya bicara dengan cepat",
+      "scaleA": "I",
+      "scaleB": "T"
+    },
+    {
+      "id": 84,
+      "textA": "Rasanya saya bekerja secara tergesa-gesa",
+      "textB": "Saya berolah raga secara teratur",
+      "scaleA": "T",
+      "scaleB": "V"
+    },
+    {
+      "id": 85,
+      "textA": "saya tidak suka bertemu kebanyakan orang",
+      "textB": "Saya cepat merasa lelah",
+      "scaleA": "V",
+      "scaleB": "S"
+    },
+    {
+      "id": 86,
+      "textA": "Saya mempunyai banyak sekali teman",
+      "textB": "Saya banyak menghabiskan waktu untuk berfikir",
+      "scaleA": "S",
+      "scaleB": "R"
+    },
+    {
+      "id": 87,
+      "textA": "Saya suka bekerja dengan teori",
+      "textB": "Saya suka menangani detail suatu pekerjaan",
+      "scaleA": "R",
+      "scaleB": "D"
+    },
+    {
+      "id": 88,
+      "textA": "Saya suka menangani detail suatu pekerjaan",
+      "textB": "Saya Suka mengorganisir pekerjaan saya",
+      "scaleA": "D",
+      "scaleB": "C"
+    },
+    {
+      "id": 89,
+      "textA": "Saya menaruh barang pada tempatnya",
+      "textB": "Saya selalu menyenangkan",
+      "scaleA": "C",
+      "scaleB": "E"
+    },
+    {
+      "id": 90,
+      "textA": "Saya suka diberitahu apa yang perlu saya kerjakan",
+      "textB": "Saya harus menyelesaikan pekerjaan yang telah saya mulai",
+      "scaleA": "W",
+      "scaleB": "N"
+    }
+  ],
+  "answerSchema": {},
+  "scoringConfig": {},
+  "config": {
+    "allowBack": true,
+    "timeLimit": null,
+    "showProgress": true,
+    "randomizeQuestions": false
+  },
+  "isActive": true,
+  "version": "1.0",
+  "questionCount": 90,
+  "exportedAt": "2025-12-16T06:04:13.142Z",
+  "exportedBy": "admin@tenant-a.com"
+}

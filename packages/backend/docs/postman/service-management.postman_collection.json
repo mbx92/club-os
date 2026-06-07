@@ -1,0 +1,656 @@
+{
+	"info": {
+		"_postman_id": "service-management-2025",
+		"name": "Service Management API",
+		"description": "Unified Service Management System - Manage memberships, class packages, PT packages, spa packages, and custom services",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "service-management-api"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Service Plans",
+			"item": [
+				{
+					"name": "List Service Plans",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/service/plans?page=1&limit=10&serviceType=all&isActive=all&sortBy=displayOrder&sortOrder=ASC",
+							"host": ["{{base_url}}"],
+							"path": ["service", "plans"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search by name or description",
+									"disabled": true
+								},
+								{
+									"key": "serviceType",
+									"value": "all",
+									"description": "Filter by type: membership, class_package, pt_package, spa_package, custom, all"
+								},
+								{
+									"key": "isActive",
+									"value": "all",
+									"description": "Filter by active status: true, false, all"
+								},
+								{
+									"key": "sortBy",
+									"value": "displayOrder",
+									"description": "Sort field: name, price, displayOrder, createdAt, serviceType"
+								},
+								{
+									"key": "sortOrder",
+									"value": "ASC",
+									"description": "Sort order: ASC, DESC"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Service Plan by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/service/plans/{{servicePlanId}}",
+							"host": ["{{base_url}}"],
+							"path": ["service", "plans", "{{servicePlanId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Service Type Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/service/plans/stats",
+							"host": ["{{base_url}}"],
+							"path": ["service", "plans", "stats"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Membership Plan (Time-based)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('servicePlanId', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"serviceType\": \"membership\",\n  \"name\": \"30 Days Gym Membership\",\n  \"description\": \"Full gym access for 30 days including all facilities\",\n  \"price\": 500000,\n  \"currency\": \"IDR\",\n  \"durationType\": \"time_based\",\n  \"duration\": 30,\n  \"accessControl\": {\n    \"facilities\": [\"gym\", \"pool\", \"sauna\"],\n    \"accessHours\": {\n      \"monday\": [\"06:00\", \"22:00\"],\n      \"tuesday\": [\"06:00\", \"22:00\"],\n      \"wednesday\": [\"06:00\", \"22:00\"],\n      \"thursday\": [\"06:00\", \"22:00\"],\n      \"friday\": [\"06:00\", \"22:00\"],\n      \"saturday\": [\"08:00\", \"20:00\"],\n      \"sunday\": [\"08:00\", \"20:00\"]\n    },\n    \"maxCheckIns\": 30\n  },\n  \"isActive\": true,\n  \"isPopular\": true,\n  \"displayOrder\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service/plans",
+							"host": ["{{base_url}}"],
+							"path": ["service", "plans"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Class Package (Session-based)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"serviceType\": \"class_package\",\n  \"name\": \"12x Yoga Class Package\",\n  \"description\": \"12 yoga class sessions valid for 30 days\",\n  \"price\": 1200000,\n  \"currency\": \"IDR\",\n  \"durationType\": \"session_based\",\n  \"sessions\": 12,\n  \"validityDays\": 30,\n  \"accessControl\": {\n    \"applicableClassTypes\": [\"yoga\"],\n    \"requiresTrainerAssignment\": true\n  },\n  \"isActive\": true,\n  \"isPopular\": false,\n  \"displayOrder\": 2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service/plans",
+							"host": ["{{base_url}}"],
+							"path": ["service", "plans"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create PT Package (Session-based)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"serviceType\": \"pt_package\",\n  \"name\": \"8x Personal Training\",\n  \"description\": \"8 personal training sessions with dedicated trainer, valid for 60 days\",\n  \"price\": 2000000,\n  \"currency\": \"IDR\",\n  \"durationType\": \"session_based\",\n  \"sessions\": 8,\n  \"validityDays\": 60,\n  \"accessControl\": {\n    \"requiresTrainerAssignment\": true\n  },\n  \"isActive\": true,\n  \"isPopular\": true,\n  \"displayOrder\": 3\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service/plans",
+							"host": ["{{base_url}}"],
+							"path": ["service", "plans"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Spa Package (Session-based)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"serviceType\": \"spa_package\",\n  \"name\": \"5x Massage Package\",\n  \"description\": \"5 massage sessions, valid for 90 days\",\n  \"price\": 1500000,\n  \"currency\": \"IDR\",\n  \"durationType\": \"session_based\",\n  \"sessions\": 5,\n  \"validityDays\": 90,\n  \"accessControl\": {\n    \"requiresTrainerAssignment\": false\n  },\n  \"isActive\": true,\n  \"isPopular\": false,\n  \"displayOrder\": 4\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service/plans",
+							"host": ["{{base_url}}"],
+							"path": ["service", "plans"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Service Plan",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"price\": 550000,\n  \"isPopular\": true,\n  \"description\": \"Updated description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service/plans/{{servicePlanId}}",
+							"host": ["{{base_url}}"],
+							"path": ["service", "plans", "{{servicePlanId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Service Plan",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/service/plans/{{servicePlanId}}",
+							"host": ["{{base_url}}"],
+							"path": ["service", "plans", "{{servicePlanId}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Active Services",
+			"item": [
+				{
+					"name": "Get Member Active Services",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/service/active/{{memberId}}?status=active&serviceType=all",
+							"host": ["{{base_url}}"],
+							"path": ["service", "active", "{{memberId}}"],
+							"query": [
+								{
+									"key": "status",
+									"value": "active",
+									"description": "Filter by status: active, expired, depleted, cancelled, suspended, all"
+								},
+								{
+									"key": "serviceType",
+									"value": "all",
+									"description": "Filter by type: membership, class_package, pt_package, spa_package, custom, all"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Service by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/service/active/detail/{{activeServiceId}}",
+							"host": ["{{base_url}}"],
+							"path": ["service", "active", "detail", "{{activeServiceId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Purchase Membership (Cash)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('activeServiceId', jsonData.data.activeService.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"memberId\": \"{{memberId}}\",\n  \"servicePlanId\": \"{{servicePlanId}}\",\n  \"paymentMethod\": \"cash\",\n  \"paidAmount\": 500000,\n  \"notes\": \"30 days membership purchase\",\n  \"autoRenew\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service/active/purchase",
+							"host": ["{{base_url}}"],
+							"path": ["service", "active", "purchase"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Purchase PT Package with Trainer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"memberId\": \"{{memberId}}\",\n  \"servicePlanId\": \"{{servicePlanId}}\",\n  \"assignedTrainerId\": \"{{trainerId}}\",\n  \"paymentMethod\": \"credit_card\",\n  \"paidAmount\": 2000000,\n  \"notes\": \"8x PT sessions with Trainer John\",\n  \"autoRenew\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service/active/purchase",
+							"host": ["{{base_url}}"],
+							"path": ["service", "active", "purchase"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Purchase with Voucher",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"memberId\": \"{{memberId}}\",\n  \"servicePlanId\": \"{{servicePlanId}}\",\n  \"voucherCode\": \"NEWYEAR2024\",\n  \"paymentMethod\": \"credit_card\",\n  \"paidAmount\": 1800000,\n  \"notes\": \"Purchase with discount voucher\",\n  \"autoRenew\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service/active/purchase",
+							"host": ["{{base_url}}"],
+							"path": ["service", "active", "purchase"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Purchase with Custom Start Date",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"memberId\": \"{{memberId}}\",\n  \"servicePlanId\": \"{{servicePlanId}}\",\n  \"startDate\": \"2024-02-01\",\n  \"paymentMethod\": \"bank_transfer\",\n  \"paidAmount\": 1200000,\n  \"notes\": \"Pre-purchase for next month\",\n  \"autoRenew\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service/active/purchase",
+							"host": ["{{base_url}}"],
+							"path": ["service", "active", "purchase"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Use Session",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notes\": \"Completed yoga class with instructor Sarah\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service/active/{{activeServiceId}}/use-session",
+							"host": ["{{base_url}}"],
+							"path": ["service", "active", "{{activeServiceId}}", "use-session"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Trainer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"trainerId\": \"{{trainerId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service/active/{{activeServiceId}}/assign-trainer",
+							"host": ["{{base_url}}"],
+							"path": ["service", "active", "{{activeServiceId}}", "assign-trainer"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Active Service",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Member requested cancellation due to relocation\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/service/active/{{activeServiceId}}/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["service", "active", "{{activeServiceId}}", "cancel"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Real-World Scenarios",
+			"item": [
+				{
+					"name": "Scenario 1: Member Beli Membership + PT",
+					"item": [
+						{
+							"name": "Step 1: Purchase 30 Days Membership",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"memberId\": \"{{memberId}}\",\n  \"servicePlanId\": \"{{servicePlanId}}\",\n  \"paymentMethod\": \"credit_card\",\n  \"paidAmount\": 500000,\n  \"notes\": \"Standard membership\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/service/active/purchase",
+									"host": ["{{base_url}}"],
+									"path": ["service", "active", "purchase"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Step 2: Purchase PT Package",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"memberId\": \"{{memberId}}\",\n  \"servicePlanId\": \"{{servicePlanId}}\",\n  \"assignedTrainerId\": \"{{trainerId}}\",\n  \"paymentMethod\": \"credit_card\",\n  \"paidAmount\": 2000000,\n  \"notes\": \"PT package with Trainer John\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/service/active/purchase",
+									"host": ["{{base_url}}"],
+									"path": ["service", "active", "purchase"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Step 3: View All Active Services",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/service/active/{{memberId}}?status=active",
+									"host": ["{{base_url}}"],
+									"path": ["service", "active", "{{memberId}}"],
+									"query": [
+										{
+											"key": "status",
+											"value": "active"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Scenario 2: Use PT Sessions",
+					"item": [
+						{
+							"name": "Session 1: Use First Session",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"notes\": \"Session 1: Upper body workout\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/service/active/{{activeServiceId}}/use-session",
+									"host": ["{{base_url}}"],
+									"path": ["service", "active", "{{activeServiceId}}", "use-session"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Session 2: Use Second Session",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"notes\": \"Session 2: Lower body workout\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/service/active/{{activeServiceId}}/use-session",
+									"host": ["{{base_url}}"],
+									"path": ["service", "active", "{{activeServiceId}}", "use-session"]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Check Remaining Sessions",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/service/active/detail/{{activeServiceId}}",
+									"host": ["{{base_url}}"],
+									"path": ["service", "active", "detail", "{{activeServiceId}}"]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Scenario 3: Multiple Services Filter",
+					"item": [
+						{
+							"name": "Get All Active Memberships",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/service/active/{{memberId}}?status=active&serviceType=membership",
+									"host": ["{{base_url}}"],
+									"path": ["service", "active", "{{memberId}}"],
+									"query": [
+										{
+											"key": "status",
+											"value": "active"
+										},
+										{
+											"key": "serviceType",
+											"value": "membership"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get All PT Packages",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/service/active/{{memberId}}?status=active&serviceType=pt_package",
+									"host": ["{{base_url}}"],
+									"path": ["service", "active", "{{memberId}}"],
+									"query": [
+										{
+											"key": "status",
+											"value": "active"
+										},
+										{
+											"key": "serviceType",
+											"value": "pt_package"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Expired Services",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/service/active/{{memberId}}?status=expired",
+									"host": ["{{base_url}}"],
+									"path": ["service", "active", "{{memberId}}"],
+									"query": [
+										{
+											"key": "status",
+											"value": "expired"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	]
+}

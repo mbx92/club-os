@@ -1,0 +1,1825 @@
+{
+  "testType": "EPPS",
+  "description": "Edwards Personal Preference Schedule - 225 questions, 15 needs",
+  "totalQuestions": 225,
+  "needs": [
+    "ach",
+    "def",
+    "ord",
+    "exh",
+    "aut",
+    "aff",
+    "int",
+    "suc",
+    "dom",
+    "aba",
+    "nur",
+    "chg",
+    "end",
+    "het",
+    "agg"
+  ],
+  "scoringNote": "Scoring menggunakan EPPS Matrix berdasarkan rowIdx dan colIdx. Backend scoringService akan handle perhitungan.",
+  "questions": [
+    {
+      "id": 1,
+      "textA": "Saya ingin menolong teman-teman saya, bila mereka berada dalam kesulitan.",
+      "textB": "Saya ingin berkarya dan bekerja sebaik mungkin.",
+      "rowIdx": 1,
+      "colIdx": 1,
+      "matrixGroup": 1
+    },
+    {
+      "id": 2,
+      "textA": "Saya ingin mengetahui pandangan tokoh-tokoh dan para ahli mengenai berbagai masalah yang menarik perhatian saya.",
+      "textB": "Saya ingin ahli dalam suatu pekerjaan, jabatan, atau bidang khusus.",
+      "rowIdx": 2,
+      "colIdx": 1,
+      "matrixGroup": 1
+    },
+    {
+      "id": 3,
+      "textA": "Saya ingin setiap pekerjaan, tulisan saya, teliti, rapi dan tersusun dengan baik.",
+      "textB": "Saya ingin ahli dalam suatu pekerjaan, jabatan atau bidang khusus.",
+      "rowIdx": 3,
+      "colIdx": 1,
+      "matrixGroup": 1
+    },
+    {
+      "id": 4,
+      "textA": "Saya suka menceritakan hal-hal yang lucu waktu pesta.",
+      "textB": "Saya ingin menulis roman, atau sandiwara yang hebat.",
+      "rowIdx": 4,
+      "colIdx": 1,
+      "matrixGroup": 1
+    },
+    {
+      "id": 5,
+      "textA": "Saya ingin dapat berbuat sekehendak hati.",
+      "textB": "Saya ingin dapat menyatakan bahwa saya telah menyelesaikan dengan baik suatu pekerjaan yang memang sulit.",
+      "rowIdx": 5,
+      "colIdx": 1,
+      "matrixGroup": 1
+    },
+    {
+      "id": 6,
+      "textA": "Saya ingin memecahkan teka-teki dan persoalan yang memang sukar bagi orang lain.",
+      "textB": "Saya suka mengikuti petunjuk-petunjuk dan melakukan hal-hal yang orang harapkan dari diri saya.",
+      "rowIdx": 1,
+      "colIdx": 2,
+      "matrixGroup": 1
+    },
+    {
+      "id": 7,
+      "textA": "Saya ingin mengalami hal-hal yang baru dan perubahan-perubahan dalam kehidupan saya sehari-hari.",
+      "textB": "Saya suka menyatakan pada atasan saya bahwa mereka telah melakukan suatu pekerjaan dengan baik, bila memang demikian halnya menurut pikiran saya.",
+      "rowIdx": 2,
+      "colIdx": 2,
+      "matrixGroup": 1
+    },
+    {
+      "id": 8,
+      "textA": "Saya terbiasa merencanakan dan mengatur detail-detail dari setiap pekerjaan yang harus saya lakukan.",
+      "textB": "Saya suka mengikuti petunjuk-petunjuk dan melakukan hal-hal yang orang harapkan dari diri saya.",
+      "rowIdx": 3,
+      "colIdx": 2,
+      "matrixGroup": 1
+    },
+    {
+      "id": 9,
+      "textA": "Saya ingin orang memperhatikan dan berkomentar mengenai penampilan saya di depan umum.",
+      "textB": "Saya suka membaca riwayat hidup orang-orang besar.",
+      "rowIdx": 4,
+      "colIdx": 2,
+      "matrixGroup": 1
+    },
+    {
+      "id": 10,
+      "textA": "Saya suka mengelakkan keadaan untuk berlaku secara konvensional (kebiasaan umum).",
+      "textB": "Saya suka membaca riwayat hidup orang-orang besar.",
+      "rowIdx": 5,
+      "colIdx": 2,
+      "matrixGroup": 1
+    },
+    {
+      "id": 11,
+      "textA": "Saya ingin ahli dalam suatu pekerjaan, jabatan atau bidang khusus.",
+      "textB": "Saya ingin pekerjaan saya diatur dan direncanakan sebelum dimulai.",
+      "rowIdx": 1,
+      "colIdx": 3,
+      "matrixGroup": 1
+    },
+    {
+      "id": 12,
+      "textA": "Saya ingin mengetahui pandangan tokoh-tokoh dan para ahli mengenai berbagai masalah yang menarik perhatian saya.",
+      "textB": "Jika saya harus bepergian, maka saya ingin segala sesuatunya telah direncanakan terlebih dahulu",
+      "rowIdx": 2,
+      "colIdx": 3,
+      "matrixGroup": 1
+    },
+    {
+      "id": 13,
+      "textA": "Saya ingin mengerjakan sampai benar-benar selesai setiap pekerjaan ataupun tugas yang telah saya mulai.",
+      "textB": "Saya ingin perlengkapan keperluan saya tersusun rapi dan teratur di tempat yang semestinya atau di dalam ruang kerja saya.",
+      "rowIdx": 3,
+      "colIdx": 3,
+      "matrixGroup": 1
+    },
+    {
+      "id": 14,
+      "textA": "Saya suka bercerita kepada orang-orang lain tentang petualangan dan hal-hal aneh yang pernah saya alami.",
+      "textB": "Saya suka makan saya teratur dan ada waktu tertentu untuk makan.",
+      "rowIdx": 4,
+      "colIdx": 3,
+      "matrixGroup": 1
+    },
+    {
+      "id": 15,
+      "textA": "Saya tak ingin tergantung orang lain saat menentukan hal yang akan saya lakukan.",
+      "textB": "Saya ingin perlengkapan keperluan saya tersusun rapi dan teratur di tempat yang semestinya atau di dalam ruang kerja saya.",
+      "rowIdx": 5,
+      "colIdx": 3,
+      "matrixGroup": 1
+    },
+    {
+      "id": 16,
+      "textA": "Saya ingin mengerjakan segala sesuatu lebih baik daripada orang lain.",
+      "textB": "Saya suka menceritakan hal-hal yang lucu waktup esta.",
+      "rowIdx": 1,
+      "colIdx": 4,
+      "matrixGroup": 1
+    },
+    {
+      "id": 17,
+      "textA": "Saya suka mengikuti adat istiadat dan menghindarkan hal-hal yang mungkin dianggap tak wajar oleh orang-orang yang saya hormati.",
+      "textB": "Saya suka berbicara tentang hal-hal yang telah saya capai.",
+      "rowIdx": 2,
+      "colIdx": 4,
+      "matrixGroup": 1
+    },
+    {
+      "id": 18,
+      "textA": "Saya ingin agar hidup saya teratur sedemikian rupa sehingga berjalan lancar dan tanpa banyak perubahan rencana.",
+      "textB": "Saya suka bercerita kepada orang-orang lain tentang petualangan dan hal-hal aneh yang pernah saya alami.",
+      "rowIdx": 3,
+      "colIdx": 4,
+      "matrixGroup": 1
+    },
+    {
+      "id": 19,
+      "textA": "Saya suka membaca buku-buku atau sandiwara-sandiwara yang terutama berkisar sekitar soal-soal seks.",
+      "textB": "Saya suka menjadi pusat perhatian dalam kelompok .",
+      "rowIdx": 4,
+      "colIdx": 4,
+      "matrixGroup": 1
+    },
+    {
+      "id": 20,
+      "textA": "Saya suka mengecam orang-orang yang dianggap berwenang.",
+      "textB": "saya suka menggunakan kata-kata yang maknanya sering tak diketahui orang lain.",
+      "rowIdx": 5,
+      "colIdx": 4,
+      "matrixGroup": 1
+    },
+    {
+      "id": 21,
+      "textA": "Saya ingin menyelesaikan tugas yang memangm embutuhkan ketrampilan serta usaha.",
+      "textB": "Saya ingin dapat berbuat sekehendak hati.",
+      "rowIdx": 1,
+      "colIdx": 5,
+      "matrixGroup": 1
+    },
+    {
+      "id": 22,
+      "textA": "Saya suka memuji seseorang yang saya kagumi.",
+      "textB": "Saya ingin merasa bebas melakukan yang saya kehe ndaki.",
+      "rowIdx": 2,
+      "colIdx": 5,
+      "matrixGroup": 1
+    },
+    {
+      "id": 23,
+      "textA": "Saya suka menyimpan surat, bon, dan kertas-kertas lain secara rapi dan menurut sistem tertentu.",
+      "textB": "Saya tak ingin tergantung orang lain saat menent ukan hal yang akan saya lakukan.",
+      "rowIdx": 3,
+      "colIdx": 5,
+      "matrixGroup": 1
+    },
+    {
+      "id": 24,
+      "textA": "Saya suka mengajukan pertanyaan yang setahu saya tak seorangpun akan bisa menjawabnya.",
+      "textB": "Saya suka mengecam orang-orang yang dianggap berwenang.",
+      "rowIdx": 4,
+      "colIdx": 5,
+      "matrixGroup": 1
+    },
+    {
+      "id": 25,
+      "textA": "Saya menjadi sedemikian marah, rasanya ingin melemparkan, dan merusak barang-barang.",
+      "textB": "Saya tak ingin memikul tanggung jawab dan kewajiban yang ditetapkan orang lain.",
+      "rowIdx": 5,
+      "colIdx": 5,
+      "matrixGroup": 1
+    },
+    {
+      "id": 26,
+      "textA": "Saya ingin berhasil dalam setiap hal yang saya lakukan.",
+      "textB": "Saya suka memperoleh teman-teman baru.",
+      "rowIdx": 1,
+      "colIdx": 6,
+      "matrixGroup": 1
+    },
+    {
+      "id": 27,
+      "textA": "saya suka mengikuti petunjuk-petunjuk dan melakukan hal-hal yang orang harapkan dari diri saya.",
+      "textB": "Saya ingin keterikatan perasaan bersama yang kuat dengan teman-teman saya.",
+      "rowIdx": 2,
+      "colIdx": 6,
+      "matrixGroup": 1
+    },
+    {
+      "id": 28,
+      "textA": "Saya ingin setiap pekerjaan, tulisan saya, teliti, rapi dan tersusun dengan baik.",
+      "textB": "Saya ingin memperoleh teman sebanyak mungkin.",
+      "rowIdx": 3,
+      "colIdx": 6,
+      "matrixGroup": 1
+    },
+    {
+      "id": 29,
+      "textA": "Saya suka menceritakan hal-hal yang lucu waktu pesta.",
+      "textB": "Saya suka berkirim surat kepada teman-teman saya .",
+      "rowIdx": 4,
+      "colIdx": 6,
+      "matrixGroup": 1
+    },
+    {
+      "id": 30,
+      "textA": "Saya ingin dapat berbuat sekehendak hati.",
+      "textB": "Saya suka melakukan atau menjalani sesuatu bersama teman-teman saya.",
+      "rowIdx": 5,
+      "colIdx": 6,
+      "matrixGroup": 1
+    },
+    {
+      "id": 31,
+      "textA": "Saya ingin memecahkan teka-teki dan persoalan yang memang sukar bagi orang lain.",
+      "textB": "Saya suka menilai orang berdasarkan alasan mereka melakukan sesuatu dan bukan atas dasar yang sesungguhnya mereka lakukan.",
+      "rowIdx": 1,
+      "colIdx": 7,
+      "matrixGroup": 1
+    },
+    {
+      "id": 32,
+      "textA": "Saya suka dipimpin orang-orang yang saya kagumi.",
+      "textB": "Saya ingin memahami perasaan teman-teman sayada lam menghadapi berbagai masalah.",
+      "rowIdx": 2,
+      "colIdx": 7,
+      "matrixGroup": 1
+    },
+    {
+      "id": 33,
+      "textA": "Saya suka makan saya teratur dan ada waktu tertentu untuk makan.",
+      "textB": "Saya suka mempelajari dan menganalisa tingkah laku orang-orang lain.",
+      "rowIdx": 3,
+      "colIdx": 7,
+      "matrixGroup": 1
+    },
+    {
+      "id": 34,
+      "textA": "Saya ingin mengatakan hal-hal yang dianggap lucu dan cerdas oleh orang-orang lain.",
+      "textB": "Saya suka menempatkan diri saya ke dalam kedudukan orang lain dan membayangkan bagaimana perasaan saya bila berada dalam keadaan yang sama.",
+      "rowIdx": 4,
+      "colIdx": 7,
+      "matrixGroup": 1
+    },
+    {
+      "id": 35,
+      "textA": "Saya ingin merasa bebas melakukan yang saya kehendaki.",
+      "textB": "Saya suka mengamati perasaan orang lain dalamsu atu keadaan tertentu.",
+      "rowIdx": 5,
+      "colIdx": 7,
+      "matrixGroup": 1
+    },
+    {
+      "id": 36,
+      "textA": "Saya ingin menyelesaikan tugas yang memangm embutuhkan ketrampilan serta usaha.",
+      "textB": "Saya ingin teman-teman memberi dorongan kepada saya bila saya menghadapi kegagalan.",
+      "rowIdx": 1,
+      "colIdx": 8,
+      "matrixGroup": 1
+    },
+    {
+      "id": 37,
+      "textA": "Dalam merencanakan sesuatu, saya ingin mendapat saran-saran dari orang-orang yang pendapatnya saya hormati.",
+      "textB": "Saya ingin diperlakukan dengan ramah oleh teman- teman saya.",
+      "rowIdx": 2,
+      "colIdx": 8,
+      "matrixGroup": 1
+    },
+    {
+      "id": 38,
+      "textA": "Saya ingin agar hidup saya teratur sedemikian rupa sehingga berjalan lancar dan tanpa banyak perubahan rencana.",
+      "textB": "Saya ingin teman-teman saya merasa kasihan pada saya apabila saya sakit.",
+      "rowIdx": 3,
+      "colIdx": 8,
+      "matrixGroup": 1
+    },
+    {
+      "id": 39,
+      "textA": "Saya suka menjadi pusat perhatian dalam kelompok.",
+      "textB": "Saya ingin teman-teman saya meributkan tentangd iri saya bila saya mendapat cedera atau sakit.",
+      "rowIdx": 4,
+      "colIdx": 8,
+      "matrixGroup": 1
+    },
+    {
+      "id": 40,
+      "textA": "Saya suka mengelakkan keadaan untuk berlaku secara konvensional (kebiasaan umum).",
+      "textB": "Saya ingin teman-teman saya bersimpati terhadap saya dan menghibur saya bila saya bersusah hati.",
+      "rowIdx": 5,
+      "colIdx": 8,
+      "matrixGroup": 1
+    },
+    {
+      "id": 41,
+      "textA": "Saya ingin menulis roman, atau sandiwara yang hebat.",
+      "textB": "Bila masuk dalam kepanitiaan, saya ingin ditunjuk atau dipilih sebagai ketuanya.",
+      "rowIdx": 1,
+      "colIdx": 9,
+      "matrixGroup": 1
+    },
+    {
+      "id": 42,
+      "textA": "Bila saya berada dalam suatu kelompok, saya suka menerima pimpinan orang lain dalam memutuskan hal-hal yang akan dilakukan.",
+      "textB": "Saya ingin mengawasi dan mengarahkan tindakan-tindakan orang lain bila keadaan memungkinkan.",
+      "rowIdx": 2,
+      "colIdx": 9,
+      "matrixGroup": 1
+    },
+    {
+      "id": 43,
+      "textA": "Saya suka menyimpan surat, bon, dan kertas-kertas lain secara rapi dan menurut sistem tertentu.",
+      "textB": "Saya ingin menjadi salah seorang pemimpin dalam organisasi atau kelompok dimana saya menjadi anggotanya.",
+      "rowIdx": 3,
+      "colIdx": 9,
+      "matrixGroup": 1
+    },
+    {
+      "id": 44,
+      "textA": "Saya suka mengajukan pertanyaan yang setahu saya tak seorangpun akan bisa menjawabnya.",
+      "textB": "Saya suka mengarahkan orang lain bagaimana mereka melakukan pekerjaan mereka.",
+      "rowIdx": 4,
+      "colIdx": 9,
+      "matrixGroup": 1
+    },
+    {
+      "id": 45,
+      "textA": "Saya tak ingin memikul tanggung jawab dan ke wajiban yang ditetapkan orang lain.",
+      "textB": "Saya ingin diminta menyelesaikan perdebatan atau perselisihan di antara orang lain.",
+      "rowIdx": 5,
+      "colIdx": 9,
+      "matrixGroup": 1
+    },
+    {
+      "id": 46,
+      "textA": "Saya ingin ahli dalam suatu pekerjaan, jabatan atau bidang khusus.",
+      "textB": "Saya merasa bersalah apabila melakukan sesuatu yang saya ketahui tidak baik.",
+      "rowIdx": 1,
+      "colIdx": 10,
+      "matrixGroup": 1
+    },
+    {
+      "id": 47,
+      "textA": "Saya suka membaca riwayat hidup orang-orang besar.",
+      "textB": "Saya merasa harus mengakui hal-hal tidak baik ya ng telah saya lakukan.",
+      "rowIdx": 2,
+      "colIdx": 10,
+      "matrixGroup": 1
+    },
+    {
+      "id": 48,
+      "textA": "Saya terbiasa merencanakan dan mengatur detail-detail dari setiap pekerjaan yang harus saya lakukan.",
+      "textB": "Bila keadaan kurang menguntungkan, saya merasah arus lebih disalahkan daripada orang lain.",
+      "rowIdx": 3,
+      "colIdx": 10,
+      "matrixGroup": 1
+    },
+    {
+      "id": 49,
+      "textA": "Saya suka menggunakan kata-kata yang maknanya sering tak diketahui orang lain.",
+      "textB": "Dalam banyak hal saya merasa kalah dibandingkan dengan orang-orang lain.",
+      "rowIdx": 4,
+      "colIdx": 10,
+      "matrixGroup": 1
+    },
+    {
+      "id": 50,
+      "textA": "Saya suka mengecam orang-orang yang dianggap berwenang.",
+      "textB": "Saya merasa canggung berada diantara orang-orang yang saya anggap sebagai atasan saya.",
+      "rowIdx": 5,
+      "colIdx": 10,
+      "matrixGroup": 1
+    },
+    {
+      "id": 51,
+      "textA": "Saya ingin berkarya dan bekerja sebaik mungkin.",
+      "textB": "Saya suka menolong orang-orang lain yang tidakb egitu beruntung seperti saya.",
+      "rowIdx": 1,
+      "colIdx": 11,
+      "matrixGroup": 1
+    },
+    {
+      "id": 52,
+      "textA": "Saya ingin mengetahui pandangan tokoh-tokoh dan para ahli mengenai berbagai masalah yang menarik perhatian saya.",
+      "textB": "Saya suka bermurah hati kepada teman-teman saya.",
+      "rowIdx": 2,
+      "colIdx": 11,
+      "matrixGroup": 1
+    },
+    {
+      "id": 53,
+      "textA": "Saya suka membuat perencanaan sebelum memulai pekerjaan yang sulit.",
+      "textB": "Saya suka memberi bantuan-bantuan kecil kepada teman-teman saya.",
+      "rowIdx": 3,
+      "colIdx": 11,
+      "matrixGroup": 1
+    },
+    {
+      "id": 54,
+      "textA": "Saya suka bercerita kepada orang-orang lain tentang petualangan dan hal-hal aneh yang pernah saya alami.",
+      "textB": "Saya ingin teman-teman saya mempercayai saya dan menceritakan kesulitan-kesulitan mereka kepada saya.",
+      "rowIdx": 4,
+      "colIdx": 11,
+      "matrixGroup": 1
+    },
+    {
+      "id": 55,
+      "textA": "Saya suka menyatakan pendapat saya tentang berbagai hal.",
+      "textB": "Saya suka memaafkan teman-teman saya yang kadang -kadang mungkin menyakiti hati saya.",
+      "rowIdx": 5,
+      "colIdx": 11,
+      "matrixGroup": 1
+    },
+    {
+      "id": 56,
+      "textA": "Saya ingin mengerjakan segala sesuatu lebih baik daripada orang lain.",
+      "textB": "Saya suka makan di restoran-restoran baru ataua sing.",
+      "rowIdx": 1,
+      "colIdx": 12,
+      "matrixGroup": 1
+    },
+    {
+      "id": 57,
+      "textA": "Saya suka mengikuti adat istiadat dan menghindarkan hal-hal yang mungkin dianggap tak wajar oleh orang-orang yang saya hormati.",
+      "textB": "Saya suka mengikuti mode atau cara baru.",
+      "rowIdx": 2,
+      "colIdx": 12,
+      "matrixGroup": 1
+    },
+    {
+      "id": 58,
+      "textA": "Saya ingin pekerjaan saya diatur dan direnca nakan sebelum dimulai.",
+      "textB": "Saya suka bepergian melihat-lihat daerah pedalaman.",
+      "rowIdx": 3,
+      "colIdx": 12,
+      "matrixGroup": 1
+    },
+    {
+      "id": 59,
+      "textA": "Saya ingin orang memperhatikan dan berkomentar mengenai penampilan saya di depan umum.",
+      "textB": "Saya suka menjelajahi pedalaman dan tinggal di berbagai tempat.",
+      "rowIdx": 4,
+      "colIdx": 12,
+      "matrixGroup": 1
+    },
+    {
+      "id": 60,
+      "textA": "Saya tak ingin tergantung orang lain saat menentukan hal yang akan saya lakukan.",
+      "textB": "Saya suka melakukan hal-hal baru dan berbeda dari biasanya.",
+      "rowIdx": 5,
+      "colIdx": 12,
+      "matrixGroup": 1
+    },
+    {
+      "id": 61,
+      "textA": "Saya ingin dapat menyatakan bahwa saya telah menyelesaikan dengan baik suatu pekerjaan yang memang sulit.",
+      "textB": "Saya suka bekerja keras pada tiap pekerjaan yang saya hadapi.",
+      "rowIdx": 1,
+      "colIdx": 13,
+      "matrixGroup": 1
+    },
+    {
+      "id": 62,
+      "textA": "Saya suka menyatakan pada atasan saya bahwa mereka telah melakukan suatu pekerjaan dengan baik, bila memang demikian halnya menurut pikiran saya.",
+      "textB": "Saya ingin menyelesaikan pekerjaan satu-persatu, sebelum memulai yang lainnya.",
+      "rowIdx": 2,
+      "colIdx": 13,
+      "matrixGroup": 1
+    },
+    {
+      "id": 63,
+      "textA": "Jika saya harus bepergian, maka saya ingins egala sesuatunya telah direncanakan terlebih dahulu.",
+      "textB": "Saya ingin mengerjakan teka-teki atau memecahkan persoalan-persoalan sampai selesai.",
+      "rowIdx": 3,
+      "colIdx": 13,
+      "matrixGroup": 1
+    },
+    {
+      "id": 64,
+      "textA": "Saya kadang-kadang suka melakukan hal-hal semata-mata untuk melihat reaksi orang lain.",
+      "textB": "Saya suka bertahan menghadapi suatu pekerjaan atau masalah sekalipun tampaknya seolah-olah saya tak akan berhasil.",
+      "rowIdx": 4,
+      "colIdx": 13,
+      "matrixGroup": 1
+    },
+    {
+      "id": 65,
+      "textA": "Saya suka melakukan hal yang dianggap tak se suai dengan adat kebiasaan.",
+      "textB": "Saya ingin bekerja berjam-jam tanpa gangguan.",
+      "rowIdx": 5,
+      "colIdx": 13,
+      "matrixGroup": 1
+    },
+    {
+      "id": 66,
+      "textA": "Saya ingin mengerjakan sesuatu yang berarti.",
+      "textB": "Saya suka mencium lawan jenis saya yang menarik.",
+      "rowIdx": 1,
+      "colIdx": 14,
+      "matrixGroup": 1
+    },
+    {
+      "id": 67,
+      "textA": "Saya suka memuji seseorang yang saya kagumi.",
+      "textB": "Saya ingin dianggap punya daya tarik fisik oleh lawan jenis saya.",
+      "rowIdx": 2,
+      "colIdx": 14,
+      "matrixGroup": 1
+    },
+    {
+      "id": 68,
+      "textA": "Saya ingin perlengkapan keperluan saya tersusun rapi dan teratur di tempat yang semestinya atau di dalam ruang kerja saya.",
+      "textB": "Saya suka jatuh cinta kepada seseorang dari lawan jenis saya.",
+      "rowIdx": 3,
+      "colIdx": 14,
+      "matrixGroup": 1
+    },
+    {
+      "id": 69,
+      "textA": "Saya suka berbicara tentang hal-hal yang telah saya capai.",
+      "textB": "Saya suka mendengarkan atau menceritakan sejumlah lelucon yang berkisar sekitar soal seks.",
+      "rowIdx": 4,
+      "colIdx": 14,
+      "matrixGroup": 1
+    },
+    {
+      "id": 70,
+      "textA": "Saya ingin melakukan setiap hal dengan cara saya sendiri tanpa menghiraukan pemikiran orang lain.",
+      "textB": "Saya suka buku, sandiwara (film) yang berkisars oal seks.",
+      "rowIdx": 5,
+      "colIdx": 14,
+      "matrixGroup": 1
+    },
+    {
+      "id": 71,
+      "textA": "Saya ingin menulis roman, atau sandiwara yang hebat.",
+      "textB": "Saya suka menyerang pendirian yang bertentangan dengan pendirian saya.",
+      "rowIdx": 1,
+      "colIdx": 15,
+      "matrixGroup": 1
+    },
+    {
+      "id": 72,
+      "textA": "Bila saya berada dalam suatu kelompok, saya suka menerima pimpinan orang lain dalam memutuskan hal-hal yang akan dilakukan.",
+      "textB": "Ingin rasanya saya mengecam seseorang di mukaum um biladia memang patut menerimanya.",
+      "rowIdx": 2,
+      "colIdx": 15,
+      "matrixGroup": 1
+    },
+    {
+      "id": 73,
+      "textA": "Saya ingin agar hidup saya teratur sedemikian rupa sehingga berjalan lancar dan tanpa banyak perubahan rencana.",
+      "textB": "Saya menjadi sedemikian marah, ingin rasanyamel emparkan, dan merusak barang-barang.",
+      "rowIdx": 3,
+      "colIdx": 15,
+      "matrixGroup": 1
+    },
+    {
+      "id": 74,
+      "textA": "Saya suka mengajukan pertanyaan yang setahu saya tak seorangpun akan bisa menjawabnya.",
+      "textB": "Saya suka mengatakan kepada orang lain pendapat saya mengenai mereka.",
+      "rowIdx": 4,
+      "colIdx": 15,
+      "matrixGroup": 1
+    },
+    {
+      "id": 75,
+      "textA": "Saya tak ingin memikul tanggung jawab dan ke wajiban yang ditetapkan orang lain.",
+      "textB": "Ingin rasanya saya memperolok orang-orang yangm elakukan hal-hal yang saya anggap bodoh.",
+      "rowIdx": 5,
+      "colIdx": 15,
+      "matrixGroup": 1
+    },
+    {
+      "id": 76,
+      "textA": "Saya ingin setia terhadap teman-teman saya.",
+      "textB": "Saya ingin berkarya dan bekerja sebaik mungkin.",
+      "rowIdx": 6,
+      "colIdx": 1,
+      "matrixGroup": 2
+    },
+    {
+      "id": 77,
+      "textA": "Saya suka mengamati perasaan orang lain dalam suatu keadaan tertentu.",
+      "textB": "Saya ingin dapat menyatakan bahwa saya telah menyelesaikan dengan baik suatu pekerjaan yang memang sulit.",
+      "rowIdx": 7,
+      "colIdx": 1,
+      "matrixGroup": 2
+    },
+    {
+      "id": 78,
+      "textA": "Saya ingin teman-teman memberi dorongan kepada saya bila saya menghadapi kegagalan.",
+      "textB": "Saya ingin berhasil dalam setiap hal yang sayal akukan.",
+      "rowIdx": 8,
+      "colIdx": 1,
+      "matrixGroup": 2
+    },
+    {
+      "id": 79,
+      "textA": "Saya ingin menjadi salah seorang pemimpinda lam organisasi atau kelompok dimana saya menjadi anggotanya.",
+      "textB": "Saya ingin mengerjakan segala sesuatu lebih baik daripada orang lain.",
+      "rowIdx": 9,
+      "colIdx": 1,
+      "matrixGroup": 2
+    },
+    {
+      "id": 80,
+      "textA": "Bila keadaan kurang menguntungkan, saya merasa harus lebih disalahkan daripada orang lain.",
+      "textB": "Saya ingin memecahkan teka-teki dan persoalan ya ng memang sukar bagi orang lain.",
+      "rowIdx": 10,
+      "colIdx": 1,
+      "matrixGroup": 2
+    },
+    {
+      "id": 81,
+      "textA": "Saya suka melakukan sesuatu untuk kepentingan teman-teman saya.",
+      "textB": "Dalam merencanakan sesuatu, saya ingin mendapat saran-saran dari orang-orang yang pendapatnya saya hormati.",
+      "rowIdx": 6,
+      "colIdx": 2,
+      "matrixGroup": 2
+    },
+    {
+      "id": 82,
+      "textA": "Saya suka menempatkan diri saya ke dalam kedudukan orang lain dan membayangkan bagaimana perasaan saya bila berada dalam keadaan yang sama.",
+      "textB": "Saya suka menyatakan pada atasan saya bahwa mereka telah melakukan suatu pekerjaan dengan baik, bila memang demikian halnya menurut pikiran saya.",
+      "rowIdx": 7,
+      "colIdx": 2,
+      "matrixGroup": 2
+    },
+    {
+      "id": 83,
+      "textA": "Saya ingin teman-teman saya menunjukkan simpati dan pengertian bila saya mengalami kesukaran.",
+      "textB": "Saya suka dipimpin orang-orang yang saya kagumi.",
+      "rowIdx": 8,
+      "colIdx": 2,
+      "matrixGroup": 2
+    },
+    {
+      "id": 84,
+      "textA": "Bila masuk dalam kepanitiaan, saya ingindit unjuk atau di pilih sebagai ketuanya.",
+      "textB": "Bila saya berada dalam suatu kelompok, saya suka menerima pimpinan orang lain dalam memutuskan hal-hal yang akan dilakukan.",
+      "rowIdx": 9,
+      "colIdx": 2,
+      "matrixGroup": 2
+    },
+    {
+      "id": 85,
+      "textA": "Bila saya melakukan kesalahan, saya merasah arus dihukum.",
+      "textB": "Saya suka mengikuti adat-istiadat dan menghindarkan hal-hal yang mungkin dianggap tak wajar oleh orang-orang yang saya hormati.",
+      "rowIdx": 10,
+      "colIdx": 2,
+      "matrixGroup": 2
+    },
+    {
+      "id": 86,
+      "textA": "Saya suka melakukan atau menjalani sesuatub ersama teman-teman saya.",
+      "textB": "Saya suka membuat perencanaan sebelum memulaipe kerjaan yang sulit.",
+      "rowIdx": 6,
+      "colIdx": 3,
+      "matrixGroup": 2
+    },
+    {
+      "id": 87,
+      "textA": "Saya ingin memahami perasaan teman-teman saya dalam menghadapi berbagai masalah.",
+      "textB": "Jika saya harus bepergian, maka saya ingin segala sesuatunya telah direncanakan terlebih dahulu.",
+      "rowIdx": 7,
+      "colIdx": 3,
+      "matrixGroup": 2
+    },
+    {
+      "id": 88,
+      "textA": "Saya ingin diperlakukan dengan ramah olehte man-teman saya.",
+      "textB": "Saya ingin pekerjaan saya diatur dan direncanakan sebelum dimulai.",
+      "rowIdx": 8,
+      "colIdx": 3,
+      "matrixGroup": 2
+    },
+    {
+      "id": 89,
+      "textA": "Saya ingin dianggap pemimpin oleh orang lain .",
+      "textB": "Saya suka menyimpan surat, bon, dan kertas-kertas lain secara rapi dan menurut sistem tertentu.",
+      "rowIdx": 9,
+      "colIdx": 3,
+      "matrixGroup": 2
+    },
+    {
+      "id": 90,
+      "textA": "Bagi saya kesedihan dan kesusahan saya, lebih banyak membawa kebaikan daripada kerugian.",
+      "textB": "Saya ingin agar hidup saya teratur sedemikian rupa sehingga berjalan lancar dan tanpa banyak perubahan rencana.",
+      "rowIdx": 10,
+      "colIdx": 3,
+      "matrixGroup": 2
+    },
+    {
+      "id": 91,
+      "textA": "Saya ingin keterikatan perasaan bersama yang kuat dengan teman-teman saya.",
+      "textB": "Saya ingin mengatakan hal-hal yang dianggap lucu dan cerdas oleh orang-orang lain.",
+      "rowIdx": 6,
+      "colIdx": 4,
+      "matrixGroup": 2
+    },
+    {
+      "id": 92,
+      "textA": "Saya suka merenungkan kepribadian teman-teman saya dan mencoba mengerti hal-hal yang menjadikan mereka sebagaimana terlihat.",
+      "textB": "Saya kadang-kadang suka melakukan hal-hal semata-mata untuk melihat reaksi orang lain. 93. A Saya ingin teman-teman saya meributkan tentang diri saya bila saya mendapat cedera atau sakit. B. Saya suka berbicara tentang hal-hal yang telah saya capai.",
+      "rowIdx": 7,
+      "colIdx": 4,
+      "matrixGroup": 2
+    },
+    {
+      "id": 93,
+      "textA": "Saya ingin teman-teman saya meributkan tentang diri saya bila saya mendapat cedera atau sakit.",
+      "textB": "Saya suka berbicara tentang hal-hal yang telah saya capai.",
+      "rowIdx": 8,
+      "colIdx": 4,
+      "matrixGroup": 2
+    },
+    {
+      "id": 94,
+      "textA": "Saya suka mengarahkan orang lain bagaimana mereka melakukan pekerjaan mereka.",
+      "textB": "Saya suka menjadi pusat perhatian dalam kelompok .",
+      "rowIdx": 9,
+      "colIdx": 4,
+      "matrixGroup": 2
+    },
+    {
+      "id": 95,
+      "textA": "Saya merasa canggung berada diantara orang-orang yang saya anggap sebagai atasan saya.",
+      "textB": "Saya suka menggunakan kata-kata yang maknanya sering tak diketahui orang lain.",
+      "rowIdx": 10,
+      "colIdx": 4,
+      "matrixGroup": 2
+    },
+    {
+      "id": 96,
+      "textA": "Saya lebih suka mengerjakan sesuatu bersama teman-teman saya daripada sendirian.",
+      "textB": "Saya suka menyatakan pendapat saya tentang berbagai hal.",
+      "rowIdx": 6,
+      "colIdx": 5,
+      "matrixGroup": 2
+    },
+    {
+      "id": 97,
+      "textA": "Saya suka mempelajari dan menganalisa tingkah laku orang-orang lain.",
+      "textB": "Saya suka melakukan hal yang dianggap tak sesuai dengan adat kebiasaan.",
+      "rowIdx": 7,
+      "colIdx": 5,
+      "matrixGroup": 2
+    },
+    {
+      "id": 98,
+      "textA": "Saya ingin teman-teman saya merasa kasihanp ada saya apabila saya sakit.",
+      "textB": "Saya suka mengelakkan keadaan untuk berlaku secara konvensional (kebiasaan umum).",
+      "rowIdx": 8,
+      "colIdx": 5,
+      "matrixGroup": 2
+    },
+    {
+      "id": 99,
+      "textA": "Saya ingin mengawasi dan mengarahkan tindaka n-tindakan orang lain bila keadaan memungkinkan.",
+      "textB": "Saya ingin melakukan setiap hal dengan cara saya sendiri tanpa menghiraukan pemikiran orang lain.",
+      "rowIdx": 9,
+      "colIdx": 5,
+      "matrixGroup": 2
+    },
+    {
+      "id": 100,
+      "textA": "Dalam banyak hal saya merasa kalah dibandingkan dengan orang-orang lain.",
+      "textB": "Saya tak ingin memikul tanggung jawab dan kewajiban yang ditetapkan orang lain.",
+      "rowIdx": 10,
+      "colIdx": 5,
+      "matrixGroup": 2
+    },
+    {
+      "id": 101,
+      "textA": "Saya ingin berhasil dalam setiap hal yang saya lakukan.",
+      "textB": "Saya suka memperoleh teman-teman baru.",
+      "rowIdx": 6,
+      "colIdx": 6,
+      "matrixGroup": 2
+    },
+    {
+      "id": 102,
+      "textA": "Saya suka menganalisa perasaan dan alasan saya melakukan sesuatu.",
+      "textB": "Saya ingin memperoleh teman sebanyak mungkin.",
+      "rowIdx": 7,
+      "colIdx": 6,
+      "matrixGroup": 2
+    },
+    {
+      "id": 103,
+      "textA": "Saya ingin agar teman-teman saya membantu saya bila saya mengalami kesulitan.",
+      "textB": "Saya suka melakukan sesuatu untuk kepentingante man-teman saya.",
+      "rowIdx": 8,
+      "colIdx": 6,
+      "matrixGroup": 2
+    },
+    {
+      "id": 104,
+      "textA": "Saya suka memperdebatkan pendirian sayabil a diserang orang lain.",
+      "textB": "Saya suka berkirim surat kepada teman-teman saya .",
+      "rowIdx": 9,
+      "colIdx": 6,
+      "matrixGroup": 2
+    },
+    {
+      "id": 105,
+      "textA": "Saya merasa bersalah apabila melakukan sesuatu yang saya ketahui tidak baik.",
+      "textB": "Saya ingin keterikatan perasaan bersama yang kuat dengan teman-teman saya.",
+      "rowIdx": 10,
+      "colIdx": 6,
+      "matrixGroup": 2
+    },
+    {
+      "id": 106,
+      "textA": "Saya suka melakukan atau menjalani sesuatu bersama teman-teman saya.",
+      "textB": "Saya suka menganalisa perasaan dan alasan sayam elakukan sesuatu.",
+      "rowIdx": 6,
+      "colIdx": 7,
+      "matrixGroup": 2
+    },
+    {
+      "id": 107,
+      "textA": "Saya suka menerima pimpinan orang-orang yang saya kagumi.",
+      "textB": "Saya ingin memahami perasaan teman-teman sayada lam menghadapi berbagai masalah.",
+      "rowIdx": 7,
+      "colIdx": 7,
+      "matrixGroup": 2
+    },
+    {
+      "id": 108,
+      "textA": "Saya ingin teman-teman saya dengan gembira memberikan bantuan-bantuan kecil kepada saya.",
+      "textB": "Saya suka menilai orang berdasarkan alasan mereka melakukan sesuatu dan bukan atas dasar yang sesungguhnya mereka lakukan.",
+      "rowIdx": 8,
+      "colIdx": 7,
+      "matrixGroup": 2
+    },
+    {
+      "id": 109,
+      "textA": "Bila berada dalam suatu kelompok, saya ingin menentukan hal-hal yang akan dilakukan.",
+      "textB": "Saya suka meramalkan bagaimana teman-teman saya akan bertindak dalam berbagai situasi.",
+      "rowIdx": 9,
+      "colIdx": 7,
+      "matrixGroup": 2
+    },
+    {
+      "id": 110,
+      "textA": "Saya lebih suka mengalah dan menghindarkan pertengkaran daripada memaksakan kemauan saya.",
+      "textB": "Saya suka menganalisa perasaan orang lain dan alasan mereka melakukan sesuatu.",
+      "rowIdx": 10,
+      "colIdx": 7,
+      "matrixGroup": 2
+    },
+    {
+      "id": 111,
+      "textA": "Saya suka memperoleh teman-teman baru.",
+      "textB": "Saya ingin agar teman-teman saya membantu sayab ila saya mengalami kesulitan.",
+      "rowIdx": 6,
+      "colIdx": 8,
+      "matrixGroup": 2
+    },
+    {
+      "id": 112,
+      "textA": "Saya suka menilai orang berdasarkan alasan mereka melakukan sesuatu dan bukan atas dasar yang sesungguhnya mereka lakukan.",
+      "textB": "Saya ingin teman-teman saya banyak menunjukkanr asasayang mereka terhadap saya.",
+      "rowIdx": 7,
+      "colIdx": 8,
+      "matrixGroup": 2
+    },
+    {
+      "id": 113,
+      "textA": "Saya ingin agar hidup saya teratur sedemikian rupa sehingga berjalan lancar dan tanpa banyak perubahan-perubahan dalam rencana-rencana saya.",
+      "textB": "Saya ingin teman-teman saya merasa kasihan pada saya apabila saya sakit.",
+      "rowIdx": 8,
+      "colIdx": 8,
+      "matrixGroup": 2
+    },
+    {
+      "id": 114,
+      "textA": "Saya ingin diminta menyelesaikan perdebatan atas perselisihan di antara orang lain.",
+      "textB": "Saya ingin teman-teman saya dengan gembira membe rikan bantuan-bantuan kecil kepada saya.",
+      "rowIdx": 9,
+      "colIdx": 8,
+      "matrixGroup": 2
+    },
+    {
+      "id": 115,
+      "textA": "Saya merasa harus mengakui hal-hal tidak baik yang telah saya lakukan.",
+      "textB": "Saya ingin teman-teman saya bersimpati terhadap saya dan menghibur saya bila saya bersusah hati.",
+      "rowIdx": 10,
+      "colIdx": 8,
+      "matrixGroup": 2
+    },
+    {
+      "id": 116,
+      "textA": "Saya lebih suka mengerjakan sesuatu bersama teman-teman saya daripada sendirian.",
+      "textB": "Saya suka memperdebatkan pendirian saya biladis erang orang lain.",
+      "rowIdx": 6,
+      "colIdx": 9,
+      "matrixGroup": 2
+    },
+    {
+      "id": 117,
+      "textA": "Saya suka merenungkan kepribadian teman-teman saya dan mencoba mengerti hal-hal yang menjadikan mereka sebagaimana terlihat.",
+      "textB": "Saya ingin mampu membujuk dan mempengaruhi orang lain melakukan hal-hal yang saya kehendaki.",
+      "rowIdx": 7,
+      "colIdx": 9,
+      "matrixGroup": 2
+    },
+    {
+      "id": 118,
+      "textA": "Saya ingin teman-teman saya bersimpati terhadap saya dan menghibur saya bila saya bersusah hati.",
+      "textB": "Bila berada dalam suatu kelompok, saya inginmen entukan hal-hal yang akan dilakukan.",
+      "rowIdx": 8,
+      "colIdx": 9,
+      "matrixGroup": 2
+    },
+    {
+      "id": 119,
+      "textA": "Saya suka mengajukan pertanyaan yang setahu saya tak seorangpun akan bisa menjawabnya.",
+      "textB": "Saya suka mengarahkan orang lain bagaimana mereka melakukan pekerjaan mereka.",
+      "rowIdx": 9,
+      "colIdx": 9,
+      "matrixGroup": 2
+    },
+    {
+      "id": 120,
+      "textA": "Saya merasa canggung berada diantara orang- orang yang saya anggap sebagai atasan saya.",
+      "textB": "Saya ingin mengawasi dan mengarahkan tindakan-tindakan orang lain bila keadaan memungkinkan.",
+      "rowIdx": 10,
+      "colIdx": 9,
+      "matrixGroup": 2
+    },
+    {
+      "id": 121,
+      "textA": "Saya suka bergaul dalam lingkungan yang mempunyai perasaan akrab satu sama lain.",
+      "textB": "Saya merasa bersalah apabila melakukan sesuatu yang saya ketahui tidak baik.",
+      "rowIdx": 6,
+      "colIdx": 10,
+      "matrixGroup": 2
+    },
+    {
+      "id": 122,
+      "textA": "Saya suka menganalisa perasaan orang lain dan alasan mereka melakukan sesuatu.",
+      "textB": "Saya merasa sedih atas ketidakmampuan saya mengh adapi berbagai macam keadaan.",
+      "rowIdx": 7,
+      "colIdx": 10,
+      "matrixGroup": 2
+    },
+    {
+      "id": 123,
+      "textA": "Saya ingin teman-teman saya merasa kasihan pada saya apabila saya sakit.",
+      "textB": "Saya lebih suka mengalah dan menghindarkan perte ngkaran daripada memaksakan kemauan saya.",
+      "rowIdx": 8,
+      "colIdx": 10,
+      "matrixGroup": 2
+    },
+    {
+      "id": 124,
+      "textA": "Saya ingin mampu membujuk dan mempengaruhi orang lain melakukan hal-hal yang saya kehendaki.",
+      "textB": "Saya merasa sedih atas ketidakmampuan saya mengh adapi berbagai macam keadaan.",
+      "rowIdx": 9,
+      "colIdx": 10,
+      "matrixGroup": 2
+    },
+    {
+      "id": 125,
+      "textA": "Saya suka mengecam orang-orang yang dianggap berwenang.",
+      "textB": "Saya merasa canggung berada diantara orang-orang yang saya anggap sebagai atasan saya.",
+      "rowIdx": 10,
+      "colIdx": 10,
+      "matrixGroup": 2
+    },
+    {
+      "id": 126,
+      "textA": "Saya suka bergaul dalam lingkungan yang mempunyai perasaan akrab satu sama lain.",
+      "textB": "Saya suka menolong teman-teman saya bila mereka berada dalam kesulitan.",
+      "rowIdx": 6,
+      "colIdx": 11,
+      "matrixGroup": 2
+    },
+    {
+      "id": 127,
+      "textA": "Saya suka menganalisa perasaan dan alasan saya melakukan sesuatu.",
+      "textB": "Saya suka menunjukkan simpati saya kepada teman- teman saya bila mereka mendapat cedera atau sakit.",
+      "rowIdx": 7,
+      "colIdx": 11,
+      "matrixGroup": 2
+    },
+    {
+      "id": 128,
+      "textA": "Saya ingin agar teman-teman saya membantu saya bila saya mengalami kesulitan.",
+      "textB": "Saya suka memperlakukan orang lain dengan ramah dan simpatik.",
+      "rowIdx": 8,
+      "colIdx": 11,
+      "matrixGroup": 2
+    },
+    {
+      "id": 129,
+      "textA": "Saya ingin menjadi salah seorang pemimpind alam organisasi atau kelompok dimana saya menjadi anggotanya.",
+      "textB": "Saya suka menunjukkan simpati saya kepada teman- teman saya bila mereka mendapat cedera atau sakit.",
+      "rowIdx": 9,
+      "colIdx": 11,
+      "matrixGroup": 2
+    },
+    {
+      "id": 130,
+      "textA": "Bagi saya kesedihan dan kesusahan saya, lebih banyak membawa kebaikan daripada kerugian.",
+      "textB": "Saya suka berlaku sangat ramah terhadap teman-te man saya.",
+      "rowIdx": 10,
+      "colIdx": 11,
+      "matrixGroup": 2
+    },
+    {
+      "id": 131,
+      "textA": "Saya lebih suka mengerjakan sesuatu bersama teman-teman saya daripada sendirian.",
+      "textB": "Saya suka bereksperimen,dan mencoba hal-hal baru .",
+      "rowIdx": 6,
+      "colIdx": 12,
+      "matrixGroup": 2
+    },
+    {
+      "id": 132,
+      "textA": "Saya suka merenungkan kepribadian teman-teman saya dan mencoba memahami hal-hal yang membuat mereka sebagaimana terlihat.",
+      "textB": "Saya lebih menyukai mencoba pekerjaan baru darip ada melakukan pekerjaan tetap.",
+      "rowIdx": 7,
+      "colIdx": 12,
+      "matrixGroup": 2
+    },
+    {
+      "id": 133,
+      "textA": "Saya ingin teman-teman saya menunjukkan simpati dan pengertian bila saya mengalami kesukaran.",
+      "textB": "Saya suka bertemu dengan orang-orang baru.",
+      "rowIdx": 8,
+      "colIdx": 12,
+      "matrixGroup": 2
+    },
+    {
+      "id": 134,
+      "textA": "Saya suka memperdebatkan pendirian sayabil a diserang orang lain.",
+      "textB": "Saya ingin mengalami hal-hal baru dan perubahan dalam kehidupan saya sehari-hari.",
+      "rowIdx": 9,
+      "colIdx": 12,
+      "matrixGroup": 2
+    },
+    {
+      "id": 135,
+      "textA": "Saya suka bergaul dalam lingkungan yang mempunyai perasaan akrab satu sama lain.",
+      "textB": "Saya suka menjelajahi pedalaman dan tinggal di berbagai tempat.",
+      "rowIdx": 10,
+      "colIdx": 12,
+      "matrixGroup": 2
+    },
+    {
+      "id": 136,
+      "textA": "Saya suka melakukan sesuatu untuk kepentingan teman-teman saya.",
+      "textB": "Bila saya melakukan suatu tugas, saya ingin meng erjakannya sampai benar-benar selesai.",
+      "rowIdx": 6,
+      "colIdx": 13,
+      "matrixGroup": 2
+    },
+    {
+      "id": 137,
+      "textA": "Saya suka menganalisa perasaan orang lain dan alasan mereka melakukan sesuatu.",
+      "textB": "Saya ingin menghindarkan gangguan bila saya sedang bekerja.",
+      "rowIdx": 7,
+      "colIdx": 13,
+      "matrixGroup": 2
+    },
+    {
+      "id": 138,
+      "textA": "Saya ingin teman-teman saya dengan gembira memberikan bantuan-bantuan kecil kepada saya.",
+      "textB": "Saya suka bekerja sampai jauh malam menyelesaikan suatu pekerjaan.",
+      "rowIdx": 8,
+      "colIdx": 13,
+      "matrixGroup": 2
+    },
+    {
+      "id": 139,
+      "textA": "Saya ingin dianggap pemimpin oleh orang lain.",
+      "textB": "Saya ingin bekerja berjam-jam tanpa gangguan.",
+      "rowIdx": 9,
+      "colIdx": 13,
+      "matrixGroup": 2
+    },
+    {
+      "id": 140,
+      "textA": "Bila saya melakukan kesalahan, saya merasa harus dihukum.",
+      "textB": "Saya suka bertahan menghadapi suatu pekerjaan atau masalah sekalipun tampaknya seolah-olah saya tak akan berhasil.",
+      "rowIdx": 10,
+      "colIdx": 13,
+      "matrixGroup": 2
+    },
+    {
+      "id": 141,
+      "textA": "Saya ingin setia terhadap teman-teman saya.",
+      "textB": "(untuk laki-laki) Saya suka bepergian denganwan ita-wanita yang menarik. (untuk wanita) Saya suka bepergian dengan laki-laki yang menarik.",
+      "rowIdx": 6,
+      "colIdx": 14,
+      "matrixGroup": 2
+    },
+    {
+      "id": 142,
+      "textA": "Saya suka meramalkan bagaimana teman-teman saya akan bertindak dalam berbagai situasi.",
+      "textB": "Saya suka ikut serta dalam diskusi tentang seks dan aktivitas seksual.",
+      "rowIdx": 7,
+      "colIdx": 14,
+      "matrixGroup": 2
+    },
+    {
+      "id": 143,
+      "textA": "Saya ingin agar teman-teman saya banyakmen unjukkan rasa sayang mereka terhadap saya.",
+      "textB": "Saya suka nafsu saya terangsang.",
+      "rowIdx": 8,
+      "colIdx": 14,
+      "matrixGroup": 2
+    },
+    {
+      "id": 144,
+      "textA": "Bila berada dalam suatu kelompok, saya ingin menentukan hal-hal yang akan dilakukan.",
+      "textB": "Saya suka bersibuk dalam aktivitas sosial bersama orang-orang dari lawan jenis saya.",
+      "rowIdx": 9,
+      "colIdx": 14,
+      "matrixGroup": 2
+    },
+    {
+      "id": 145,
+      "textA": "Saya merasa sedih atas ketidakmampuan saya menghadapi berbagai macam keadaan.",
+      "textB": "Saya suka buku, sandiwara (film) yang berkisars oal seks.",
+      "rowIdx": 10,
+      "colIdx": 14,
+      "matrixGroup": 2
+    },
+    {
+      "id": 146,
+      "textA": "Saya suka berkirim surat kepada teman-teman saya.",
+      "textB": "Saya suka membaca berita kabar tentang pembunuhan, dan perbuatan kekerasan lain.",
+      "rowIdx": 6,
+      "colIdx": 15,
+      "matrixGroup": 2
+    },
+    {
+      "id": 147,
+      "textA": "Saya suka meramalkan bagaimana teman-teman saya akan bertindak dalam berbagai situasi.",
+      "textB": "Saya suka menyerang pendirian yang bertentangan dengan pendirian saya.",
+      "rowIdx": 7,
+      "colIdx": 15,
+      "matrixGroup": 2
+    },
+    {
+      "id": 148,
+      "textA": "Saya ingin teman-teman saya meributkan tentang diri saya bila saya mendapat cedera atau sakit.",
+      "textB": "Bila keadaan kurang menguntungkan, ingin rasanya saya menyalahkan orang lain.",
+      "rowIdx": 8,
+      "colIdx": 15,
+      "matrixGroup": 2
+    },
+    {
+      "id": 149,
+      "textA": "Saya suka mengarahkan orang lain bagaimana mereka melakukan pekerjaan mereka.",
+      "textB": "Saya ingin membalas dendam terhadap orang yangm enghina saya.",
+      "rowIdx": 9,
+      "colIdx": 15,
+      "matrixGroup": 2
+    },
+    {
+      "id": 150,
+      "textA": "Dalam banyak hal saya merasa kalah dibandingkan dengan orang-orang lain.",
+      "textB": "Ingin rasanya saya menghardik orang lain bila berbeda pendapat dengan mereka.",
+      "rowIdx": 10,
+      "colIdx": 15,
+      "matrixGroup": 2
+    },
+    {
+      "id": 151,
+      "textA": "Saya suka menolong teman-teman saya bilame reka berada dalam kesulitan.",
+      "textB": "Saya ingin berkarya dan bekerja sebaik mungkin.",
+      "rowIdx": 11,
+      "colIdx": 1,
+      "matrixGroup": 3
+    },
+    {
+      "id": 152,
+      "textA": "Saya suka bepergian melihat-lihat daerahpe dalaman.",
+      "textB": "Saya ingin menyelesaikan tugas yang memang membu tuhkan keterampilan serta usaha.",
+      "rowIdx": 12,
+      "colIdx": 1,
+      "matrixGroup": 3
+    },
+    {
+      "id": 153,
+      "textA": "Saya suka bekerja keras pada tiap pekerjaan yang saya hadapi.",
+      "textB": "Saya ingin mengerjakan sesuatu yang berarti.",
+      "rowIdx": 13,
+      "colIdx": 1,
+      "matrixGroup": 3
+    },
+    {
+      "id": 154,
+      "textA": "(untuk wanita) Saya suka bepergian denganl aki-laki yang menarik. (untuk laki-laki) Saya suka bepergian dengan wanita -wanita yang menarik.",
+      "textB": "Saya ingin berhasil dalam setiap hal yang sayal akukan.",
+      "rowIdx": 14,
+      "colIdx": 1,
+      "matrixGroup": 3
+    },
+    {
+      "id": 155,
+      "textA": "Saya suka membaca berita kabar tentang pemb unuhan, dan perbuatan kekerasan lain.",
+      "textB": "Saya ingin menulis roman, atau sandiwara yang hebat.",
+      "rowIdx": 15,
+      "colIdx": 1,
+      "matrixGroup": 3
+    },
+    {
+      "id": 156,
+      "textA": "Saya suka memberi bantuan-bantuan kecilkep ada teman-teman saya.",
+      "textB": "Dalam merencanakan sesuatu, saya ingin mendapat saran-saran dari orang-orang yang pendapatnya saya hormati.",
+      "rowIdx": 11,
+      "colIdx": 2,
+      "matrixGroup": 3
+    },
+    {
+      "id": 157,
+      "textA": "Saya ingin mengalami hal-hal baru dan perubahan dalam kehidupan saya sehari-hari.",
+      "textB": "Saya suka menyatakan pada atasan saya bahwa mereka telah melakukan suatu pekerjaan dengan baik. Bila memang demikian halnya menurut pikiran saya.",
+      "rowIdx": 12,
+      "colIdx": 2,
+      "matrixGroup": 3
+    },
+    {
+      "id": 158,
+      "textA": "Saya suka bekerja sampai jauh malam menyele saikan suatu pekerjaan.",
+      "textB": "Saya suka memuji seseorang yang saya kagumi.",
+      "rowIdx": 13,
+      "colIdx": 2,
+      "matrixGroup": 3
+    },
+    {
+      "id": 159,
+      "textA": "Saya suka nafsu saya terangsang.",
+      "textB": "Saya suka dipimpin orang-orang yang saya kagumi.",
+      "rowIdx": 14,
+      "colIdx": 2,
+      "matrixGroup": 3
+    },
+    {
+      "id": 160,
+      "textA": "Saya ingin membalas dendam terhadap orang yang menghina saya.",
+      "textB": "Bila saya berada dalam suatu kelompok, saya suka menerima pimpinan orang lain dalam memutuskan hal-hal yang akan dilakukan.",
+      "rowIdx": 15,
+      "colIdx": 2,
+      "matrixGroup": 3
+    },
+    {
+      "id": 161,
+      "textA": "Saya suka bermurah hati kepada teman-teman saya.",
+      "textB": "Saya suka membuat perencanaan sebelum memulaipe kerjaan yang sulit.",
+      "rowIdx": 11,
+      "colIdx": 3,
+      "matrixGroup": 3
+    },
+    {
+      "id": 162,
+      "textA": "Saya suka bertemu dengan orang-orang baru.",
+      "textB": "Saya ingin setiap pekerjaan, tulisan saya, teliti, rapi dan tersusun dengan baik.",
+      "rowIdx": 12,
+      "colIdx": 3,
+      "matrixGroup": 3
+    },
+    {
+      "id": 163,
+      "textA": "Saya ingin mengerjakan sampai benar-benars elesai setiap pekerjaan atau tugas yang telah saya mulai.",
+      "textB": "Saya ingin perlengkapan keperluan saya tersusunr api dan teratur di tempat yang semestinya atau di dalam ruang kerja saya.",
+      "rowIdx": 13,
+      "colIdx": 3,
+      "matrixGroup": 3
+    },
+    {
+      "id": 164,
+      "textA": "Saya ingin dianggap punya daya tarik fisik oleh lawan jenis saya.",
+      "textB": "Saya terbiasa merencanakan dan mengatur detail-detail dari setiap pekerjaan yang harus saya lakukan.",
+      "rowIdx": 14,
+      "colIdx": 3,
+      "matrixGroup": 3
+    },
+    {
+      "id": 165,
+      "textA": "Saya suka mengatakan kepada orang lain pend apat saya mengenai mereka.",
+      "textB": "saya suka makan saya teratur dan ada waktu tertentu untuk makan.",
+      "rowIdx": 15,
+      "colIdx": 3,
+      "matrixGroup": 3
+    },
+    {
+      "id": 166,
+      "textA": "Saya suka berlaku sangat ramah terhadap teman-teman saya.",
+      "textB": "Saya ingin mengatakan hal-hal yang dianggap lucu dan cerdas oleh orang-orang lain.",
+      "rowIdx": 11,
+      "colIdx": 4,
+      "matrixGroup": 3
+    },
+    {
+      "id": 167,
+      "textA": "Saya lebih menyukai mencoba pekerjaan baru daripada melakukan pekerjaan tetap.",
+      "textB": "Saya kadang-kadang suka melakukan hal-hal semata-mata untuk melihat reaksi orang lain.",
+      "rowIdx": 12,
+      "colIdx": 4,
+      "matrixGroup": 3
+    },
+    {
+      "id": 168,
+      "textA": "Saya suka bertahan menghadapi suatu pekerjaan atau masalah sekalipun tampaknya seolah-olah saya tak akan berhasil.",
+      "textB": "Saya ingin orang memperhatikan dan berkomentarm engenai penampilan saya di depan umum.",
+      "rowIdx": 13,
+      "colIdx": 4,
+      "matrixGroup": 3
+    },
+    {
+      "id": 169,
+      "textA": "Saya suka buku, sandiwara (film) yang berkisar soal seks.",
+      "textB": "Saya suka menjadi pusat perhatian dalam kelompok .",
+      "rowIdx": 14,
+      "colIdx": 4,
+      "matrixGroup": 3
+    },
+    {
+      "id": 170,
+      "textA": "Bila keadaan kurang menguntungkan, ingin rasanya saya menyalahkan orang lain.",
+      "textB": "Saya suka mengajukan pertanyaan yang setahu saya tak seorangpun akan bisa menjawabnya.",
+      "rowIdx": 15,
+      "colIdx": 4,
+      "matrixGroup": 3
+    },
+    {
+      "id": 171,
+      "textA": "Saya suka bertahan menghadapi suatu pekerjaan atau masalah sekalipun tampaknya seolah-olah saya tak akan berhasil.",
+      "textB": "Saya suka mengatakan pendapat saya tentang berbagai hal.",
+      "rowIdx": 11,
+      "colIdx": 5,
+      "matrixGroup": 3
+    },
+    {
+      "id": 172,
+      "textA": "Saya suka makan di restoran-restoran baru atau asing.",
+      "textB": "Saya suka melakukan hal yang dianggap tak sesuai dengan adat kebiasaan.",
+      "rowIdx": 12,
+      "colIdx": 5,
+      "matrixGroup": 3
+    },
+    {
+      "id": 173,
+      "textA": "Saya ingin menyelesaikan pekerjaan satu-per satu, sebelum memulai yang lain.",
+      "textB": "Saya ingin merasa bebas melakukan yang saya kehe ndaki.",
+      "rowIdx": 13,
+      "colIdx": 5,
+      "matrixGroup": 3
+    },
+    {
+      "id": 174,
+      "textA": "Saya suka ikut serta dalam diskusi tentang seks dan aktivitas seksual.",
+      "textB": "Saya ingin melakukan setiap hal dengan cara saya sendiri tanpa menghiraukan pemikiran orang lain.",
+      "rowIdx": 14,
+      "colIdx": 5,
+      "matrixGroup": 3
+    },
+    {
+      "id": 175,
+      "textA": "Saya menjadi sedemikian marah, ingin rasanya melemparkan, dan merusak barang-barang.",
+      "textB": "Saya tak ingin memikul tanggung jawab dan kewajiban yang ditetapkan orang lain.",
+      "rowIdx": 15,
+      "colIdx": 5,
+      "matrixGroup": 3
+    },
+    {
+      "id": 176,
+      "textA": "Saya suka menolong teman-teman saya bilame reka berada dalam kesulitan.",
+      "textB": "Saya ingin setia terhadap teman-teman saya.",
+      "rowIdx": 11,
+      "colIdx": 6,
+      "matrixGroup": 3
+    },
+    {
+      "id": 177,
+      "textA": "Saya suka melakukan hal-hal baru dan berbeda dari biasanya.",
+      "textB": "Saya suka memperoleh teman-teman baru.",
+      "rowIdx": 12,
+      "colIdx": 6,
+      "matrixGroup": 3
+    },
+    {
+      "id": 178,
+      "textA": "Bila saya melakukan suatu tugas, saya ingin mengerjakannya sampai benar-benar selesai.",
+      "textB": "Saya suka bergaul dalam lingkungan yang mempunyai perasaan akrab satu sama lain.",
+      "rowIdx": 13,
+      "colIdx": 6,
+      "matrixGroup": 3
+    },
+    {
+      "id": 179,
+      "textA": "(untuk laki-laki) Saya suka bepergian dengan wanita-wanita yang menarik. (untuk wanita) Saya suka bepergian dengan laki-laki yang menarik.",
+      "textB": "Saya ingin memperoleh teman sebanyak mungkin.",
+      "rowIdx": 14,
+      "colIdx": 6,
+      "matrixGroup": 3
+    },
+    {
+      "id": 180,
+      "textA": "Saya suka menyerang pendirian yang bertenta ngan dengan pendirian saya.",
+      "textB": "Saya suka berkirim surat kepada teman-teman saya .",
+      "rowIdx": 15,
+      "colIdx": 6,
+      "matrixGroup": 3
+    },
+    {
+      "id": 181,
+      "textA": "Saya suka bermurah hati kepada teman-teman saya.",
+      "textB": "Saya suka mengamati perasaan orang lain dalamsu atu keadaan tertentu.",
+      "rowIdx": 11,
+      "colIdx": 7,
+      "matrixGroup": 3
+    },
+    {
+      "id": 182,
+      "textA": "Saya suka makan di restoran-restoran baru atau asing.",
+      "textB": "Saya suka menempatkan diri saya ke dalam kedudukan orang lain dan membayangkan bagaimana perasaan saya bila berada dalam keadaan yang sama.",
+      "rowIdx": 12,
+      "colIdx": 7,
+      "matrixGroup": 3
+    },
+    {
+      "id": 183,
+      "textA": "Saya suka bekerja sampai jauh malam menyele saikan suatu pekerjaan.",
+      "textB": "Saya ingin memahami perasaan teman-teman sayada lam menghadapi berbagai masalah.",
+      "rowIdx": 13,
+      "colIdx": 7,
+      "matrixGroup": 3
+    },
+    {
+      "id": 184,
+      "textA": "Saya suka nafsu saya terangsang.",
+      "textB": "Saya suka mempelajari dan menganalisa tingkah laku orang-orang lain.",
+      "rowIdx": 14,
+      "colIdx": 7,
+      "matrixGroup": 3
+    },
+    {
+      "id": 185,
+      "textA": "Ingin rasanya saya memperolok orang-orang yang melakukan hal-hal yang saya anggap bodoh.",
+      "textB": "Saya suka meramalkan bagaimana teman-teman saya akan bertindak dalam berbagai situasi.",
+      "rowIdx": 15,
+      "colIdx": 7,
+      "matrixGroup": 3
+    },
+    {
+      "id": 186,
+      "textA": "Saya suka memaafkan teman-teman saya yang kadang-kadang mungkin menyakiti hati saya.",
+      "textB": "Saya ingin teman-teman memberi dorongan kepada saya bila saya mengalami kegagalan.",
+      "rowIdx": 11,
+      "colIdx": 8,
+      "matrixGroup": 3
+    },
+    {
+      "id": 187,
+      "textA": "Saya suka bereksperimen, dan mencoba hal-hal baru.",
+      "textB": "Saya ingin teman-teman saya menunjukkan simpati dan pengertian bila saya mengalami kesukaran.",
+      "rowIdx": 12,
+      "colIdx": 8,
+      "matrixGroup": 3
+    },
+    {
+      "id": 188,
+      "textA": "Saya ingin mengerjakan teka-teki atau memec ahkan persoalan-persoalan sampai selesai.",
+      "textB": "Saya ingin diperlakukan dengan ramah oleh teman- teman saya.",
+      "rowIdx": 13,
+      "colIdx": 8,
+      "matrixGroup": 3
+    },
+    {
+      "id": 189,
+      "textA": "Saya ingin dianggap punya daya tarik fisik oleh lawan jenis saya.",
+      "textB": "Saya ingin teman-teman saya banyak menunjukkanr asa sayang mereka terhadap saya.",
+      "rowIdx": 14,
+      "colIdx": 8,
+      "matrixGroup": 3
+    },
+    {
+      "id": 190,
+      "textA": "Ingin rasanya saya mengecam seseorang di muka umum biladia memang patut menerimanya.",
+      "textB": "Saya ingin teman-teman saya meributkan tentangd iri saya bila saya mendapat cedera atau sakit.",
+      "rowIdx": 15,
+      "colIdx": 8,
+      "matrixGroup": 3
+    },
+    {
+      "id": 191,
+      "textA": "Saya suka berlaku sangat ramah terhadap teman-teman saya.",
+      "textB": "Saya ingin dianggap pemimpin oleh orang lain.",
+      "rowIdx": 11,
+      "colIdx": 9,
+      "matrixGroup": 3
+    },
+    {
+      "id": 192,
+      "textA": "Saya lebih menyukai mencoba pekerjaan baru daripada melakukan pekerjaan tetap.",
+      "textB": "Bila masuk dalam kepanitiaan, saya ingin ditunjuk atau dipilih sebagai ketua.",
+      "rowIdx": 12,
+      "colIdx": 9,
+      "matrixGroup": 3
+    },
+    {
+      "id": 193,
+      "textA": "Saya ingin mengerjakan sampai benar-benars elasai setiap pekerjaan atau tugas yang telah saya mulai.",
+      "textB": "Saya ingin mampu membujuk dan mempengaruhi orang lain melakukan hal-hal yang saya kehendaki.",
+      "rowIdx": 13,
+      "colIdx": 9,
+      "matrixGroup": 3
+    },
+    {
+      "id": 194,
+      "textA": "Saya suka ikut serta dalam diskusi tentang seks dan aktivitas seksual.",
+      "textB": "Saya ingin diminta menyelesaikan perdebatan atau perselisihan diantara orang lain.",
+      "rowIdx": 14,
+      "colIdx": 9,
+      "matrixGroup": 3
+    },
+    {
+      "id": 195,
+      "textA": "Saya menjadi sedemikian marah, ingin rasanya melemparkan, dan merusak barang-barang.",
+      "textB": "Saya suka mengarahkan orang lain bagaimana mereka melakukan pekerjaan mereka.",
+      "rowIdx": 15,
+      "colIdx": 9,
+      "matrixGroup": 3
+    },
+    {
+      "id": 196,
+      "textA": "Saya suka berlaku sangat ramah terhadap teman-teman saya.",
+      "textB": "Bila keadaan kurang menguntungkan, saya merasah arus lebih disalahkan daripada orang lain.",
+      "rowIdx": 11,
+      "colIdx": 10,
+      "matrixGroup": 3
+    },
+    {
+      "id": 197,
+      "textA": "Saya suka menjelajahi pedalaman dan tinggal di berbagai tempat.",
+      "textB": "Bila saya melakukan kesalahan, saya merasa harus dihukum.",
+      "rowIdx": 12,
+      "colIdx": 10,
+      "matrixGroup": 3
+    },
+    {
+      "id": 198,
+      "textA": "Saya suka bertahan menghadapi suatu pekerjaan atau masalah sekalipun tampaknya seolah-olah saya tak akan berhasil.",
+      "textB": "Bagi saya kesedihan dan kesusahan saya, lebihba nyak membawa kebaikan daripada kerugian.",
+      "rowIdx": 13,
+      "colIdx": 10,
+      "matrixGroup": 3
+    },
+    {
+      "id": 199,
+      "textA": "Saya suka buku, sandiwara (film) yang berkisar soal seks.",
+      "textB": "Saya merasa harus mengakui hal-hal tidak baik ya ng telah saya lakukan.",
+      "rowIdx": 14,
+      "colIdx": 10,
+      "matrixGroup": 3
+    },
+    {
+      "id": 200,
+      "textA": "Bila keadaan kurang menguntungkan, ingin rasanya saya menyalahkan orang lain.",
+      "textB": "Dalam banyak hal saya merasa kalah dibandingkan dengan orang-orang lain.",
+      "rowIdx": 15,
+      "colIdx": 10,
+      "matrixGroup": 3
+    },
+    {
+      "id": 201,
+      "textA": "Saya ingin melakukan setiap pekerjaan sebaik mungkin.",
+      "textB": "Saya suka menolong orang-orang lain yang tidakb egitu beruntung seperti saya.",
+      "rowIdx": 11,
+      "colIdx": 11,
+      "matrixGroup": 3
+    },
+    {
+      "id": 202,
+      "textA": "Saya suka melakukan hal-hal baru dan berbeda dari biasanya.",
+      "textB": "Saya suka memperlakukan orang lain dengan ramah dan simpatik.",
+      "rowIdx": 12,
+      "colIdx": 11,
+      "matrixGroup": 3
+    },
+    {
+      "id": 203,
+      "textA": "Bila saya melakukan suatu tugas, saya ingin mengerjakannya sampai benar-benar selesai.",
+      "textB": "Saya suka menolong orang-orang lain yang tidakb egitu beruntung seperti saya.",
+      "rowIdx": 13,
+      "colIdx": 11,
+      "matrixGroup": 3
+    },
+    {
+      "id": 204,
+      "textA": "Saya suka bersibuk dalam aktivitas sosialb ersama orang-orang dari lawan jenis saya.",
+      "textB": "Saya suka memaafkan teman-teman saya yang kadang -kadang mungkin menyakiti hati saya.",
+      "rowIdx": 14,
+      "colIdx": 11,
+      "matrixGroup": 3
+    },
+    {
+      "id": 205,
+      "textA": "Saya akan menyerang pendirian yang bertenta ngan dengan pendirian saya.",
+      "textB": "Saya ingin teman-teman saya mempercayai saya dan menceritakan kesulitan-kesulitan mereka kepada saya.",
+      "rowIdx": 15,
+      "colIdx": 11,
+      "matrixGroup": 3
+    },
+    {
+      "id": 206,
+      "textA": "Saya suka memperlakukan orang lain denganr amah dan simpatik.",
+      "textB": "Saya suka bepergian melihat-lihat daerah pedalaman.",
+      "rowIdx": 11,
+      "colIdx": 12,
+      "matrixGroup": 3
+    },
+    {
+      "id": 207,
+      "textA": "Saya suka mengikuti adat-istiadat dan mengh indarkan melakukan hal-hal yang mungkin dianggap tidak wajar oleh orang-orang yang saya hormati.",
+      "textB": "Saya suka mengikuti mode atau cara baru.",
+      "rowIdx": 12,
+      "colIdx": 12,
+      "matrixGroup": 3
+    },
+    {
+      "id": 208,
+      "textA": "Saya suka bekerja keras pada tiap pekerjaan yang saya hadapi.",
+      "textB": "Saya ingin mengalami hal-hal baru dan perubahan dalam kehidupan saya sehari-hari.",
+      "rowIdx": 13,
+      "colIdx": 12,
+      "matrixGroup": 3
+    },
+    {
+      "id": 209,
+      "textA": "Saya suka mencium lawan jenis saya yangmen arik.",
+      "textB": "Saya suka bereksperimen, dan mencoba hal-halbar u.",
+      "rowIdx": 14,
+      "colIdx": 12,
+      "matrixGroup": 3
+    },
+    {
+      "id": 210,
+      "textA": "Ingin rasanya saya menghardik orang lain bila berbeda pendapat dengan mereka.",
+      "textB": "Saya suka mengikuti mode atau cara baru.",
+      "rowIdx": 15,
+      "colIdx": 12,
+      "matrixGroup": 3
+    },
+    {
+      "id": 211,
+      "textA": "Saya suka menolong orang-orang lain yangti dak begitu beruntung seperti saya.",
+      "textB": "Saya ingin mengerjakan sampai benar-benar selesai setiap pekerjaan atau tugas yang telah saya mulai.",
+      "rowIdx": 11,
+      "colIdx": 13,
+      "matrixGroup": 3
+    },
+    {
+      "id": 212,
+      "textA": "Saya suka menjelajahi pedalaman dan tinggal di berbagai tempat.",
+      "textB": "Saya ingin bekerja berjam-jam tanpa gangguan.",
+      "rowIdx": 12,
+      "colIdx": 13,
+      "matrixGroup": 3
+    },
+    {
+      "id": 213,
+      "textA": "Jika saya bepergian, saya ingin segala sesuatunya telah direncanakan terlebih dahulu.",
+      "textB": "Saya ingin mengerjakan teka-teki atau memecahkan persoalan-persoalan sampai selesai.",
+      "rowIdx": 13,
+      "colIdx": 13,
+      "matrixGroup": 3
+    },
+    {
+      "id": 214,
+      "textA": "Saya suka jatuh cinta kepada seseorang dari lawan jenis saya.",
+      "textB": "Saya ingin menyelesaikan pekerjaan satu-persatu, sebelum memulai yang baru.",
+      "rowIdx": 14,
+      "colIdx": 13,
+      "matrixGroup": 3
+    },
+    {
+      "id": 215,
+      "textA": "Saya suka mengatakan kepada orang lain pend apat saya mengenai mereka.",
+      "textB": "Saya ingin menghindarkan gangguan bila saya sedang bekerja.",
+      "rowIdx": 15,
+      "colIdx": 13,
+      "matrixGroup": 3
+    },
+    {
+      "id": 216,
+      "textA": "Saya suka memberi bantuan-bantuan kecilkep ada teman-teman saya.",
+      "textB": "Saya suka bersibuk dalam aktivitas sosial bersama orang-orang dari lawan jenis saya.",
+      "rowIdx": 11,
+      "colIdx": 14,
+      "matrixGroup": 3
+    },
+    {
+      "id": 217,
+      "textA": "Saya suka bertemu dengan orang-orang baru.",
+      "textB": "Saya suka mencium lawan jenis saya yang menarik.",
+      "rowIdx": 12,
+      "colIdx": 14,
+      "matrixGroup": 3
+    },
+    {
+      "id": 218,
+      "textA": "Saya ingin mengerjakan teka-teki atau memec ahkan persoalan-persoalan sampai selesai.",
+      "textB": "Saya suka jatuh cinta kepada seseorang dari lawan jenis saya.",
+      "rowIdx": 13,
+      "colIdx": 14,
+      "matrixGroup": 3
+    },
+    {
+      "id": 219,
+      "textA": "Saya suka berbicara tentang hal-hal yangte lah saya capai.",
+      "textB": "Saya suka mendengarkan atau menceritakan sejumlah lelucon yang berkisar sekitar soal seks.",
+      "rowIdx": 14,
+      "colIdx": 14,
+      "matrixGroup": 3
+    },
+    {
+      "id": 220,
+      "textA": "Ingin rasanya saya memperolok orang-orang yang melakukan hal-hal yang saya anggap bodoh.",
+      "textB": "Saya suka mendengarkan atau menceritakan sejumlah lelucon yang berkisar sekitar soal seks.",
+      "rowIdx": 15,
+      "colIdx": 14,
+      "matrixGroup": 3
+    },
+    {
+      "id": 221,
+      "textA": "Saya ingin teman-teman saya mempercayai saya dan menceritakan kesulitan-kesulitan mereka kepada saya.",
+      "textB": "Saya suka membaca berita surat kabar tentangpem bunuhan, dan perbuatan kekerasan lain.",
+      "rowIdx": 11,
+      "colIdx": 15,
+      "matrixGroup": 3
+    },
+    {
+      "id": 222,
+      "textA": "Saya suka mengikuti mode atau cara baru.",
+      "textB": "Ingin rasanya saya mengecam seseorang di mukaum um biladia memang patut menerimanya.",
+      "rowIdx": 12,
+      "colIdx": 15,
+      "matrixGroup": 3
+    },
+    {
+      "id": 223,
+      "textA": "Saya ingin menghindarkan gangguan bila saya sedang bekerja.",
+      "textB": "Ingin rasanya saya menghardik orang lain bila berbeda pendapat dengan mereka.",
+      "rowIdx": 13,
+      "colIdx": 15,
+      "matrixGroup": 3
+    },
+    {
+      "id": 224,
+      "textA": "Saya suka mendengarkan atau menceritakan se jumlah lelucon yang berkisar sekitar soal seks.",
+      "textB": "Saya ingin membalas dendam terhadap orang yangm enghina saya.",
+      "rowIdx": 14,
+      "colIdx": 15,
+      "matrixGroup": 3
+    },
+    {
+      "id": 225,
+      "textA": "Saya suka mengelakkan tanggung jawab dan ke wajiban-kewajiban.",
+      "textB": "Ingin rasanya saya memperolok orang-orang yangm elakukan hal-hal yang saya anggap bodoh.",
+      "rowIdx": 15,
+      "colIdx": 15,
+      "matrixGroup": 3
+    }
+  ]
+}

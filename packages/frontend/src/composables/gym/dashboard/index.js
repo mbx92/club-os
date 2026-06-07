@@ -1,0 +1,1 @@
+export { useGymDashboard } from './useGymDashboard'
