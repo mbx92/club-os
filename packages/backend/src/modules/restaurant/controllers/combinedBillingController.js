@@ -19,9 +19,6 @@ const {
   TransactionPayment,
   Product, 
   Member,
-  MembershipType,
-  Membership,
-  MembershipPayment,
   ServicePlan,
   ActiveService,
   Voucher,
@@ -323,26 +320,9 @@ const createCombinedTransaction = async (req, res, next) => {
           where: { id: item.activeServiceId },
           transaction: t
         });
-      } else if (item.membershipId) {
-        // Legacy membership system
-        await Membership.update({
-          status: 'active'
-        }, {
-          where: { id: item.membershipId },
-          transaction: t
-        });
-
-        // Create membership payment record
-        await MembershipPayment.create({
-          tenantId,
-          membershipId: item.membershipId,
-          amount: item.totalPrice,
-          paymentDate: new Date(),
-          paymentMethod: normalizePaymentMethod(payments[0].method),
-          transactionId: transaction.id,
-          status: 'paid',
-          createdBy: req.user.id
-        }, { transaction: t });
+      } else {
+        // Legacy membership fallback — replaced by ActiveService system
+        throw createError('NOT_FOUND', 'Service plan not found for membership item');
       }
     }
 
@@ -527,53 +507,8 @@ async function processMembershipItem(item, tenantId, memberId, taxEnabled, taxPe
     };
   }
 
-  // Fallback to legacy MembershipType
-  const membershipType = await MembershipType.findOne({
-    where: { id: itemId, tenantId, isActive: true },
-    transaction
-  });
-
-  if (!membershipType) {
-    throw createError('NOT_FOUND', 'Service plan or membership type not found');
-  }
-
-  // Legacy membership system
-  const startDate = item.startDate ? new Date(item.startDate) : new Date();
-  const endDate = new Date(startDate);
-  endDate.setDate(endDate.getDate() + membershipType.durationDays);
-
-  const membership = await Membership.create({
-    tenantId,
-    memberId,
-    membershipTypeId: membershipType.id,
-    startDate,
-    endDate,
-    status: 'pending',
-    price: membershipType.price,
-    createdBy: memberId
-  }, { transaction });
-
-  const unitPrice = parseFloat(membershipType.price);
-  const totalPrice = unitPrice;
-  const taxAmount = taxEnabled ? totalPrice * (taxPercentage / 100) : 0;
-
-  return {
-    type: 'membership',
-    itemId: membershipType.id,
-    itemName: membershipType.name,
-    membershipId: membership.id,
-    quantity: 1,
-    unitPrice,
-    totalPrice,
-    taxAmount,
-    notes: item.notes,
-    metadata: {
-      membershipTypeName: membershipType.name,
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      durationDays: membershipType.durationDays
-    }
-  };
+  // No matching service plan found
+  throw createError('NOT_FOUND', 'Service plan not found');
 }
 
 /**

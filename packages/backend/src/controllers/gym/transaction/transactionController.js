@@ -3,12 +3,10 @@ const {
   TransactionItem,
   TransactionPayment,
   Product,
-  Membership,
   Member,
   ServicePlan,
   User,
   Tenant,
-  MembershipPayment,
   Voucher,
   VoucherUsage,
   ActiveService,
@@ -242,19 +240,6 @@ exports.createTransaction = async (req, res) => {
           itemDetails
         };
 
-      } else if (item.itemType === 'membership') {
-        const membership = await Membership.findOne({
-          where: { id: item.itemId, tenantId },
-          // Only join Member when we actually need to validate ownership
-          ...(customerType === 'member' && customerId
-            ? { include: [{ model: Member, as: 'member', where: { id: customerId }, required: true }] }
-            : {}),
-          transaction,
-          lock: transaction.LOCK.UPDATE   // lock upfront for status update later
-        });
-        if (!membership) throw _mkVErr(`Membership with ID ${item.itemId} not found or does not belong to the customer`, 404);
-        return { item, _membership: membership, itemPrice: membership.price, itemDetails: { membershipType: membership.type, duration: membership.duration } };
-
       } else if (item.itemType === 'service_plan') {
         const servicePlan = await ServicePlan.findOne({
           where: { id: item.itemId, tenantId, isActive: true },
@@ -279,7 +264,7 @@ exports.createTransaction = async (req, res) => {
     }));
 
     // Assemble validated items and compute subtotal
-    const validatedItems = _itemFetchResults.map(({ item, _product, _membership, _productStockField, _productIsTracked, itemPrice, itemDetails }) => {
+    const validatedItems = _itemFetchResults.map(({ item, _product, _productStockField, _productIsTracked, itemPrice, itemDetails }) => {
       const itemSubtotal = itemPrice * item.quantity;
       return {
         ...item,
@@ -291,7 +276,6 @@ exports.createTransaction = async (req, res) => {
         _product:     _product     || null,
         _productStockField: _productStockField || null,
         _productIsTracked: _productIsTracked || false,
-        _membership:  _membership  || null,
       };
     });
     let subtotal = validatedItems.reduce((s, i) => s + i.subtotal, 0);
@@ -423,7 +407,6 @@ exports.createTransaction = async (req, res) => {
     
     // Create transaction payments
     const transactionPayments = [];
-    let membershipPayment = null;
     
     for (const payment of payments) {
       const transactionPayment = await TransactionPayment.create({
@@ -438,38 +421,6 @@ exports.createTransaction = async (req, res) => {
       }, { transaction });
       
       transactionPayments.push(transactionPayment);
-      
-      // If this transaction includes a membership, create a membership payment record
-      if (validatedItems.some(item => item.itemType === 'membership')) {
-        const membershipItem = validatedItems.find(item => item.itemType === 'membership');
-        
-        membershipPayment = await MembershipPayment.create({
-          tenantId,
-          memberId: customerId,
-          membershipId: membershipItem.itemId,
-          paymentMethod: normalizePaymentMethod(payment.paymentMethod),
-          amount: payment.amount,
-          paymentDate: payment.paymentDate || new Date(),
-          status: 'completed',
-          receiptNumber: transactionPayment.receiptNumber,
-          voucherId: voucher ? voucher.id : null,
-          voucherDiscount,
-          notes: payment.notes,
-          paymentDetails: payment.paymentDetails || {},
-          createdBy: req.user.id
-        }, { transaction });
-        
-        // Update membership status using the already-locked _membership instance
-        const _memInst = membershipItem._membership;
-        if (_memInst && _memInst.status === 'pending') {
-          await _memInst.update({ status: 'active' }, { transaction });
-        }
-        
-        // Update member's membershipStatus using the already-fetched memberObj
-        if (memberObj) {
-          await memberObj.update({ membershipStatus: 'active' }, { transaction });
-        }
-      }
     }
     
     // Record voucher usage using centralized service (single call, outside payment loop)
@@ -487,7 +438,6 @@ exports.createTransaction = async (req, res) => {
         originalAmount: totalAmount,
         finalAmount: finalAmount,
         usageDetails: {
-          membershipPaymentId: membershipPayment ? membershipPayment.id : null,
           items: validatedItems.map(item => ({
             itemType: item.itemType,
             itemId: item.itemId,
@@ -520,7 +470,6 @@ exports.createTransaction = async (req, res) => {
         return {
           ...ti.toJSON(),
           product:    vi._product    ? { id: vi._product.id,    name: vi._product.name,    sku: vi._product.sku,       price: vi._product.price }    : null,
-          membership: vi._membership ? { id: vi._membership.id, type: vi._membership.type, price: vi._membership.price, duration: vi._membership.duration } : null,
         };
       }),
       payments: transactionPayments.map(p => p.toJSON()),
@@ -533,8 +482,7 @@ exports.createTransaction = async (req, res) => {
     };
 
     return {
-      transaction: responseTransaction,
-      membershipPayment
+      transaction: responseTransaction
     };
   }).then(result => {
     res.status(201).json({
@@ -1000,22 +948,17 @@ exports.updateTransactionStatus = async (req, res) => {
             as: 'member',
             attributes: ['id', 'firstName', 'lastName', 'email', 'phone']
           },
-          {
-            model: TransactionItem,
-            as: 'transactionItems',
-            include: [
-              {
-                model: Product,
-                as: 'product',
-                attributes: ['id', 'name', 'sku', 'price']
+            {
+                model: TransactionItem,
+                as: 'transactionItems',
+                include: [
+                  {
+                    model: Product,
+                    as: 'product',
+                    attributes: ['id', 'name', 'sku', 'price']
+                  }
+                ]
               },
-              {
-                model: Membership,
-                as: 'membership',
-                attributes: ['id', 'type', 'price', 'duration']
-              }
-            ]
-          },
           {
             model: TransactionPayment,
             as: 'payments'
@@ -1363,7 +1306,6 @@ exports.refundTransaction = async (req, res) => {
  * Cancel a transaction due to input mistake.
  * - Restores product stock for tracked items
  * - Cancels linked active services
- * - Cancels linked membership payment records when traceable
  * - Marks transaction as cancelled
  */
 exports.cancelTransaction = async (req, res) => {
@@ -1504,38 +1446,6 @@ exports.cancelTransaction = async (req, res) => {
       await service.save({ transaction: t });
     }
 
-    const membershipItemIds = transactionItems
-      .filter(item => item.itemType === 'membership')
-      .map(item => item.itemId);
-    const receiptNumbers = payments.map(payment => payment.receiptNumber).filter(Boolean);
-
-    let cancelledMembershipPayments = [];
-    if (membershipItemIds.length > 0 && receiptNumbers.length > 0 && transaction.customerId) {
-      const membershipPayments = await MembershipPayment.findAll({
-        where: {
-          tenantId,
-          memberId: transaction.customerId,
-          membershipId: { [Op.in]: membershipItemIds },
-          receiptNumber: { [Op.in]: receiptNumbers },
-          status: { [Op.ne]: 'cancelled' }
-        },
-        transaction: t,
-        lock: t.LOCK.UPDATE
-      });
-
-      for (const membershipPayment of membershipPayments) {
-        membershipPayment.status = 'cancelled';
-        membershipPayment.notes = appendAuditNote(membershipPayment.notes, 'CANCELLED', notes);
-        await membershipPayment.save({ transaction: t });
-      }
-
-      cancelledMembershipPayments = membershipPayments.map(payment => ({
-        id: payment.id,
-        receiptNumber: payment.receiptNumber,
-        amount: parseFloat(payment.amount || 0)
-      }));
-    }
-
     if (transaction.customerType === 'member' && transaction.customerId) {
       const member = await Member.findOne({
         where: { id: transaction.customerId, tenantId },
@@ -1652,8 +1562,7 @@ exports.cancelTransaction = async (req, res) => {
           startDate: service.startDate,
           endDate: service.endDate
         })),
-        restockedProducts,
-        cancelledMembershipPayments
+        restockedProducts
       }
     });
   } catch (error) {
@@ -1921,12 +1830,6 @@ exports.prePrintPayment = async (req, res) => {
               model: Product,
               as: 'product',
               attributes: ['id', 'name', 'sku', 'price', 'category'],
-              required: false
-            },
-            {
-              model: Membership,
-              as: 'membership',
-              attributes: ['id', 'price', 'status', 'startDate', 'endDate'],
               required: false
             }
           ]

@@ -3,7 +3,7 @@
 /**
  * Combined Billing Routes
  * 
- * Supports combined transactions: membership + products in one bill
+ * Supports combined transactions: service plans + products in one bill
  * Feature-gated: requires 'combinedBilling' feature
  * 
  * @module modules/restaurant/routes/combinedBilling.routes
@@ -21,7 +21,7 @@ router.use(authenticate);
 
 /**
  * @route POST /api/v1/restaurant/billing/combined
- * @desc Create combined transaction (membership + products)
+ * @desc Create combined transaction (service_plan + products)
  * @access Private - requires 'combinedBilling' feature and 'create' permission on 'Transaction'
  * 
  * @body {
@@ -34,7 +34,7 @@ router.use(authenticate);
  *   orderType: 'dine-in' | 'takeaway' | 'delivery' (optional),
  *   items: [
  *     { type: 'product', productId: UUID, quantity: number, notes: string },
- *     { type: 'membership', membershipTypeId: UUID, startDate: Date }
+ *     { type: 'service_plan', servicePlanId: UUID, startDate: Date }
  *   ],
  *   payments: [
  *     { method: 'cash' | 'credit_card' | 'debit_card' | 'e_wallet' | 'qris', amount: number }

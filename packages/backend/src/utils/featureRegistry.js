@@ -78,14 +78,6 @@ const FEATURE_REGISTRY = {
       icon: '📈',
       availableIn: ['Enterprise']
     },
-    psychology: {
-      type: 'boolean',
-      default: false,
-      label: 'Psychology Testing',
-      description: 'PAPI Kostick, EPPS, and psychological testing module',
-      icon: '🧠',
-      availableIn: ['Professional', 'Enterprise']
-    },
     finance: {
       type: 'boolean',
       default: true,
@@ -243,7 +235,7 @@ const FEATURE_REGISTRY = {
       type: 'boolean',
       default: true,
       label: 'Transactional Income',
-      description: 'Automatic income from membership, POS, restaurant, and psychology',
+      description: 'Automatic income from membership, POS, and restaurant',
       icon: '🔄',
       availableIn: ['Basic', 'Professional', 'Enterprise']
     },

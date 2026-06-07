@@ -25,14 +25,14 @@ const api = useApi()
 const membershipTypes = ref([])
 const loading = ref(false)
 
-// Fetch membership types
+// Fetch service plans (membership type)
 const fetchMembershipTypes = async () => {
   loading.value = true
   try {
-    const response = await api.get('/membership-types')
+    const response = await api.get('/service/plans', { params: { serviceType: 'membership' } })
     membershipTypes.value = response.data?.data || response.data || []
   } catch (err) {
-    console.error('Failed to fetch membership types:', err)
+    console.error('Failed to fetch service plans:', err)
   } finally {
     loading.value = false
   }

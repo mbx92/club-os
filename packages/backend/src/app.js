@@ -82,7 +82,7 @@ app.use(metricsMiddleware);
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Serve static files from public directory (psychology test images, etc.)
+// Serve static files from public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
 app.use('/api/v1', routes);

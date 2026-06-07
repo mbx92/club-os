@@ -888,7 +888,6 @@ const permissionModules = [
   { id: 'gym', label: 'Gym', icon: IconUsers },
   { id: 'pos', label: 'POS', icon: IconCashRegister },
   { id: 'restaurant', label: 'Restaurant', icon: IconToolsKitchen2 },
-  { id: 'psychology', label: 'Psychology', icon: IconBrain },
   { id: 'finance', label: 'Finance', icon: IconFileInvoice },
   { id: 'reports', label: 'Reports', icon: IconChartBar },
   { id: 'system', label: 'System', icon: IconSettings }
@@ -1103,16 +1102,6 @@ const getResourceModule = (resourceName) => {
     'Subscription':        'finance',
     'SubscriptionPlan':    'finance',
 
-    // Psychology (8)
-    'Patient':             'psychology',
-    'PsychologySession':   'psychology',
-    'PsychologyPackage':   'psychology',
-    'PsychologyTest':      'psychology',
-    'TestResult':          'psychology',
-    'CfitTest':            'psychology',
-    'TestSubmission':      'psychology',
-    'PsychologyDashboard': 'psychology',
-
     // POS (4)
     'POSProduct':          'pos',
     'POSCategory':         'pos',
@@ -1151,7 +1140,6 @@ const getResourceModule = (resourceName) => {
   if (name.startsWith('restaurant')) return 'restaurant'
   if (name.startsWith('gym'))        return 'gym'
   if (name.startsWith('pos'))        return 'pos'
-  if (name.startsWith('psychology')) return 'psychology'
   if (name.startsWith('finance'))    return 'finance'
   if (name.includes('report'))       return 'reports'
   if (name === 'dashboard')          return 'dashboard'

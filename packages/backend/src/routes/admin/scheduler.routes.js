@@ -29,10 +29,4 @@ router.post('/trigger/report-cleanup',
   schedulerController.triggerReportCleanup
 );
 
-router.post('/trigger/session-cleanup',
-  authenticate,
-  requireSuperAdmin,
-  schedulerController.triggerSessionCleanup
-);
-
 module.exports = router;

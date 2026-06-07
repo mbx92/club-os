@@ -520,7 +520,7 @@ export function useSubscriptionPlans() {
         classes: false,
         reports: false,
         advancedReports: false,
-        psychology: false
+        
       },
       limits: {
         maxUsers: 0,

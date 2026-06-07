@@ -2,8 +2,6 @@ const cron = require('node-cron');
 const logService = require('../services/logService');
 const logger = require('../utils/logger');
 const cleanupExpiredReports = require('../jobs/cleanupExpiredReports');
-const { sessionCleanupJob } = require('../jobs');
-const sessionLogsCleanupJob = require('../jobs/sessionLogsCleanupJob');
 const hikvisionSyncJob = require('../jobs/hikvisionSyncJob');
 const { createBackup } = require('../../scripts/backupDatabase');
 const { createSequelizeBackup } = require('../../scripts/backupDatabaseSequelize');
@@ -31,24 +29,6 @@ const schedulerStatus = {
       name: 'Report Cleanup',
       schedule: '30 2 * * *',
       description: 'Cleanup expired PDF reports',
-      lastRun: null,
-      nextRun: null,
-      status: 'pending',
-      isRunning: false
-    },
-    sessionCleanup: {
-      name: 'Session Cleanup',
-      schedule: '0 2 * * *',
-      description: 'Cleanup timeout/abandoned sessions',
-      lastRun: null,
-      nextRun: null,
-      status: 'pending',
-      isRunning: false
-    },
-    sessionLogsCleanup: {
-      name: 'Session Logs Cleanup',
-      schedule: '0 */6 * * *',
-      description: 'Cleanup session logs older than 12 hours',
       lastRun: null,
       nextRun: null,
       status: 'pending',
@@ -189,149 +169,6 @@ function scheduleReportCleanup() {
   
   logger.logSystem('Report cleanup scheduler initialized (daily at 2:30 AM)', {
     action: 'REPORT_CLEANUP_SCHEDULER_INITIALIZED',
-    userId: null,
-    tenantId: null,
-    ip: 'system',
-    userAgent: 'scheduled-task',
-    method: 'SYSTEM',
-    path: '/system/scheduler',
-    skipDb: true
-  });
-}
-
-/**
- * Schedule psychology session cleanup
- * Runs daily at 3:00 AM (timeout/abandoned sessions)
- */
-function scheduleSessionCleanup() {
-  // Wrap cleanup to track status
-  const originalSchedule = sessionCleanupJob.scheduleCleanupJob.bind(sessionCleanupJob);
-  sessionCleanupJob.scheduleCleanupJob = function() {
-    const result = originalSchedule();
-    
-    // Track the cleanup execution
-    const originalCleanup = sessionCleanupJob.cleanupAbandonedSessions?.bind(sessionCleanupJob);
-    if (originalCleanup) {
-      sessionCleanupJob.cleanupAbandonedSessions = async function() {
-        schedulerStatus.jobs.sessionCleanup.isRunning = true;
-        schedulerStatus.jobs.sessionCleanup.status = 'running';
-        const startTime = Date.now();
-        
-        try {
-          const cleanupResult = await originalCleanup();
-          schedulerStatus.jobs.sessionCleanup.lastRun = {
-            timestamp: new Date(),
-            duration: Date.now() - startTime,
-            success: true,
-            ...cleanupResult
-          };
-          schedulerStatus.jobs.sessionCleanup.status = 'success';
-          return cleanupResult;
-        } catch (err) {
-          schedulerStatus.jobs.sessionCleanup.lastRun = {
-            timestamp: new Date(),
-            duration: Date.now() - startTime,
-            success: false,
-            error: err.message
-          };
-          schedulerStatus.jobs.sessionCleanup.status = 'error';
-          throw err;
-        } finally {
-          schedulerStatus.jobs.sessionCleanup.isRunning = false;
-        }
-      };
-    }
-    
-    return result;
-  };
-  
-  sessionCleanupJob.scheduleCleanupJob();
-  
-  logger.logSystem('Session cleanup scheduler initialized (daily at 2:00 AM)', {
-    action: 'SESSION_CLEANUP_SCHEDULER_INITIALIZED',
-    userId: null,
-    tenantId: null,
-    ip: 'system',
-    userAgent: 'scheduled-task',
-    method: 'SYSTEM',
-    path: '/system/scheduler',
-    skipDb: true
-  });
-}
-
-/**
- * Schedule session logs cleanup
- * Runs every 6 hours
- */
-function scheduleSessionLogsCleanup() {
-  const jobConfig = schedulerStatus.jobs.sessionLogsCleanup;
-  
-  cron.schedule(jobConfig.schedule, async () => {
-    jobConfig.isRunning = true;
-    jobConfig.status = 'running';
-    const startTime = Date.now();
-    
-    try {
-      logger.logSystem('Starting scheduled session logs cleanup...', {
-        action: 'STARTING_SCHEDULED_SESSION_LOGS_CLEANUP',
-        userId: null,
-        tenantId: null,
-        ip: 'system',
-        userAgent: 'scheduled-task',
-        method: 'SYSTEM',
-        path: '/system/scheduler/session-logs-cleanup',
-        skipDb: true
-      });
-      
-      const result = await sessionLogsCleanupJob.runLogsCleanupTask();
-      
-      const duration = Date.now() - startTime;
-      jobConfig.lastRun = new Date();
-      jobConfig.status = result.success ? 'success' : 'failed';
-      jobConfig.isRunning = false;
-      
-      logger.logSystem('Session logs cleanup completed', {
-        action: 'SESSION_LOGS_CLEANUP_COMPLETED',
-        userId: null,
-        tenantId: null,
-        ip: 'system',
-        userAgent: 'scheduled-task',
-        method: 'SYSTEM',
-        path: '/system/scheduler/session-logs-cleanup',
-        skipDb: true,
-        metadata: {
-          deletedCount: result.deletedCount || 0,
-          duration: `${duration}ms`,
-          success: result.success
-        }
-      });
-    } catch (err) {
-      const duration = Date.now() - startTime;
-      jobConfig.status = 'failed';
-      jobConfig.isRunning = false;
-      jobConfig.lastRun = new Date();
-      
-      logger.logError('Session logs cleanup failed', {
-        action: 'SESSION_LOGS_CLEANUP_FAILED',
-        userId: null,
-        tenantId: null,
-        ip: 'system',
-        userAgent: 'scheduled-task',
-        method: 'SYSTEM',
-        path: '/system/scheduler/session-logs-cleanup',
-        error: err.message,
-        stack: err.stack,
-        skipDb: true,
-        metadata: { duration: `${duration}ms` }
-      });
-    }
-  }, {
-    scheduled: true,
-    timezone: process.env.TZ || 'Asia/Jakarta'
-  });
-  
-  logger.logSystem('Session logs cleanup scheduler initialized (every 6 hours)', {
-    action: 'SESSION_LOGS_CLEANUP_SCHEDULER_INITIALIZED',
     userId: null,
     tenantId: null,
     ip: 'system',
@@ -506,8 +343,6 @@ function scheduleHikvisionSync() {
 function initializeScheduledJobs() {
   scheduleLogCleanup();
   scheduleReportCleanup();
-  scheduleSessionCleanup();
-  scheduleSessionLogsCleanup();
   scheduleHikvisionSync();
   scheduleAutoBackup();
   
@@ -561,12 +396,8 @@ module.exports = {
   initializeScheduledJobs,
   scheduleLogCleanup,
   scheduleReportCleanup,
-  scheduleSessionCleanup,
-  scheduleSessionLogsCleanup,
   scheduleHikvisionSync,
   cleanupExpiredReports,
-  sessionCleanupJob,
-  sessionLogsCleanupJob,
   hikvisionSyncJob,
   getSchedulerStatus
 };

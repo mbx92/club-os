@@ -490,7 +490,6 @@ const moduleIcon = (mod) => {
   const m = mod?.toLowerCase()
   if (m === 'gym') return IconBarbell
   if (m === 'restaurant') return IconToolsKitchen2
-  if (m === 'psychology') return IconBrain
   return IconReceipt
 }
 
@@ -498,7 +497,6 @@ const moduleColor = (mod) => {
   const m = mod?.toLowerCase()
   if (m === 'gym') return 'bg-success/10 text-success'
   if (m === 'restaurant') return 'bg-primary/10 text-primary'
-  if (m === 'psychology') return 'bg-violet-100 text-violet-600'
   return 'bg-base-200 text-base-content/60'
 }
 
@@ -506,7 +504,6 @@ const moduleBadge = (mod) => {
   const m = mod?.toLowerCase()
   if (m === 'gym') return 'badge-success'
   if (m === 'restaurant') return 'badge-primary'
-  if (m === 'psychology') return 'badge-secondary'
   return 'badge-ghost'
 }
 

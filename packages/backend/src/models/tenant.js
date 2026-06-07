@@ -5,8 +5,6 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       Tenant.hasMany(models.User, { foreignKey: 'tenantId', as: 'users' });
       Tenant.hasMany(models.Member, { foreignKey: 'tenantId', as: 'members' });
-      Tenant.hasMany(models.Membership, { foreignKey: 'tenantId', as: 'memberships' });
-      Tenant.hasMany(models.MembershipType, { foreignKey: 'tenantId', as: 'membershipTypes' });
       Tenant.hasMany(models.Payment, { foreignKey: 'tenantId', as: 'payments' });
       Tenant.hasMany(models.CheckIn, { foreignKey: 'tenantId', as: 'checkIns' });
       

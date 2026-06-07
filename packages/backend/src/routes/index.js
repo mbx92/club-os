@@ -7,16 +7,13 @@ const { userRoutes } = require('./core/user');
 const { tenantRoutes, transactionSettingsRoutes } = require('./core/tenant');
 const { permissionRoutes, featureSyncRoutes, logsRoutes, printerSettingsRoutes, receiptTemplateRoutes, receiptSettingsRoutes } = require('./core/system');
 const schedulerRoutes = require('./admin/scheduler.routes');
-const revenueRoutes = require('./admin/revenue.routes');
 const databaseRoutes = require('./admin/database.routes');
 
 // Business module routes
-const { billingRoutes, membershipPaymentRoutes, subscriptionRoutes } = require('./subscription');
+const { billingRoutes, subscriptionRoutes } = require('./subscription');
 const { voucherRoutes } = require('./voucher');
 const { posRoutes, restaurantRoutes, membersRoutes, trainerRoutes, transactionRoutes, checkInRoutes, servicePlansRouter, activeServicesRouter, serviceManagementRouter, reportRoutes, dashboardRoutes, ptSessionsRoutes, cashRegisterRoutes, staffAttendanceRoutes, employeeScheduleRoutes, employeeScheduleTemplateRoutes, shiftRoutes, schedulePeriodRoutes } = require('./gym');
 const restaurantModuleRoutes = require('../modules/restaurant/routes');
-const psychologyModuleRoutes = require('../modules/psychology/routes');
-const ticketingModuleRoutes = require('../modules/ticketing/routes');
 const metricsRoutes = require('./metricsRoutes');
 
 // Integration routes
@@ -75,7 +72,6 @@ router.use('/transaction-settings', transactionSettingsRoutes);
 router.use('/permissions', permissionRoutes);
 router.use('/admin/features', featureSyncRoutes);
 router.use('/admin/scheduler', schedulerRoutes);
-router.use('/admin/revenue', revenueRoutes);
 router.use('/admin/database', databaseRoutes);
 router.use('/logs', logsRoutes);
 router.use('/system/printers', printerSettingsRoutes);
@@ -89,8 +85,6 @@ router.use('/system/receipt-settings', receiptSettingsRoutes);
 // Subscription module
 router.use('/subscription', subscriptionRoutes);
 router.use('/billing', billingRoutes);
-router.use('/membership-payments', membershipPaymentRoutes);
-
 // Transaction module
 router.use('/transactions', transactionRoutes);
 
@@ -148,12 +142,6 @@ router.use('/integrations/hikvision', hikvisionRoutes);
 
 // Restaurant module (new modular structure)
 router.use('/restaurant', restaurantModuleRoutes);
-
-// Psychology module (psychological testing)
-router.use('/psychology', psychologyModuleRoutes);
-
-// Ticketing module (customer support)
-router.use('/ticketing', ticketingModuleRoutes);
 
 // Service module (unified service management)
 router.use('/service/plans', servicePlansRouter);

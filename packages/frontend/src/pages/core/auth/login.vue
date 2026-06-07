@@ -215,7 +215,7 @@ const errorTitle = ref('');
 
 const fillDevCredentials = () => {
   email.value = 'superadmin@gym-system.com';
-  password.value = 'superadmin123';
+  password.value = 'Dynastygym2026!';
   rememberMe.value = true;
 };
 const fillTenantCredentials = () => {

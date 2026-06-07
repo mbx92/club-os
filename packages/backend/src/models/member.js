@@ -14,11 +14,6 @@ module.exports = (sequelize, DataTypes) => {
         as: 'user' 
       });
       
-      Member.hasMany(models.Membership, { 
-        foreignKey: 'memberId', 
-        as: 'memberships' 
-      });
-      
       Member.hasMany(models.ActiveService, { 
         foreignKey: 'memberId', 
         as: 'activeServices' 

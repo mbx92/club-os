@@ -22,13 +22,8 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/admin/database/download/:filename': { subject: 'DatabaseBackup', actions: ['read'] },
   '/admin/database/backups/:filename': { subject: 'DatabaseBackup', actions: ['delete'] },
   
-  // Revenue Management
-  '/admin/revenue/invitation/preview': { subject: 'Revenue', actions: ['read'] },
-  '/admin/revenue/invitation/recalculate': { subject: 'Revenue', actions: ['create'] },
-  
   // Scheduler Management
   '/admin/scheduler/status': { subject: 'Scheduler', actions: ['read'] },
-  '/admin/scheduler/trigger/session-cleanup': { subject: 'Scheduler', actions: ['create'] },
   
   // Feature Management
   '/admin/features/metadata': { subject: 'SubscriptionFeature', actions: ['read'] },
@@ -238,17 +233,6 @@ const ROUTE_TO_SUBJECT_MAP = {
     POST: { subject: 'Payment', actions: ['create'] }
   },
   '/billing/payments/:id': { subject: 'Payment', actions: ['read'] },
-  
-  '/membership-payments': {
-    GET: { subject: 'MembershipPayment', actions: ['read'] },
-    POST: { subject: 'MembershipPayment', actions: ['create'] }
-  },
-  '/membership-payments/statistics': { subject: 'MembershipPayment', actions: ['read'] },
-  '/membership-payments/:id': {
-    GET: { subject: 'MembershipPayment', actions: ['read'] },
-    PUT: { subject: 'MembershipPayment', actions: ['update'] },
-    DELETE: { subject: 'MembershipPayment', actions: ['delete'] }
-  },
   
   // ═══════════════════════════════════════════════════════════════════════════
   // SUBSCRIPTION MANAGEMENT (SaaS)
@@ -653,75 +637,6 @@ const ROUTE_TO_SUBJECT_MAP = {
   // Log Reprocessing
   '/integrations/hikvision/reprocess-logs': { 
     POST: { subject: 'HikvisionDevice', actions: ['update'] }
-  },
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // PSYCHOLOGY MODULE
-  // ═══════════════════════════════════════════════════════════════════════════
-  
-  '/psychology/dashboard': { subject: 'PsychologyDashboard', actions: ['read'] },
-  '/psychology/patients': {
-    GET: { subject: 'Patient', actions: ['read'] },
-    POST: { subject: 'Patient', actions: ['create'] }
-  },
-  '/psychology/patients/:id': {
-    GET: { subject: 'Patient', actions: ['read'] },
-    PUT: { subject: 'Patient', actions: ['update'] },
-    DELETE: { subject: 'Patient', actions: ['delete'] }
-  },
-  
-  '/psychology/packages': {
-    GET: { subject: 'PsychologyPackage', actions: ['read'] },
-    POST: { subject: 'PsychologyPackage', actions: ['create'] }
-  },
-  '/psychology/packages/:id': {
-    PUT: { subject: 'PsychologyPackage', actions: ['update'] },
-    DELETE: { subject: 'PsychologyPackage', actions: ['delete'] }
-  },
-  
-  '/psychology/orders': {
-    GET: { subject: 'PsychologyOrder', actions: ['read'] },
-    POST: { subject: 'PsychologyOrder', actions: ['create'] }
-  },
-  '/psychology/orders/:id': {
-    GET: { subject: 'PsychologyOrder', actions: ['read'] },
-    PUT: { subject: 'PsychologyOrder', actions: ['update'] }
-  },
-  
-  '/psychology/sessions': { subject: 'PsychologySession', actions: ['read'] },
-  '/psychology/sessions/:id': { subject: 'PsychologySession', actions: ['read'] },
-  
-  '/psychology/invitations': {
-    GET: { subject: 'PsychologyInvitation', actions: ['read'] },
-    POST: { subject: 'PsychologyInvitation', actions: ['create'] }
-  },
-  '/psychology/invitations/:id': {
-    PUT: { subject: 'PsychologyInvitation', actions: ['update'] },
-    DELETE: { subject: 'PsychologyInvitation', actions: ['delete'] }
-  },
-  
-  '/psychology/test-types': {
-    GET: { subject: 'TestType', actions: ['read'] },
-    POST: { subject: 'TestType', actions: ['create'] }
-  },
-  '/psychology/test-types/:id': {
-    PUT: { subject: 'TestType', actions: ['update'] },
-    DELETE: { subject: 'TestType', actions: ['delete'] }
-  },
-  
-  '/psychology/price-rules': {
-    GET: { subject: 'PriceRule', actions: ['read'] },
-    POST: { subject: 'PriceRule', actions: ['create'] }
-  },
-  '/psychology/price-rules/:id': {
-    PUT: { subject: 'PriceRule', actions: ['update'] },
-    DELETE: { subject: 'PriceRule', actions: ['delete'] }
-  },
-  
-  '/psychology/logs': { subject: 'PsychologyLogs', actions: ['read'] },
-  '/psychology/settings': {
-    GET: { subject: 'PsychologySettings', actions: ['read'] },
-    PUT: { subject: 'PsychologySettings', actions: ['update'] }
   },
   
   // ═══════════════════════════════════════════════════════════════════════════

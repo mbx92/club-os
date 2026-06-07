@@ -14,8 +14,8 @@ module.exports = {
           users: ['read', 'create', 'update', 'delete'],
           roles: ['read', 'create', 'update', 'delete'],
           members: ['read', 'create', 'update', 'delete'],
-          membershipTypes: ['read', 'create', 'update', 'delete'],
-          memberships: ['read', 'create', 'update', 'delete'],
+          servicePlans: ['read', 'create', 'update', 'delete'],
+          activeServices: ['read', 'create', 'update', 'delete'],
           payments: ['read', 'create', 'update', 'delete'],
           checkIns: ['read', 'create', 'update', 'delete']
         }),
@@ -29,8 +29,8 @@ module.exports = {
         description: 'Manager with limited access',
         permissions: JSON.stringify({
           members: ['read', 'create', 'update', 'delete'],
-          membershipTypes: ['read', 'create', 'update', 'delete'],
-          memberships: ['read', 'create', 'update', 'delete'],
+          servicePlans: ['read', 'create', 'update', 'delete'],
+          activeServices: ['read', 'create', 'update', 'delete'],
           payments: ['read', 'create', 'update', 'delete'],
           checkIns: ['read', 'create', 'update', 'delete']
         }),
@@ -43,7 +43,7 @@ module.exports = {
         name: 'user',
         description: 'Regular user',
         permissions: JSON.stringify({
-          memberships: ['read'],
+          activeServices: ['read'],
           payments: ['read'],
           checkIns: ['read', 'create']
         }),
@@ -56,7 +56,7 @@ module.exports = {
         name: 'Member',
         description: 'Gym member with access to member portal',
         permissions: JSON.stringify({
-          memberships: ['read'],
+          activeServices: ['read'],
           payments: ['read'],
           checkIns: ['read', 'create']
         }),

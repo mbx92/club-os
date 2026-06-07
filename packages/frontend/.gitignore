@@ -7,9 +7,6 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Exception: allow psychology logs page
-!src/pages/psychology/logs/
-
 node_modules
 dist
 dist-ssr

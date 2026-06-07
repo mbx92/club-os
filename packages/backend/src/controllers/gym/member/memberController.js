@@ -1,4 +1,4 @@
-const { Member, Membership, MembershipType, User, Role, Tenant, ActiveService, ServicePlan, sequelize } = require("../../../models");
+const { Member, User, Role, Tenant, ActiveService, ServicePlan, sequelize } = require("../../../models");
 const { Op } = require('sequelize');
 const logger = require("../../../utils/logger");
 const { getClientIp, getUserAgent } = require("../../../utils/requestHelper");
@@ -728,19 +728,19 @@ async function deleteMember(req, res, next) {
       });
     }
 
-    // Check if member has active memberships
-    const activeMemberships = await Membership.count({
+    // Check if member has active services
+    const activeServices = await ActiveService.count({
       where: {
         memberId: member.id,
         status: 'active'
       }
     });
 
-    if (activeMemberships > 0) {
+    if (activeServices > 0) {
       const error = createError(
         'RESOURCE_LOCKED',
-        'Tidak dapat menghapus member dengan membership aktif. Batalkan membership terlebih dahulu.',
-        { activeMemberships }
+        'Tidak dapat menghapus member dengan layanan aktif. Batalkan layanan terlebih dahulu.',
+        { activeServices }
       );
       return res.status(error.statusCode).json({
         success: false,

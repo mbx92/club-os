@@ -90,13 +90,6 @@ module.exports = (sequelize, DataTypes) => {
       as: 'transaction'
     });
 
-    // Polymorphic association with Membership (if itemType is 'membership')
-    TransactionItem.belongsTo(models.Membership, {
-      foreignKey: 'itemId',
-      as: 'membership',
-      constraints: false
-    });
-
     // Polymorphic association with Product (if itemType is 'product')
     TransactionItem.belongsTo(models.Product, {
       foreignKey: 'itemId',

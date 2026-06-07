@@ -6,7 +6,7 @@
  * Provides endpoints to monitor scheduled jobs status and trigger manual execution
  */
 
-const { getSchedulerStatus, cleanupExpiredReports, sessionCleanupJob } = require('../../utils/scheduler');
+const { getSchedulerStatus, cleanupExpiredReports } = require('../../utils/scheduler');
 const logService = require('../../services/logService');
 const logger = require('../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../utils/requestHelper');
@@ -122,48 +122,8 @@ async function triggerReportCleanup(req, res, next) {
   }
 }
 
-/**
- * Trigger session cleanup manually
- * POST /api/v1/admin/scheduler/trigger/session-cleanup
- */
-async function triggerSessionCleanup(req, res, next) {
-  try {
-    logger.logInfo('Manual session cleanup triggered', {
-      action: 'MANUAL_SESSION_CLEANUP_TRIGGERED',
-      userId: req.user.id,
-      tenantId: req.user.tenantId,
-      ip: getClientIp(req),
-      userAgent: getUserAgent(req),
-      method: req.method,
-      path: req.originalUrl
-    });
-
-    const result = await sessionCleanupJob.cleanupAbandonedSessions();
-
-    res.json({
-      success: true,
-      message: 'Session cleanup completed successfully',
-      data: result
-    });
-
-    logger.logInfo('Manual session cleanup completed', {
-      action: 'MANUAL_SESSION_CLEANUP_COMPLETED',
-      userId: req.user.id,
-      tenantId: req.user.tenantId,
-      ip: getClientIp(req),
-      userAgent: getUserAgent(req),
-      method: req.method,
-      path: req.originalUrl,
-      metadata: result
-    });
-  } catch (err) {
-    next(err);
-  }
-}
-
 module.exports = {
   getStatus,
   triggerLogCleanup,
-  triggerReportCleanup,
-  triggerSessionCleanup
+  triggerReportCleanup
 };

@@ -39,13 +39,6 @@ Object.entries(restaurantModels).forEach(([modelName, modelDefinition]) => {
   db[model.name] = model;
 });
 
-// Load ticketing module models
-const ticketingModels = require('../modules/ticketing/models');
-Object.entries(ticketingModels).forEach(([modelName, modelDefinition]) => {
-  const model = modelDefinition(sequelize, Sequelize.DataTypes);
-  db[model.name] = model;
-});
-
 Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {
     db[modelName].associate(db);

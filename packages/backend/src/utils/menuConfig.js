@@ -222,50 +222,6 @@ const MENU_CONFIG = [
     requiredCasl: { action: 'read', subject: 'Member' },
   },
 
-  // ─── PSYCHOLOGY ───────────────────────────────────────────────────────────
-  {
-    key: 'psychology',
-    label: 'Psychology',
-    icon: 'Brain',
-    path: null,
-    requiredModule: 'psychology',
-    requiredCasl: { action: 'read', subject: 'Patient' },
-    children: [
-      {
-        key: 'psychology.patients',
-        label: 'Patients',
-        icon: 'UserRound',
-        path: '/psychology/patients',
-        requiredModule: 'psychology',
-        requiredCasl: { action: 'read', subject: 'Patient' },
-      },
-      {
-        key: 'psychology.orders',
-        label: 'Orders',
-        icon: 'ClipboardList',
-        path: '/psychology/orders',
-        requiredModule: 'psychology',
-        requiredCasl: { action: 'read', subject: 'PsychologyOrder' },
-      },
-      {
-        key: 'psychology.sessions',
-        label: 'Sessions',
-        icon: 'ScanFace',
-        path: '/psychology/sessions',
-        requiredModule: 'psychology',
-        requiredCasl: { action: 'read', subject: 'PsychologySession' },
-      },
-      {
-        key: 'psychology.packages',
-        label: 'Packages',
-        icon: 'Package2',
-        path: '/psychology/packages',
-        requiredModule: 'psychology',
-        requiredCasl: { action: 'read', subject: 'PsychologyPackage' },
-      },
-    ],
-  },
-
   // ─── USER MANAGEMENT (back-office) ────────────────────────────────────────
   {
     key: 'users',

@@ -184,16 +184,6 @@ export const useRolesPermissions = () => {
       { name: 'Payment', actions: CRU },
       { name: 'FinanceReport', actions: RO },
 
-      // ── Psychology Module (8) ─────────────────────────────────
-      { name: 'Patient', actions: CRUD },
-      { name: 'PsychologySession', actions: CRUD },
-      { name: 'PsychologyPackage', actions: CRUD },
-      { name: 'PsychologyTest', actions: CRUD },
-      { name: 'TestResult', actions: CRU },
-      { name: 'CfitTest', actions: CRU },
-      { name: 'TestSubmission', actions: CRU },
-      { name: 'PsychologyDashboard', actions: RO },
-
       // ── Subscription & Billing (4) ───────────────────────────
       { name: 'Subscription', actions: CRUD },
       { name: 'SubscriptionPlan', actions: CRUD },

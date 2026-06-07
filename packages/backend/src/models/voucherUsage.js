@@ -48,16 +48,6 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE',
       onDelete: 'SET NULL'
     },
-    membershipPaymentId: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: 'MembershipPayments',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'SET NULL'
-    },
     discountAmount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false
@@ -95,10 +85,6 @@ module.exports = (sequelize, DataTypes) => {
       // Index for transactionId
       {
         fields: ['transactionId']
-      },
-      // Index for membershipPaymentId
-      {
-        fields: ['membershipPaymentId']
       },
       // Composite index for voucherId and userId
       {
@@ -150,12 +136,6 @@ module.exports = (sequelize, DataTypes) => {
     VoucherUsage.belongsTo(models.Transaction, {
       foreignKey: 'transactionId',
       as: 'transaction'
-    });
-
-    // Association with MembershipPayment (if used in a membership payment)
-    VoucherUsage.belongsTo(models.MembershipPayment, {
-      foreignKey: 'membershipPaymentId',
-      as: 'membershipPayment'
     });
   };
 

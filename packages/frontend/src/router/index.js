@@ -23,7 +23,7 @@ const router = createRouter({
 
 /**
  * Get the appropriate dashboard based on available modules
- * Priority: gym > psychology > restaurant > default (/)
+ * Priority: gym > restaurant > default (/)
  */
 const getAvailableDashboard = (subscriptionStore, isSuperAdmin) => {
   // Super admin gets default dashboard
@@ -33,7 +33,6 @@ const getAvailableDashboard = (subscriptionStore, isSuperAdmin) => {
 
   // Check available modules in priority order
   if (modules.gym) return '/'
-  if (modules.psychology) return '/psychology'
   if (modules.restaurant) return '/restaurant'
   if (modules.nutrition) return '/nutrition'
 
@@ -107,12 +106,6 @@ router.beforeEach(async (to, from) => {
   // Special handling for error pages - let them through
   if (to.path === '/404' || to.path === '/403' || to.path === '/core/errors/no-subscription' || to.name === 'NotFound' || to.name === 'errors.404' || to.name === 'errors.403' || to.name === 'core-errors-no-subscription') {
     debug.log('✅ Allowing error page')
-    return true
-  }
-
-  // Allow public psikogram routes
-  if (to.path.startsWith('/public/psikogram/')) {
-    debug.log('✅ Public psikogram route - allowing access')
     return true
   }
 

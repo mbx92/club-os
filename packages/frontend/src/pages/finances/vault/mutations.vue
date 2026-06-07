@@ -83,8 +83,6 @@ const getReferenceTargetId = (mutation) => {
       return mutation?.transaction?.id || mutation?.reference?.id || mutation?.referenceId || ''
     case 'order':
       return mutation?.order?.id || mutation?.reference?.id || mutation?.referenceId || ''
-    case 'psychologyorder':
-      return mutation?.psychologyOrder?.id || mutation?.reference?.id || mutation?.referenceId || ''
     case 'pettycash':
     case 'pettycashfund':
       return mutation?.pettyCash?.id || mutation?.pettyCashFund?.id || mutation?.reference?.id || mutation?.referenceId || ''
@@ -106,8 +104,6 @@ const getReferenceRoute = (mutation) => {
       return `/finances/transactions/${referenceId}`
     case 'order':
       return `/restaurant/orders/${referenceId}`
-    case 'psychologyorder':
-      return `/psychology/orders/${referenceId}`
     case 'pettycash':
     case 'pettycashfund':
       return `/finances/petty-cash/${referenceId}`
@@ -123,8 +119,6 @@ const getReferenceLabel = (mutation) => {
     mutation?.expense?.referenceNumber,
     mutation?.transaction?.transactionNumber,
     mutation?.order?.transactionNumber,
-    mutation?.psychologyOrder?.orderNumber,
-    mutation?.psychologyOrder?.transactionNumber,
     mutation?.reference?.expenseNumber,
     mutation?.reference?.transactionNumber,
     mutation?.reference?.orderNumber,
