@@ -288,10 +288,10 @@ async function getCheckIns(req, res, next) {
     if (startDate || endDate) {
       where.checkInTime = {};
       if (startDate) {
-        where.checkInTime[Op.gte] = new Date(startDate);
+        where.checkInTime[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
       }
       if (endDate) {
-        where.checkInTime[Op.lte] = new Date(endDate);
+        where.checkInTime[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
       }
     }
 
@@ -566,10 +566,10 @@ async function getCheckInStats(req, res, next) {
     if (startDate || endDate) {
       where.checkInTime = {};
       if (startDate) {
-        where.checkInTime[Op.gte] = new Date(startDate);
+        where.checkInTime[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
       }
       if (endDate) {
-        where.checkInTime[Op.lte] = new Date(endDate);
+        where.checkInTime[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
       }
     }
 

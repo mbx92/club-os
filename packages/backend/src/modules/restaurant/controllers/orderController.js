@@ -381,10 +381,10 @@ const getAllOrders = async (req, res, next) => {
     if (startDate || endDate) {
       where.createdAt = {};
       if (startDate) {
-        where.createdAt[Op.gte] = new Date(startDate);
+        where.createdAt[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
       }
       if (endDate) {
-        where.createdAt[Op.lte] = new Date(endDate);
+        where.createdAt[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
       }
     }
 

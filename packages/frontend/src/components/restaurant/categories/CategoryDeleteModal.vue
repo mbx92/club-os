@@ -26,7 +26,7 @@ const emit = defineEmits(['update:modelValue', 'confirm'])
 const moveProductsTo = ref(null)
 
 const productCount = computed(() => {
-  return props.category?.productCount || props.category?._count?.products || 0
+  return Number(props.category?.productCount || props.category?._count?.products || 0)
 })
 
 const hasProducts = computed(() => productCount.value > 0)

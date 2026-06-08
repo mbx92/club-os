@@ -120,14 +120,22 @@ async function getRevenueReport(req, res, next) {
       where,
       attributes: [
         [fn('DATE_TRUNC', trunc, col('createdAt')), 'period'],
-        [fn('SUM', col('totalAmount')), 'revenue'],
-        [fn('COUNT', col('id')), 'transactionCount'],
+        [fn('SUM', col('subtotal')), 'subtotal'],
         [fn('SUM', col('tax')), 'tax'],
-        [fn('SUM', col('voucherDiscount')), 'discounts']
+        [fn('SUM', col('serviceCharge')), 'serviceCharge'],
+        [fn('SUM', col('voucherDiscount')), 'discounts'],
+        [fn('SUM', col('totalAmount')), 'revenue'],
+        [fn('COUNT', col('id')), 'transactionCount']
       ],
       group: [fn('DATE_TRUNC', trunc, col('createdAt'))],
       order: [[fn('DATE_TRUNC', trunc, col('createdAt')), 'ASC']],
       raw: true
+    });
+
+    // Enrich period data with gross revenue
+    const enrichedRevenueByPeriod = revenueByPeriod.map(r => {
+      const gross = parseFloat(r.subtotal || 0) + parseFloat(r.tax || 0) + parseFloat(r.serviceCharge || 0);
+      return { ...r, grossRevenue: Math.round(gross * 100) / 100 };
     });
 
     // Revenue by module/type
@@ -135,12 +143,16 @@ async function getRevenueReport(req, res, next) {
       where,
       attributes: [
         'transactionType',
+        [fn('SUM', col('subtotal')), 'subtotal'],
+        [fn('SUM', col('tax')), 'tax'],
+        [fn('SUM', col('serviceCharge')), 'serviceCharge'],
+        [fn('SUM', col('voucherDiscount')), 'discounts'],
         [fn('SUM', col('totalAmount')), 'revenue'],
         [fn('COUNT', col('id')), 'transactionCount'],
         [fn('AVG', col('totalAmount')), 'avgTransaction']
       ],
       group: ['transactionType'],
-      order: [[fn('SUM', col('totalAmount')), 'DESC']],
+      order: [[fn('SUM', col('subtotal')), 'DESC']],
       raw: true
     });
 
@@ -229,33 +241,42 @@ async function getRevenueReport(req, res, next) {
     const grandTotal = await Transaction.findOne({
       where,
       attributes: [
-        [fn('SUM', col('totalAmount')), 'totalRevenue'],
-        [fn('COUNT', col('id')), 'totalTransactions'],
-        [fn('AVG', col('totalAmount')), 'avgTransaction'],
+        [fn('SUM', col('subtotal')), 'grossSubtotal'],
         [fn('SUM', col('tax')), 'totalTax'],
-        [fn('SUM', col('voucherDiscount')), 'totalDiscounts']
+        [fn('SUM', col('serviceCharge')), 'totalServiceCharge'],
+        [fn('SUM', col('voucherDiscount')), 'totalDiscounts'],
+        [fn('SUM', col('totalAmount')), 'netRevenue'],
+        [fn('COUNT', col('id')), 'totalTransactions'],
+        [fn('AVG', col('totalAmount')), 'avgTransaction']
       ],
       raw: true
     });
 
+    const grossSubtotal = parseFloat(grandTotal?.grossSubtotal) || 0;
+    const totalTax = parseFloat(grandTotal?.totalTax) || 0;
+    const totalServiceCharge = parseFloat(grandTotal?.totalServiceCharge) || 0;
+    const totalDiscounts = parseFloat(grandTotal?.totalDiscounts) || 0;
+    const netRevenue = parseFloat(grandTotal?.netRevenue) || 0;
+    const grossRevenue = grossSubtotal + totalTax + totalServiceCharge;
+
     // Forecast
-    const forecastData = revenueByPeriod.map(r => ({ period: r.period, value: parseFloat(r.revenue) || 0 }));
+    const forecastData = enrichedRevenueByPeriod.map(r => ({ period: r.period, value: r.grossRevenue }));
     const forecast = generateForecast(forecastData, 3);
 
     res.json({
       success: true,
       data: {
         summary: {
-          totalRevenue: parseFloat(grandTotal?.totalRevenue) || 0,
+          totalRevenue: Math.round(grossRevenue * 100) / 100,
           totalTransactions: parseInt(grandTotal?.totalTransactions) || 0,
           avgTransaction: Math.round((parseFloat(grandTotal?.avgTransaction) || 0) * 100) / 100,
-          totalTax: parseFloat(grandTotal?.totalTax) || 0,
-          totalDiscounts: parseFloat(grandTotal?.totalDiscounts) || 0,
+          totalTax: totalTax,
+          totalDiscounts: totalDiscounts,
           cashExpenseDeduction: 0,
-          netRevenue: (parseFloat(grandTotal?.totalRevenue) || 0) - (parseFloat(grandTotal?.totalDiscounts) || 0),
+          netRevenue: Math.round(netRevenue * 100) / 100,
           period: { startDate, endDate, groupBy }
         },
-        revenueByPeriod,
+        revenueByPeriod: enrichedRevenueByPeriod,
         revenueByModule,
         paymentDistribution,
         forecast

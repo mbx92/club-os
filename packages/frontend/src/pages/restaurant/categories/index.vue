@@ -63,7 +63,7 @@ const stats = computed(() => {
     cats.forEach((cat) => {
       total++
       if (cat.isActive !== false) active++
-      const productCount = cat.productCount || cat._count?.products || 0
+      const productCount = Number(cat.productCount || cat._count?.products || 0)
       if (productCount > 0) {
         withProducts++
         totalProducts += productCount
@@ -342,7 +342,7 @@ onMounted(() => {
         <div>
           <span class="text-sm text-base-content/60">Products</span>
           <p class="font-semibold">
-            {{ selectedCategory.productCount || selectedCategory._count?.products || 0 }}
+            {{ Number(selectedCategory.productCount || selectedCategory._count?.products || 0) }}
           </p>
         </div>
         <div>

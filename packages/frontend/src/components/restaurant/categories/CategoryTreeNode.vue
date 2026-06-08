@@ -54,7 +54,7 @@ const isExpanded = (categoryId) => {
 }
 
 const productCount = computed(() => {
-  return props.category.productCount || props.category._count?.products || 0
+  return Number(props.category.productCount || props.category._count?.products || 0)
 })
 
 const isActive = computed(() => {

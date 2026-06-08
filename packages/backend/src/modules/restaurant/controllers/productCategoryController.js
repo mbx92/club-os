@@ -61,6 +61,7 @@ const getAllCategories = async (req, res, next) => {
           .filter(cat => cat.parentId === parentId)
           .map(cat => ({
             ...cat.toJSON(),
+            productCount: includeCount === 'true' ? parseInt(cat.productCount, 10) || 0 : undefined,
             children: buildTree(cat.id)
           }));
       };
@@ -76,7 +77,9 @@ const getAllCategories = async (req, res, next) => {
 
     res.json({
       success: true,
-      data: categories,
+      data: includeCount === 'true'
+        ? categories.map(cat => ({ ...cat.toJSON(), productCount: parseInt(cat.productCount, 10) || 0 }))
+        : categories,
       count: categories.length
     });
   } catch (error) {

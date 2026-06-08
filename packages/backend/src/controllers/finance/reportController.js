@@ -150,9 +150,11 @@ async function getProfitLossReport(req, res, next) {
       }
 
       const periodData = periodMap.get(periodKey);
-      const revenueAmount = parseFloat(r.total || 0);
-      periodData.revenue.total += revenueAmount;
-      periodData.revenue.byModule[r.transactionType] = revenueAmount;
+      const grossRevenueAmount = parseFloat(r.subtotal || 0) + parseFloat(r.tax || 0);
+      const netRevenueAmount = parseFloat(r.total || 0);
+      periodData.revenue.total += grossRevenueAmount;
+      periodData.netRevenue = (periodData.netRevenue || 0) + netRevenueAmount;
+      periodData.revenue.byModule[r.transactionType] = grossRevenueAmount;
     });
 
     // Add expenses to periods
@@ -190,6 +192,7 @@ async function getProfitLossReport(req, res, next) {
     // =================
 
     const totalRevenue = periodData.reduce((sum, p) => sum + p.revenue.total, 0);
+    const totalNetRevenue = periodData.reduce((sum, p) => sum + (p.netRevenue || 0), 0);
     const totalExpenses = periodData.reduce((sum, p) => sum + p.expenses, 0);
     const netProfit = totalRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0
@@ -201,6 +204,7 @@ async function getProfitLossReport(req, res, next) {
       data: {
         summary: {
           totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+          netRevenue: parseFloat(totalNetRevenue.toFixed(2)),
           totalExpenses: parseFloat(totalExpenses.toFixed(2)),
           netProfit: parseFloat(netProfit.toFixed(2)),
           profitMargin,
@@ -213,6 +217,7 @@ async function getProfitLossReport(req, res, next) {
         periodData: periodData.map(p => ({
           period: p.period,
           revenue: parseFloat(p.revenue.total.toFixed(2)),
+          netRevenue: parseFloat((p.netRevenue || 0).toFixed(2)),
           revenueByModule: p.revenue.byModule,
           expenses: parseFloat(p.expenses.toFixed(2)),
           netProfit: parseFloat(p.netProfit.toFixed(2)),
@@ -323,11 +328,13 @@ async function getRevenueReport(req, res, next) {
       },
       attributes: [
         'transactionType',
+        [fn('SUM', col('Transaction.subtotal')), 'subtotal'],
+        [fn('SUM', col('Transaction.tax')), 'tax'],
         [fn('SUM', col('Transaction.totalAmount')), 'total'],
         [fn('COUNT', col('Transaction.id')), 'transactionCount']
       ],
       group: ['transactionType'],
-      order: [[fn('SUM', col('Transaction.totalAmount')), 'DESC']],
+      order: [[fn('SUM', col('Transaction.subtotal')), 'DESC']],
       raw: true
     });
 
@@ -381,15 +388,20 @@ async function getRevenueReport(req, res, next) {
     const paymentMethodsTotal = paymentMethods.reduce((sum, pm) => sum + (parseFloat(pm.total || 0)), 0);
 
     // Calculate summary
-    const totalRevenue = revenueByModule.reduce((sum, m) => sum + parseFloat(m.total || 0), 0);
+    const totalGrossRevenue = revenueByModule.reduce((sum, m) => {
+      const gross = parseFloat(m.subtotal || 0) + parseFloat(m.tax || 0);
+      return sum + gross;
+    }, 0);
+    const totalNetRevenue = revenueByModule.reduce((sum, m) => sum + parseFloat(m.total || 0), 0);
     const totalTransactions = revenueByModule.reduce((sum, m) => sum + parseInt(m.transactionCount || 0), 0);
-    const avgTransactionValue = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
+    const avgTransactionValue = totalTransactions > 0 ? totalGrossRevenue / totalTransactions : 0;
 
     res.json({
       success: true,
       data: {
         summary: {
-          totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+          totalRevenue: parseFloat(totalGrossRevenue.toFixed(2)),
+          netRevenue: parseFloat(totalNetRevenue.toFixed(2)),
           totalTransactions,
           avgTransactionValue: parseFloat(avgTransactionValue.toFixed(2)),
           cashExpenseDeduction: 0,

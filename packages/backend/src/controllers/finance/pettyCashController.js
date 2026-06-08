@@ -1290,8 +1290,8 @@ async function getPettyCashTransactions(req, res, next) {
 
     if (startDate || endDate) {
       where.transactionDate = {};
-      if (startDate) where.transactionDate[Op.gte] = startDate;
-      if (endDate) where.transactionDate[Op.lte] = endDate;
+      if (startDate) where.transactionDate[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
+      if (endDate) where.transactionDate[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
     }
 
     const offset = (parseInt(page) - 1) * parseInt(limit);

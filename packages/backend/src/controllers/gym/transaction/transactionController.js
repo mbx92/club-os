@@ -577,15 +577,15 @@ exports.getAllTransactions = async (req, res) => {
     
     if (startDate && endDate) {
       whereClause.transactionDate = {
-        [Op.between]: [new Date(startDate), new Date(endDate)]
+        [Op.between]: [new Date(`${startDate}T00:00:00.000Z`), new Date(`${endDate}T23:59:59.999Z`)]
       };
     } else if (startDate) {
       whereClause.transactionDate = {
-        [Op.gte]: new Date(startDate)
+        [Op.gte]: new Date(`${startDate}T00:00:00.000Z`)
       };
     } else if (endDate) {
       whereClause.transactionDate = {
-        [Op.lte]: new Date(endDate)
+        [Op.lte]: new Date(`${endDate}T23:59:59.999Z`)
       };
     }
 
@@ -1021,15 +1021,15 @@ exports.getTransactionStatistics = async (req, res) => {
     const dateFilter = {};
     if (startDate && endDate) {
       dateFilter.transactionDate = {
-        [Op.between]: [new Date(startDate), new Date(endDate)]
+        [Op.between]: [new Date(`${startDate}T00:00:00.000Z`), new Date(`${endDate}T23:59:59.999Z`)]
       };
     } else if (startDate) {
       dateFilter.transactionDate = {
-        [Op.gte]: new Date(startDate)
+        [Op.gte]: new Date(`${startDate}T00:00:00.000Z`)
       };
     } else if (endDate) {
       dateFilter.transactionDate = {
-        [Op.lte]: new Date(endDate)
+        [Op.lte]: new Date(`${endDate}T23:59:59.999Z`)
       };
     }
     
