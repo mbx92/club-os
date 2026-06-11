@@ -67,7 +67,7 @@ export const useRolesPermissions = () => {
     // Build from all existing roles permissions (aggregate all unique keys)
     if (roles.value.length > 0) {
       const resourceMap = {}
-      const SKIP_KEYS = ['caslRules', 'uiFlags', 'menuAccess', 'rolePermissions']
+      const SKIP_KEYS = ['rules', 'uiFlags', 'menuAccess', 'rolePermissions']
 
       roles.value.forEach(role => {
         const perms = role.permissions || {}
@@ -98,11 +98,11 @@ export const useRolesPermissions = () => {
   }
 
   /**
-   * Convert form permissions to caslRules array format (new backend format)
+   * Convert form permissions to rules array format (new backend format)
    * Input:  { Member: ['read', 'create'], CheckIn: ['read'] }
    * Output: [{ subject: 'Member', actions: ['read', 'create'], conditions: { tenantId: '$tenantId' } }]
    */
-  const formPermissionsToCaslRules = (permissions) => {
+  const formPermissionsToRules = (permissions) => {
     return Object.entries(permissions)
       .filter(([, actions]) => Array.isArray(actions) && actions.length > 0)
       .map(([subject, actions]) => ({
@@ -113,14 +113,14 @@ export const useRolesPermissions = () => {
   }
 
   /**
-   * Convert caslRules back to form permissions format
+   * Convert rules back to form permissions format
    * Input:  [{ subject: 'Member', actions: ['read','create'] }]
    * Output: { Member: ['read', 'create'] }
    */
-  const caslRulesToFormPermissions = (caslRules) => {
-    if (!Array.isArray(caslRules)) return {}
+  const rulesToFormPermissions = (rules) => {
+    if (!Array.isArray(rules)) return {}
     const result = {}
-    caslRules.forEach(rule => {
+    rules.forEach(rule => {
       if (rule.subject && rule.subject !== 'all' && Array.isArray(rule.actions)) {
         result[rule.subject] = rule.actions
       }
@@ -129,15 +129,15 @@ export const useRolesPermissions = () => {
   }
 
   /**
-   * Get default resources as fallback - PascalCase subjects matching backend CASL format.
-   * Based on COMPLETE-SUBJECT-MAPPING-AUDIT.md (65+ subjects).
+   * Get default resources as fallback — subjects matching backend route mapping.
+   * Only includes subjects that have actual backend routes and frontend pages.
    */
   const getDefaultResources = () => {
     const CRUD = ['create', 'delete', 'read', 'update']
     const RO = ['read']
     const CRU = ['create', 'read', 'update']
     return [
-      // ── Core Module (10) ──────────────────────────────────────
+      // ── Core Module ──
       { name: 'Tenant', actions: CRUD },
       { name: 'User', actions: CRUD },
       { name: 'Role', actions: CRUD },
@@ -149,7 +149,7 @@ export const useRolesPermissions = () => {
       { name: 'AuditLog', actions: RO },
       { name: 'SystemSetting', actions: CRU },
 
-      // ── Gym Module (15) ───────────────────────────────────────
+      // ── Gym Module ──
       { name: 'Member', actions: CRUD },
       { name: 'Membership', actions: CRUD },
       { name: 'MembershipPayment', actions: CRU },
@@ -166,7 +166,7 @@ export const useRolesPermissions = () => {
       { name: 'GymProduct', actions: CRUD },
       { name: 'GymReport', actions: RO },
 
-      // ── Restaurant Module (8) ─────────────────────────────────
+      // ── Restaurant Module ──
       { name: 'Restaurant', actions: RO },
       { name: 'RestaurantCategory', actions: CRUD },
       { name: 'RestaurantProduct', actions: CRUD },
@@ -176,39 +176,24 @@ export const useRolesPermissions = () => {
       { name: 'RestaurantStock', actions: CRU },
       { name: 'RestaurantReport', actions: RO },
 
-      // ── Finance Module (6) ────────────────────────────────────
+      // ── Finance Module ──
       { name: 'Transaction', actions: CRUD },
       { name: 'Expense', actions: CRUD },
       { name: 'CashRegisterSession', actions: CRU },
       { name: 'Invoice', actions: CRU },
       { name: 'Payment', actions: CRU },
       { name: 'FinanceReport', actions: RO },
-
-      // ── Subscription & Billing (4) ───────────────────────────
-      { name: 'Subscription', actions: CRUD },
-      { name: 'SubscriptionPlan', actions: CRUD },
-
-      // ── Voucher (1) ───────────────────────────────────────────
       { name: 'Voucher', actions: CRUD },
 
-      // ── Integrations (2) ─────────────────────────────────────
-      { name: 'HikvisionDevice', actions: CRU },
-      { name: 'MidtransPayment', actions: CRU },
-
-      // ── POS Module (4) ───────────────────────────────────────
+      // ── POS Module ──
       { name: 'POSProduct', actions: CRUD },
       { name: 'POSCategory', actions: CRUD },
       { name: 'POSTransaction', actions: CRU },
       { name: 'POSReport', actions: RO },
 
-      // ── Advanced / Optional ───────────────────────────────────
-      { name: 'AdvancedReport', actions: RO },
-      { name: 'CustomReport', actions: CRU },
-      { name: 'Campaign', actions: CRUD },
-      { name: 'Promotion', actions: CRUD },
-      { name: 'Inventory', actions: CRUD },
-      { name: 'Supplier', actions: CRUD },
-      { name: 'PurchaseOrder', actions: CRU },
+      // ── Integrations ──
+      { name: 'HikvisionDevice', actions: CRU },
+      { name: 'MidtransPayment', actions: CRU },
     ]
   }
 
@@ -216,10 +201,10 @@ export const useRolesPermissions = () => {
    * Normalize role data from backend - handles various response structures
    */
   const normalizeRole = (role) => {
-    // Backend may return caslRules at different levels:
-    // Option A: role.permissions.caslRules (nested)
-    // Option B: role.caslRules (flat)
-    // Option C: role.permissions = { caslRules: [], rolePermissions: {} }
+    // Backend may return rules at different levels:
+    // Option A: role.permissions.rules (nested)
+    // Option B: role.rules (flat)
+    // Option C: role.permissions = { rules: [], rolePermissions: {} }
     if (!role) return role
 
     const normalized = { ...role }
@@ -227,9 +212,9 @@ export const useRolesPermissions = () => {
     // Ensure permissions object exists
     if (!normalized.permissions) normalized.permissions = {}
 
-    // If caslRules at root level, move into permissions
-    if (Array.isArray(role.caslRules) && !normalized.permissions.caslRules) {
-      normalized.permissions.caslRules = role.caslRules
+    // If rules at root level, move into permissions
+    if (Array.isArray(role.rules) && !normalized.permissions.rules) {
+      normalized.permissions.rules = role.rules
     }
 
     // If rolePermissions at root level, move into permissions
@@ -272,7 +257,7 @@ export const useRolesPermissions = () => {
   }
 
   /**
-   * Create a new role, then generate CASL rules via new endpoint
+   * Create a new role, then generate RBAC rules via generate-rules endpoint
    * @param {Object} roleData - { name, description, permissions, isActive }
    * permissions format: { Subject: ['read', 'create'] }
    */
@@ -289,9 +274,10 @@ export const useRolesPermissions = () => {
       const response = await api.post('/permissions/roles', baseData)
       const newRole = response.data?.role || response.role || response
 
-      // Step 2: Generate CASL rules from subjects form
+      // Step 2: Generate rules from subjects form
       if (newRole?.id && permissions && Object.keys(permissions).length > 0) {
-        await generateCaslForRole(newRole.id, permissions)
+        const allSelected = Object.keys(permissions).length >= availableResources.value.length
+        await generateRulesForRole(newRole.id, permissions, { fullAccess: allSelected })
       }
 
       showSuccess('Role created successfully')
@@ -305,7 +291,7 @@ export const useRolesPermissions = () => {
   }
 
   /**
-   * Update an existing role, then re-generate CASL rules
+   * Update an existing role, then re-generate RBAC rules
    * @param {string} roleId - Role UUID
    * @param {Object} roleData - { name, description, permissions, isActive }
    */
@@ -322,9 +308,10 @@ export const useRolesPermissions = () => {
       const response = await api.put(`/permissions/roles/${roleId}`, baseData)
       const updatedRole = response.data?.role || response.role || response
 
-      // Step 2: Regenerate CASL rules from subjects
+      // Step 2: Regenerate rules from subjects
       if (permissions && Object.keys(permissions).length > 0) {
-        await generateCaslForRole(roleId, permissions)
+        const allSelected = Object.keys(permissions).length >= availableResources.value.length
+        await generateRulesForRole(roleId, permissions, { fullAccess: allSelected })
       }
 
       showSuccess('Role updated successfully')
@@ -338,22 +325,24 @@ export const useRolesPermissions = () => {
   }
 
   /**
-   * Generate CASL rules for a role from form permissions
-   * POST /permissions/roles/:roleId/generate-casl
+   * Generate rules for a role from form permissions
+   * POST /permissions/roles/:roleId/generate-rules
    * @param {string} roleId
    * @param {Object} permissions - { Subject: ['read', 'create'] }
    */
-  const generateCaslForRole = async (roleId, permissions) => {
-    const subjects = formPermissionsToCaslRules(permissions)
-    const response = await api.post(`/permissions/roles/${roleId}/generate-casl`, { subjects })
+  const generateRulesForRole = async (roleId, permissions, { fullAccess = false } = {}) => {
+    const payload = fullAccess
+      ? { fullAccess: true }
+      : { subjects: formPermissionsToRules(permissions) }
+    const response = await api.post(`/permissions/roles/${roleId}/generate-rules`, payload)
     if (isDev) {
-      console.log('[useRolesPermissions] CASL generated for role', roleId, response.data)
+      console.log('[useRolesPermissions] Rules generated for role', roleId, response.data)
     }
     return response.data
   }
 
   /**
-   * Preview full permissions for a role (caslRules + menus + routes)
+   * Preview full permissions for a role (rules + menus + routes)
    * GET /permissions/roles/:roleId/preview
    */
   const previewRole = async (roleId) => {
@@ -437,10 +426,10 @@ export const useRolesPermissions = () => {
     updateRolePermissions,
     deleteRole,
     regenerateRoutes,
-    generateCaslForRole,
+    generateRulesForRole,
     previewRole,
-    caslRulesToFormPermissions,
-    formPermissionsToCaslRules
+    rulesToFormPermissions,
+    formPermissionsToRules
   }
 }
 

@@ -12,12 +12,12 @@ const express = require('express');
 const router = express.Router();
 const receiptTemplateController = require('../../../controllers/core/system/receiptTemplateController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireFeature } = require('../../../middlewares/featureGateMiddleware');
 
 // All routes require authentication and thermalPrinting feature
 router.use(authenticate);
-router.use(requireFeature('printing', 'thermalPrinting'));
+router.use(requireFeature('thermalPrinting'));
 
 /**
  * @route GET /api/v1/system/receipt-templates
@@ -28,7 +28,7 @@ router.use(requireFeature('printing', 'thermalPrinting'));
  * @access Private - requires 'read' permission on 'ReceiptTemplate'
  */
 router.get('/',
-  authorizeCasl('read', 'ReceiptTemplate'),
+  authorize('read', 'ReceiptTemplate'),
   receiptTemplateController.getAllTemplates
 );
 
@@ -38,7 +38,7 @@ router.get('/',
  * @access Private - requires 'read' permission on 'ReceiptTemplate'
  */
 router.get('/:id',
-  authorizeCasl('read', 'ReceiptTemplate'),
+  authorize('read', 'ReceiptTemplate'),
   receiptTemplateController.getTemplateById
 );
 
@@ -56,7 +56,7 @@ router.get('/:id',
  * @access Private - requires 'create' permission on 'ReceiptTemplate'
  */
 router.post('/',
-  authorizeCasl('create', 'ReceiptTemplate'),
+  authorize('create', 'ReceiptTemplate'),
   receiptTemplateController.createTemplate
 );
 
@@ -67,7 +67,7 @@ router.post('/',
  * @access Private - requires 'update' permission on 'ReceiptTemplate'
  */
 router.patch('/:id',
-  authorizeCasl('update', 'ReceiptTemplate'),
+  authorize('update', 'ReceiptTemplate'),
   receiptTemplateController.updateTemplate
 );
 
@@ -77,7 +77,7 @@ router.patch('/:id',
  * @access Private - requires 'delete' permission on 'ReceiptTemplate'
  */
 router.delete('/:id',
-  authorizeCasl('delete', 'ReceiptTemplate'),
+  authorize('delete', 'ReceiptTemplate'),
   receiptTemplateController.deleteTemplate
 );
 
@@ -88,7 +88,7 @@ router.delete('/:id',
  * @access Private - requires 'create' permission on 'ReceiptTemplate'
  */
 router.post('/:id/duplicate',
-  authorizeCasl('create', 'ReceiptTemplate'),
+  authorize('create', 'ReceiptTemplate'),
   receiptTemplateController.duplicateTemplate
 );
 
@@ -100,7 +100,7 @@ router.post('/:id/duplicate',
  * @access Private - requires 'read' permission on 'ReceiptTemplate'
  */
 router.post('/preview-draft',
-  authorizeCasl('read', 'ReceiptTemplate'),
+  authorize('read', 'ReceiptTemplate'),
   receiptTemplateController.previewDraftTemplate
 );
 
@@ -111,7 +111,7 @@ router.post('/preview-draft',
  * @access Private - requires 'read' permission on 'ReceiptTemplate'
  */
 router.post('/:id/preview',
-  authorizeCasl('read', 'ReceiptTemplate'),
+  authorize('read', 'ReceiptTemplate'),
   receiptTemplateController.previewTemplate
 );
 
@@ -123,7 +123,7 @@ router.post('/:id/preview',
  * @access Private - requires 'read' permission on 'ReceiptTemplate'
  */
 router.post('/:id/test-print',
-  authorizeCasl('read', 'ReceiptTemplate'),
+  authorize('read', 'ReceiptTemplate'),
   receiptTemplateController.testPrintTemplate
 );
 
@@ -136,7 +136,7 @@ router.post('/:id/test-print',
  * @access Private - requires 'read' permission on 'ReceiptTemplate'
  */
 router.post('/test-print-draft',
-  authorizeCasl('read', 'ReceiptTemplate'),
+  authorize('read', 'ReceiptTemplate'),
   receiptTemplateController.testPrintDraftTemplate
 );
 

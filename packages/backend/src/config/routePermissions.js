@@ -1,7 +1,7 @@
 /**
  * Route to Subject Mapping Configuration
  * 
- * Maps backend routes to CASL subjects for consistent permission checking.
+ * Maps backend routes to RBAC subjects for consistent permission checking.
  * This is the single source of truth for route-level permissions.
  * 
  * Format:
@@ -67,7 +67,7 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/permissions/roles/:id/permissions': { subject: 'Role', actions: ['update'] },
   '/permissions/roles/:id/preview': { subject: 'Role', actions: ['read'] },
   '/permissions/roles/:id/reset': { subject: 'Role', actions: ['update'] },
-  '/permissions/roles/:roleId/generate-casl': { subject: 'Role', actions: ['create'] },
+  '/permissions/roles/:roleId/generate-rules': { subject: 'Role', actions: ['create'] },
   
   // ═══════════════════════════════════════════════════════════════════════════
   // GYM MODULE
@@ -706,7 +706,7 @@ const ROUTE_TO_SUBJECT_MAP = {
 };
 
 /**
- * Get all unique CASL subjects from the route mapping
+ * Get all unique RBAC subjects from the route mapping
  * @param {boolean} withActions - If true, returns objects with subject and actions
  * @returns {string[]|object[]} Array of unique subject names, or array of {subject, actions} objects
  */
@@ -800,7 +800,7 @@ function getSubjectForRoute(path, method) {
 
 /**
  * Get all routes for a specific subject
- * @param {string} subject - CASL subject name
+ * @param {string} subject - RBAC subject name
  * @returns {Array} Array of routes that use this subject
  */
 function getRoutesForSubject(subject) {

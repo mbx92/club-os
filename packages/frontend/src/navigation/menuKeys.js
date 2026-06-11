@@ -1,19 +1,7 @@
-// Role-based menu access configuration (FE-only)
-// SuperAdmin bypasses all checks — tidak perlu di-list
-// Jika backend sudah set menuAccess via our UI, itu akan di-prioritaskan
+// Static menu data for role permission admin editor.
+// ALL_MENU_KEYS = all valid menu keys with labels (UI picker)
+// ROLE_MENU_MAP = default menu templates per role
 
-/**
- * Default menu access per role
- * Key = role name (lowercase)
- * Value = array of menuKey yang boleh diakses (parent + child keys)
- *
- * Parent keys   : 'gym', 'restaurant', etc.
- * Child keys    : 'gym.members', 'restaurant.pos', etc.
- *
- * Jika parent key ada → seluruh parent group tampil.
- * Jika child key ada  → child tersebut tampil di dalam parent.
- * Parent harus ada supaya child bisa tampil.
- */
 export const ROLE_MENU_MAP = {
   admin: [
     'dashboard',
@@ -55,10 +43,6 @@ export const ROLE_MENU_MAP = {
   ],
 }
 
-/**
- * Daftar semua menu keys yang tersedia (hierarki untuk UI editor)
- * Parent items + nested children
- */
 export const ALL_MENU_KEYS = [
   {
     key: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard',
@@ -151,34 +135,3 @@ export const ALL_MENU_KEYS = [
     key: 'settings', label: 'Settings', icon: 'settings',
   },
 ]
-
-// Build flat set of all valid keys (parent + child) for validation
-const VALID_MENU_KEYS = new Set()
-ALL_MENU_KEYS.forEach(item => {
-  VALID_MENU_KEYS.add(item.key)
-  if (item.children) {
-    item.children.forEach(child => VALID_MENU_KEYS.add(child.key))
-  }
-})
-
-/**
- * Get allowed menu keys for a given role
- * @param {string} role - User role (case-insensitive)
- * @param {Array|null} backendMenuAccess - menuAccess from backend (overrides default)
- * @returns {Array<string>} - Array of allowed menuKey strings
- */
-export function getAllowedMenuKeys(role, backendMenuAccess = null) {
-  // Priority 1: Backend override (only if set via our UI — validate format)
-  if (Array.isArray(backendMenuAccess) && backendMenuAccess.length > 0) {
-    // Only use backend data if ALL keys match our menuKey format
-    const allKeysValid = backendMenuAccess.every(k => VALID_MENU_KEYS.has(k))
-    if (allKeysValid) {
-      return backendMenuAccess
-    }
-    // If any key doesn't match our format, it's old backend data — ignore
-  }
-
-  // Priority 2: Default FE config
-  const normalizedRole = (role || '').toLowerCase()
-  return ROLE_MENU_MAP[normalizedRole] || []
-}

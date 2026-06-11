@@ -4,7 +4,7 @@
  */
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const {
   getActiveMembersReport,
   getMemberGrowthReport,
@@ -21,7 +21,7 @@ const router = express.Router();
  */
 router.get('/active',
   authenticate,
-  authorizeCasl('read', 'Member'),
+  authorize('read', 'Member'),
   getActiveMembersReport
 );
 
@@ -33,7 +33,7 @@ router.get('/active',
  */
 router.get('/growth',
   authenticate,
-  authorizeCasl('read', 'Member'),
+  authorize('read', 'Member'),
   getMemberGrowthReport
 );
 
@@ -45,7 +45,7 @@ router.get('/growth',
  */
 router.get('/retention',
   authenticate,
-  authorizeCasl('read', 'Member'),
+  authorize('read', 'Member'),
   getMemberRetentionReport
 );
 

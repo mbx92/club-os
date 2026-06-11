@@ -11,6 +11,7 @@ import DialogPlugin from './plugins/dialog'
 import { useAuthStore } from '@/stores/auth'
 import { useSubscriptionStore } from '@/stores/subscription'
 import { debug } from '@/utils/debug'
+import { setAccessDeniedRouter } from '@/utils/accessDenied'
 
 // Import directives
 import { vFeatureLock, featureLockStyles } from '@/directives/featureLock'
@@ -40,6 +41,7 @@ const subscriptionStore = useSubscriptionStore()
 // Connect stores to API interceptor
 api.setSubscriptionStore(subscriptionStore)
 api.setAuthStore(authStore)
+setAccessDeniedRouter(router)
 
 // Initialize auth BEFORE mounting app to ensure stores are ready
 const initApp = async () => {

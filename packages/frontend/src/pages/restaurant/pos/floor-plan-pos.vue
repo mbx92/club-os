@@ -949,7 +949,7 @@ onMounted(async () => {
           <span>{{ userName }}</span>
         </div>
 
-        <button class="btn btn-ghost btn-sm btn-square" @click="toggleFullscreen" :title="fullscreenMode ? 'Exit Fullscreen' : 'Fullscreen'">
+        <button class="btn btn-ghost btn-sm btn-circle" @click="toggleFullscreen" :title="fullscreenMode ? 'Exit Fullscreen' : 'Fullscreen'">
           <IconMinimize v-if="fullscreenMode" class="w-4 h-4" />
           <IconMaximize v-else class="w-4 h-4" />
         </button>

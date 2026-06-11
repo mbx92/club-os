@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const auditLog = require('../../middlewares/auditMiddleware');
 const {
   createSupplier,
@@ -20,7 +20,7 @@ const router = express.Router();
  */
 router.post('/',
   authenticate,
-  authorizeCasl('create', 'Supplier'),
+  authorize('create', 'Supplier'),
   createSupplier,
   auditLog('CREATE_SUPPLIER')
 );
@@ -32,7 +32,7 @@ router.post('/',
  */
 router.get('/',
   authenticate,
-  authorizeCasl('read', 'Supplier'),
+  authorize('read', 'Supplier'),
   getAllSuppliers
 );
 
@@ -43,7 +43,7 @@ router.get('/',
  */
 router.get('/:id',
   authenticate,
-  authorizeCasl('read', 'Supplier'),
+  authorize('read', 'Supplier'),
   getSupplierById
 );
 
@@ -54,7 +54,7 @@ router.get('/:id',
  */
 router.put('/:id',
   authenticate,
-  authorizeCasl('update', 'Supplier'),
+  authorize('update', 'Supplier'),
   updateSupplier,
   auditLog('UPDATE_SUPPLIER')
 );
@@ -66,7 +66,7 @@ router.put('/:id',
  */
 router.patch('/:id/toggle-status',
   authenticate,
-  authorizeCasl('update', 'Supplier'),
+  authorize('update', 'Supplier'),
   toggleSupplierStatus,
   auditLog('TOGGLE_SUPPLIER_STATUS')
 );
@@ -78,7 +78,7 @@ router.patch('/:id/toggle-status',
  */
 router.delete('/:id',
   authenticate,
-  authorizeCasl('delete', 'Supplier'),
+  authorize('delete', 'Supplier'),
   deleteSupplier,
   auditLog('DELETE_SUPPLIER')
 );

@@ -2,14 +2,14 @@ const express = require('express');
 const router = express.Router();
 const trainerController = require('../../../controllers/gym/trainer/trainerController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireFeature } = require('../../../middlewares/featureGateMiddleware');
 
 // All routes require authentication
 router.use(authenticate);
 
 // Require trainer management feature (Professional/Enterprise only)
-router.use(requireFeature('gym', 'trainerManagement'));
+router.use(requireFeature('trainerManagement'));
 
 /**
  * @route   GET /api/v1/gym/trainers
@@ -17,7 +17,7 @@ router.use(requireFeature('gym', 'trainerManagement'));
  * @access  Private (read permission on Trainer)
  */
 router.get('/',
-  authorizeCasl('read', 'Trainer'),
+  authorize('read', 'Trainer'),
   trainerController.getAllTrainers
 );
 
@@ -27,7 +27,7 @@ router.get('/',
  * @access  Private (read permission on Trainer)
  */
 router.get('/:id',
-  authorizeCasl('read', 'Trainer'),
+  authorize('read', 'Trainer'),
   trainerController.getTrainerById
 );
 
@@ -37,7 +37,7 @@ router.get('/:id',
  * @access  Private (create permission on Trainer)
  */
 router.post('/',
-  authorizeCasl('create', 'Trainer'),
+  authorize('create', 'Trainer'),
   trainerController.createTrainer
 );
 
@@ -47,7 +47,7 @@ router.post('/',
  * @access  Private (update permission on Trainer)
  */
 router.put('/:id',
-  authorizeCasl('update', 'Trainer'),
+  authorize('update', 'Trainer'),
   trainerController.updateTrainer
 );
 
@@ -57,7 +57,7 @@ router.put('/:id',
  * @access  Private (update permission on Trainer)
  */
 router.patch('/:id/toggle-active',
-  authorizeCasl('update', 'Trainer'),
+  authorize('update', 'Trainer'),
   trainerController.toggleTrainerActive
 );
 
@@ -67,7 +67,7 @@ router.patch('/:id/toggle-active',
  * @access  Private (update permission on Trainer)
  */
 router.post('/:id/restore',
-  authorizeCasl('update', 'Trainer'),
+  authorize('update', 'Trainer'),
   trainerController.restoreTrainer
 );
 
@@ -77,7 +77,7 @@ router.post('/:id/restore',
  * @access  Private (delete permission on Trainer)
  */
 router.delete('/:id',
-  authorizeCasl('delete', 'Trainer'),
+  authorize('delete', 'Trainer'),
   trainerController.deleteTrainer
 );
 
@@ -87,7 +87,7 @@ router.delete('/:id',
  * @access  Private (update permission on Trainer)
  */
 router.post('/:id/reset-password',
-  authorizeCasl('update', 'Trainer'),
+  authorize('update', 'Trainer'),
   trainerController.resetTrainerPassword
 );
 
@@ -98,8 +98,8 @@ router.post('/:id/reset-password',
  * @feature Requires trainerCommission feature
  */
 router.get('/:id/commissions',
-  requireFeature('gym', 'trainerCommission'),
-  authorizeCasl('read', 'TrainerCommission'),
+  requireFeature('trainerCommission'),
+  authorize('read', 'TrainerCommission'),
   trainerController.getTrainerCommissions
 );
 
@@ -110,8 +110,8 @@ router.get('/:id/commissions',
  * @feature Requires trainerCommission feature
  */
 router.post('/:id/commissions/:commissionId/pay',
-  requireFeature('gym', 'trainerCommission'),
-  authorizeCasl('update', 'TrainerCommission'),
+  requireFeature('trainerCommission'),
+  authorize('update', 'TrainerCommission'),
   trainerController.payCommission
 );
 
@@ -123,8 +123,8 @@ router.post('/:id/commissions/:commissionId/pay',
  * @feature Requires trainerCommission feature
  */
 router.post('/commissions/backfill',
-  requireFeature('gym', 'trainerCommission'),
-  authorizeCasl('manage', 'TrainerCommission'),
+  requireFeature('trainerCommission'),
+  authorize('manage', 'TrainerCommission'),
   trainerController.backfillCommissions
 );
 

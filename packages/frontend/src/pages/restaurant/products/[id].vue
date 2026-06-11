@@ -229,7 +229,7 @@ onMounted(async () => {
     <div v-else-if="product">
       <!-- Header -->
       <div class="flex items-center gap-4 mb-6">
-        <button class="btn btn-ghost btn-sm" @click="router.push('/restaurant/products')">
+        <button class="btn btn-ghost btn-sm btn-circle" @click="router.push('/restaurant/products')">
           <IconArrowLeft class="w-5 h-5" />
         </button>
         <div class="flex-1">

@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const {
   getCashFlowSummary,
   getCashFlowByCategory,
@@ -17,7 +17,7 @@ const router = express.Router();
  */
 router.get('/summary',
   authenticate,
-  authorizeCasl('read', 'CashFlow'),
+  authorize('read', 'CashFlow'),
   getCashFlowSummary
 );
 
@@ -28,7 +28,7 @@ router.get('/summary',
  */
 router.get('/by-category',
   authenticate,
-  authorizeCasl('read', 'CashFlow'),
+  authorize('read', 'CashFlow'),
   getCashFlowByCategory
 );
 
@@ -39,7 +39,7 @@ router.get('/by-category',
  */
 router.get('/projection',
   authenticate,
-  authorizeCasl('read', 'CashFlow'),
+  authorize('read', 'CashFlow'),
   getCashFlowProjection
 );
 
@@ -52,7 +52,7 @@ router.get('/projection',
  */
 router.get('/statement',
   authenticate,
-  authorizeCasl('read', 'CashFlow'),
+  authorize('read', 'CashFlow'),
   getCashFlowStatement
 );
 

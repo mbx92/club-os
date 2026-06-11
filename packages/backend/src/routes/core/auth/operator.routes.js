@@ -2,7 +2,7 @@
 
 const express = require('express');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const {
   listOperators,
   verifyOperatorPin,
@@ -25,15 +25,15 @@ router.post('/verify', authenticate, verifyOperatorPin);
 // ── Endpoint manajemen operator (hanya admin/owner) ──────────────────────────
 
 /** GET /auth/operator/manage — semua operator termasuk nonaktif */
-router.get('/manage', authenticate, authorizeCasl('read', 'User'), getAllOperators);
+router.get('/manage', authenticate, authorize('read', 'User'), getAllOperators);
 
 /** POST /auth/operator/manage — buat operator baru */
-router.post('/manage', authenticate, authorizeCasl('create', 'User'), createOperator);
+router.post('/manage', authenticate, authorize('create', 'User'), createOperator);
 
 /** PUT /auth/operator/manage/:id — update operator */
-router.put('/manage/:id', authenticate, authorizeCasl('update', 'User'), updateOperator);
+router.put('/manage/:id', authenticate, authorize('update', 'User'), updateOperator);
 
 /** DELETE /auth/operator/manage/:id — nonaktifkan operator */
-router.delete('/manage/:id', authenticate, authorizeCasl('delete', 'User'), deleteOperator);
+router.delete('/manage/:id', authenticate, authorize('delete', 'User'), deleteOperator);
 
 module.exports = router;

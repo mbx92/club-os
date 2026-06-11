@@ -7,7 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 
 const {
@@ -31,7 +31,7 @@ const {
 router.get('/',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'StaffAttendance'),
+  authorize('read', 'StaffAttendance'),
   listAttendance
 );
 
@@ -45,7 +45,7 @@ router.get('/',
 router.get('/report',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'StaffAttendance'),
+  authorize('read', 'StaffAttendance'),
   attendanceReport
 );
 
@@ -59,7 +59,7 @@ router.get('/report',
 router.get('/report/export',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'StaffAttendance'),
+  authorize('read', 'StaffAttendance'),
   exportAttendanceReport
 );
 
@@ -73,7 +73,7 @@ router.get('/report/export',
 router.post('/sync',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('create', 'StaffAttendance'),
+  authorize('create', 'StaffAttendance'),
   syncAllDevices
 );
 
@@ -87,7 +87,7 @@ router.post('/sync',
 router.post('/reprocess',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('create', 'StaffAttendance'),
+  authorize('create', 'StaffAttendance'),
   reprocessUnmatchedLogs
 );
 
@@ -102,7 +102,7 @@ router.post('/reprocess',
 router.post('/fix-checkin',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'StaffAttendance'),
+  authorize('update', 'StaffAttendance'),
   fixSmartCheckInOut
 );
 
@@ -115,7 +115,7 @@ router.post('/fix-checkin',
 router.post('/',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('create', 'StaffAttendance'),
+  authorize('create', 'StaffAttendance'),
   createManualAttendance
 );
 
@@ -128,7 +128,7 @@ router.post('/',
 router.patch('/:id',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'StaffAttendance'),
+  authorize('update', 'StaffAttendance'),
   updateAttendance
 );
 

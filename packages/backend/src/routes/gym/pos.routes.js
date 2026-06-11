@@ -75,7 +75,7 @@ router.post('/transactions', async (req, res) => {
  * @access  Private (requires 'pos' module + 'creditCard' payment feature)
  */
 router.post('/transactions/credit-card',
-  requireFeature('payments', 'creditCard'),
+  requireFeature('creditCard'),
   async (req, res) => {
     res.json({
       success: true,

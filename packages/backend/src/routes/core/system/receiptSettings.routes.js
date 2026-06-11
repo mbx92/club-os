@@ -12,7 +12,7 @@ const express = require('express');
 const router = express.Router();
 const receiptSettingsController = require('../../../controllers/core/system/receiptSettingsController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 
 // All routes require authentication
 router.use(authenticate);
@@ -24,7 +24,7 @@ router.use(authenticate);
  * @access Private - requires 'read' permission on 'SystemSettings'
  */
 router.get('/',
-  authorizeCasl('read', 'SystemSettings'),
+  authorize('read', 'SystemSettings'),
   receiptSettingsController.getReceiptSettings
 );
 
@@ -35,7 +35,7 @@ router.get('/',
  * @access Private - requires 'read' permission on 'SystemSettings'
  */
 router.post('/test-print',
-  authorizeCasl('read', 'SystemSettings'),
+  authorize('read', 'SystemSettings'),
   receiptSettingsController.testPrintReceipt
 );
 
@@ -46,7 +46,7 @@ router.post('/test-print',
  * @access Private - requires 'read' permission on 'SystemSettings'
  */
 router.post('/test-print-actual',
-  authorizeCasl('read', 'SystemSettings'),
+  authorize('read', 'SystemSettings'),
   receiptSettingsController.testPrintActual
 );
 
@@ -57,7 +57,7 @@ router.post('/test-print-actual',
  * @access Private - requires 'create' permission on 'SystemSettings'
  */
 router.post('/',
-  authorizeCasl('create', 'SystemSettings'),
+  authorize('create', 'SystemSettings'),
   receiptSettingsController.createReceiptTemplate
 );
 
@@ -68,7 +68,7 @@ router.post('/',
  * @access Private - requires 'update' permission on 'SystemSettings'
  */
 router.put('/',
-  authorizeCasl('update', 'SystemSettings'),
+  authorize('update', 'SystemSettings'),
   receiptSettingsController.updateReceiptSettings
 );
 
@@ -79,7 +79,7 @@ router.put('/',
  * @access Private - requires 'update' permission on 'SystemSettings'
  */
 router.post('/reset',
-  authorizeCasl('update', 'SystemSettings'),
+  authorize('update', 'SystemSettings'),
   receiptSettingsController.resetReceiptSettings
 );
 

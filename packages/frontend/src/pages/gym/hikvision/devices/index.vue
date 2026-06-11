@@ -74,7 +74,7 @@ meta:
                 <IconFileText class="w-4 h-4" /> Logs
               </router-link>
               <div class="dropdown dropdown-end">
-                <label tabindex="0" class="btn btn-ghost btn-sm btn-square">
+                <label tabindex="0" class="btn btn-ghost btn-sm btn-circle">
                   <IconDotsVertical class="w-4 h-4" />
                 </label>
                 <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 rounded-box w-52">

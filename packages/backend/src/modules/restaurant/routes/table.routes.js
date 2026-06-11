@@ -10,7 +10,7 @@ const express = require('express');
 const router = express.Router();
 const tableController = require('../controllers/tableController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 
 // All routes require authentication and restaurant module access
@@ -26,7 +26,7 @@ router.use(requireModule('restaurant'));
  * @access Private - requires 'read' permission on 'RestaurantTable'
  */
 router.get('/',
-  authorizeCasl('read', 'RestaurantTable'),
+  authorize('read', 'RestaurantTable'),
   tableController.getAllTables
 );
 
@@ -39,7 +39,7 @@ router.get('/',
  * @access Private - requires 'read' permission on 'RestaurantTable'
  */
 router.get('/statistics',
-  authorizeCasl('read', 'RestaurantTable'),
+  authorize('read', 'RestaurantTable'),
   tableController.getTableStatistics
 );
 
@@ -52,7 +52,7 @@ router.get('/statistics',
  * @access Private - requires 'read' permission on 'RestaurantTable'
  */
 router.get('/stats',
-  authorizeCasl('read', 'RestaurantTable'),
+  authorize('read', 'RestaurantTable'),
   tableController.getTableStatistics
 );
 
@@ -62,7 +62,7 @@ router.get('/stats',
  * @access Private - requires 'read' permission on 'RestaurantTable'
  */
 router.get('/layout/:locationId',
-  authorizeCasl('read', 'RestaurantTable'),
+  authorize('read', 'RestaurantTable'),
   tableController.getTableLayout
 );
 
@@ -72,7 +72,7 @@ router.get('/layout/:locationId',
  * @access Private - requires 'read' permission on 'RestaurantTable'
  */
 router.get('/:id',
-  authorizeCasl('read', 'RestaurantTable'),
+  authorize('read', 'RestaurantTable'),
   tableController.getTableById
 );
 
@@ -82,7 +82,7 @@ router.get('/:id',
  * @access Private - requires 'create' permission on 'RestaurantTable'
  */
 router.post('/',
-  authorizeCasl('create', 'RestaurantTable'),
+  authorize('create', 'RestaurantTable'),
   tableController.createTable
 );
 
@@ -92,7 +92,7 @@ router.post('/',
  * @access Private - requires 'update' permission on 'RestaurantTable'
  */
 router.put('/:id',
-  authorizeCasl('update', 'RestaurantTable'),
+  authorize('update', 'RestaurantTable'),
   tableController.updateTable
 );
 
@@ -102,7 +102,7 @@ router.put('/:id',
  * @access Private - requires 'delete' permission on 'RestaurantTable'
  */
 router.delete('/:id',
-  authorizeCasl('delete', 'RestaurantTable'),
+  authorize('delete', 'RestaurantTable'),
   tableController.deleteTable
 );
 
@@ -114,7 +114,7 @@ router.delete('/:id',
  * @access Private - requires 'update' permission on 'RestaurantTable'
  */
 router.post('/:id/occupy',
-  authorizeCasl('update', 'RestaurantTable'),
+  authorize('update', 'RestaurantTable'),
   tableController.occupyTable
 );
 
@@ -124,7 +124,7 @@ router.post('/:id/occupy',
  * @access Private - requires 'update' permission on 'RestaurantTable'
  */
 router.post('/:id/release',
-  authorizeCasl('update', 'RestaurantTable'),
+  authorize('update', 'RestaurantTable'),
   tableController.releaseTable
 );
 
@@ -139,7 +139,7 @@ router.post('/:id/release',
  * @access Private - requires 'update' permission on 'RestaurantTable'
  */
 router.post('/:id/reserve',
-  authorizeCasl('update', 'RestaurantTable'),
+  authorize('update', 'RestaurantTable'),
   tableController.reserveTable
 );
 
@@ -149,7 +149,7 @@ router.post('/:id/reserve',
  * @access Private - requires 'update' permission on 'RestaurantTable'
  */
 router.post('/:id/cleaning',
-  authorizeCasl('update', 'RestaurantTable'),
+  authorize('update', 'RestaurantTable'),
   tableController.setForCleaning
 );
 

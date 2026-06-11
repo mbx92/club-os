@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { enforceLimit } = require('../../../middlewares/featureGateMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const { 
@@ -24,7 +24,7 @@ const router = express.Router();
  */
 router.get('/', 
   authenticate, 
-  authorizeCasl('read', 'Member'), 
+  authorize('read', 'Member'), 
   auditLog('LIST_MEMBERS'), 
   getMembers
 );
@@ -37,7 +37,7 @@ router.get('/',
  */
 router.get('/:id', 
   authenticate, 
-  authorizeCasl('read', 'Member'), 
+  authorize('read', 'Member'), 
   auditLog('GET_MEMBER'), 
   getMember
 );
@@ -51,7 +51,7 @@ router.get('/:id',
  */
 router.post('/', 
   authenticate, 
-  authorizeCasl('create', 'Member'),
+  authorize('create', 'Member'),
   enforceLimit('maxMembers', async (tenantId) => {
     return await Member.count({ where: { tenantId } });
   }),
@@ -67,7 +67,7 @@ router.post('/',
  */
 router.put('/:id', 
   authenticate, 
-  authorizeCasl('update', 'Member'), 
+  authorize('update', 'Member'), 
   auditLog('UPDATE_MEMBER'), 
   updateMember
 );
@@ -80,7 +80,7 @@ router.put('/:id',
  */
 router.delete('/:id', 
   authenticate, 
-  authorizeCasl('delete', 'Member'), 
+  authorize('delete', 'Member'), 
   auditLog('DELETE_MEMBER'), 
   deleteMember
 );
@@ -93,7 +93,7 @@ router.delete('/:id',
  */
 router.post('/:id/reset-password', 
   authenticate, 
-  authorizeCasl('update', 'Member'), 
+  authorize('update', 'Member'), 
   auditLog('RESET_MEMBER_PASSWORD'), 
   resetMemberPassword
 );

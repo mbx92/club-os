@@ -1,14 +1,14 @@
 'use strict';
 
 /**
- * Seeder: Seed default CASL permissions into existing Roles
+ * Seeder: Seed default RBAC permissions into existing Roles
  *
  * Mengisi kolom `permissions` (JSON) pada setiap Role dengan:
- *   - caslRules  : array aturan CASL yang sebelumnya hard-code di casl.js
+ *   - rules      : array aturan RBAC dari defaultRolePermissions
  *   - uiFlags    : flag UI (canManageUsers, canViewLogs, …)
  *   - menuAccess : daftar menu key yang boleh diakses
  *
- * Berjalan idempoten: hanya update role yang belum memiliki caslRules.
+ * Berjalan idempoten: hanya update role yang belum memiliki rules.
  */
 
 const { DEFAULT_ROLE_PERMISSIONS } = require('../../src/utils/defaultRolePermissions');
@@ -42,15 +42,15 @@ module.exports = {
         existing = {};
       }
 
-      // Hanya isi jika belum ada caslRules
-      if (Array.isArray(existing.caslRules) && existing.caslRules.length > 0) {
-        console.log(`[seed-role-permissions] "${role.name}" already has caslRules — skipping`);
+      // Hanya isi jika belum ada rules
+      if (Array.isArray(existing.rules) && existing.rules.length > 0) {
+        console.log(`[seed-role-permissions] "${role.name}" already has rules — skipping`);
         continue;
       }
 
       const newPermissions = {
         ...existing,
-        caslRules:  defaults.caslRules,
+        rules:      defaults.rules,
         uiFlags:    defaults.uiFlags,
         menuAccess: defaults.menuAccess,
       };
@@ -65,12 +65,12 @@ module.exports = {
         }
       );
 
-      console.log(`[seed-role-permissions] ✓ "${role.name}" permissions seeded (${defaults.caslRules.length} rules)`);
+      console.log(`[seed-role-permissions] ✓ "${role.name}" permissions seeded (${defaults.rules.length} rules)`);
     }
   },
 
   async down(queryInterface) {
-    // Hapus caslRules, uiFlags, menuAccess dari semua role (reset ke kosong)
+    // Hapus rules, uiFlags, menuAccess dari semua role (reset ke kosong)
     const [roles] = await queryInterface.sequelize.query(
       `SELECT id, name, permissions FROM "Roles";`
     );
@@ -86,7 +86,7 @@ module.exports = {
       }
 
       const cleaned = { ...existing };
-      delete cleaned.caslRules;
+      delete cleaned.rules;
       delete cleaned.uiFlags;
       delete cleaned.menuAccess;
 
@@ -101,6 +101,6 @@ module.exports = {
       );
     }
 
-    console.log('[seed-role-permissions] Rollback complete — caslRules removed from all roles');
+    console.log('[seed-role-permissions] Rollback complete — rules removed from all roles');
   },
 };

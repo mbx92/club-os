@@ -4,8 +4,8 @@
  * Definisi struktur menu yang dikirimkan ke frontend.
  * Backend akan filter setiap item berdasarkan:
  *   1. requiredModule  — apakah modul aktif di subscription plan tenant
- *   2. requiredCasl    — apakah user punya CASL permission untuk resource tsb
- *   3. requiredFlag    — apakah flag uiFlags aktif di role permissions
+ *   2. requiredPermission — apakah user punya RBAC permission untuk resource tsb
+ *   3. requiredFlag       — apakah flag uiFlags aktif di role permissions
  *   4. superAdminOnly  — hanya tampil untuk superadmin
  *
  * Frontend menerima array menu yang sudah di-filter dan tinggal di-render.
@@ -23,7 +23,7 @@ const MENU_CONFIG = [
     icon: 'LayoutDashboard',
     path: '/dashboard',
     requiredModule: null,          // always visible if user is logged in
-    requiredCasl: null,
+    requiredPermission: null,
   },
 
   // ─── GYM ──────────────────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ const MENU_CONFIG = [
     icon: 'Dumbbell',
     path: null,
     requiredModule: 'gym',
-    requiredCasl: { action: 'read', subject: 'Member' },
+    requiredPermission: { action: 'read', subject: 'Member' },
     children: [
       {
         key: 'gym.members',
@@ -41,7 +41,7 @@ const MENU_CONFIG = [
         icon: 'Users',
         path: '/gym/members',
         requiredModule: 'gym',
-        requiredCasl: { action: 'read', subject: 'Member' },
+        requiredPermission: { action: 'read', subject: 'Member' },
       },
       {
         key: 'gym.check-ins',
@@ -49,7 +49,7 @@ const MENU_CONFIG = [
         icon: 'CheckSquare',
         path: '/gym/check-ins',
         requiredModule: 'gym',
-        requiredCasl: { action: 'read', subject: 'CheckIn' },
+        requiredPermission: { action: 'read', subject: 'CheckIn' },
       },
       {
         key: 'gym.service-plans',
@@ -57,7 +57,7 @@ const MENU_CONFIG = [
         icon: 'Tag',
         path: '/gym/service-plans',
         requiredModule: 'serviceManagement',
-        requiredCasl: { action: 'read', subject: 'ServicePlan' },
+        requiredPermission: { action: 'read', subject: 'ServicePlan' },
       },
       {
         key: 'gym.active-services',
@@ -65,7 +65,7 @@ const MENU_CONFIG = [
         icon: 'Activity',
         path: '/gym/active-services',
         requiredModule: 'serviceManagement',
-        requiredCasl: { action: 'read', subject: 'ActiveService' },
+        requiredPermission: { action: 'read', subject: 'ActiveService' },
       },
       {
         key: 'gym.trainers',
@@ -73,7 +73,7 @@ const MENU_CONFIG = [
         icon: 'PersonStanding',
         path: '/gym/trainers',
         requiredModule: 'gym',
-        requiredCasl: { action: 'read', subject: 'User' },
+        requiredPermission: { action: 'read', subject: 'User' },
       },
     ],
   },
@@ -85,7 +85,7 @@ const MENU_CONFIG = [
     icon: 'ShoppingCart',
     path: null,
     requiredModule: 'pos',
-    requiredCasl: { action: 'read', subject: 'Product' },
+    requiredPermission: { action: 'read', subject: 'Product' },
     children: [
       {
         key: 'pos.products',
@@ -93,7 +93,7 @@ const MENU_CONFIG = [
         icon: 'Package',
         path: '/pos/products',
         requiredModule: 'pos',
-        requiredCasl: { action: 'read', subject: 'Product' },
+        requiredPermission: { action: 'read', subject: 'Product' },
       },
       {
         key: 'pos.transactions',
@@ -101,7 +101,7 @@ const MENU_CONFIG = [
         icon: 'Receipt',
         path: '/pos/transactions',
         requiredModule: 'pos',
-        requiredCasl: { action: 'read', subject: 'Transaction' },
+        requiredPermission: { action: 'read', subject: 'Transaction' },
       },
     ],
   },
@@ -113,7 +113,7 @@ const MENU_CONFIG = [
     icon: 'UtensilsCrossed',
     path: null,
     requiredModule: 'restaurant',
-    requiredCasl: { action: 'read', subject: 'Transaction' },
+    requiredPermission: { action: 'read', subject: 'Transaction' },
     children: [
       {
         key: 'restaurant.orders',
@@ -121,7 +121,7 @@ const MENU_CONFIG = [
         icon: 'ClipboardList',
         path: '/restaurant/orders',
         requiredModule: 'restaurant',
-        requiredCasl: { action: 'read', subject: 'Transaction' },
+        requiredPermission: { action: 'read', subject: 'Transaction' },
       },
       {
         key: 'restaurant.tables',
@@ -129,7 +129,7 @@ const MENU_CONFIG = [
         icon: 'LayoutGrid',
         path: '/restaurant/tables',
         requiredModule: 'restaurant',
-        requiredCasl: { action: 'read', subject: 'RestaurantTable' },
+        requiredPermission: { action: 'read', subject: 'RestaurantTable' },
       },
       {
         key: 'restaurant.products',
@@ -137,7 +137,7 @@ const MENU_CONFIG = [
         icon: 'BookOpen',
         path: '/restaurant/products',
         requiredModule: 'restaurant',
-        requiredCasl: { action: 'read', subject: 'Product' },
+        requiredPermission: { action: 'read', subject: 'Product' },
       },
       {
         key: 'restaurant.stock',
@@ -145,7 +145,7 @@ const MENU_CONFIG = [
         icon: 'Boxes',
         path: '/restaurant/stock',
         requiredModule: 'restaurant',
-        requiredCasl: { action: 'read', subject: 'StockMovement' },
+        requiredPermission: { action: 'read', subject: 'StockMovement' },
       },
     ],
   },
@@ -157,7 +157,7 @@ const MENU_CONFIG = [
     icon: 'CalendarDays',
     path: '/classes',
     requiredModule: 'classes',
-    requiredCasl: { action: 'read', subject: 'ActiveService' },
+    requiredPermission: { action: 'read', subject: 'ActiveService' },
   },
 
   // ─── FINANCE ──────────────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ const MENU_CONFIG = [
     icon: 'Wallet',
     path: null,
     requiredModule: 'finance',
-    requiredCasl: { action: 'read', subject: 'Payment' },
+    requiredPermission: { action: 'read', subject: 'Payment' },
     children: [
       {
         key: 'finance.expenses',
@@ -175,7 +175,7 @@ const MENU_CONFIG = [
         icon: 'TrendingDown',
         path: '/finance/expenses',
         requiredModule: 'finance',
-        requiredCasl: { action: 'read', subject: 'Payment' },
+        requiredPermission: { action: 'read', subject: 'Payment' },
       },
       {
         key: 'finance.incomes',
@@ -183,7 +183,7 @@ const MENU_CONFIG = [
         icon: 'TrendingUp',
         path: '/finance/incomes',
         requiredModule: 'finance',
-        requiredCasl: { action: 'read', subject: 'Payment' },
+        requiredPermission: { action: 'read', subject: 'Payment' },
       },
       {
         key: 'finance.cash-flow',
@@ -191,7 +191,7 @@ const MENU_CONFIG = [
         icon: 'ArrowLeftRight',
         path: '/finance/cash-flow',
         requiredModule: 'finance',
-        requiredCasl: { action: 'read', subject: 'Payment' },
+        requiredPermission: { action: 'read', subject: 'Payment' },
       },
       {
         key: 'finance.vouchers',
@@ -199,7 +199,7 @@ const MENU_CONFIG = [
         icon: 'Ticket',
         path: '/finance/vouchers',
         requiredModule: 'finance',
-        requiredCasl: { action: 'read', subject: 'Voucher' },
+        requiredPermission: { action: 'read', subject: 'Voucher' },
       },
     ],
   },
@@ -211,7 +211,7 @@ const MENU_CONFIG = [
     icon: 'BarChart2',
     path: '/reports',
     requiredModule: 'reports',
-    requiredCasl: { action: 'read', subject: 'Member' },
+    requiredPermission: { action: 'read', subject: 'Member' },
   },
   {
     key: 'advancedReports',
@@ -219,7 +219,7 @@ const MENU_CONFIG = [
     icon: 'LineChart',
     path: '/reports/advanced',
     requiredModule: 'advancedReports',
-    requiredCasl: { action: 'read', subject: 'Member' },
+    requiredPermission: { action: 'read', subject: 'Member' },
   },
 
   // ─── USER MANAGEMENT (back-office) ────────────────────────────────────────
@@ -229,7 +229,7 @@ const MENU_CONFIG = [
     icon: 'UserCog',
     path: '/users',
     requiredModule: null,
-    requiredCasl: { action: 'read', subject: 'User' },
+    requiredPermission: { action: 'read', subject: 'User' },
     requiredFlag: 'canManageUsers',
   },
   {
@@ -238,7 +238,7 @@ const MENU_CONFIG = [
     icon: 'ShieldCheck',
     path: '/roles',
     requiredModule: null,
-    requiredCasl: { action: 'read', subject: 'Role' },
+    requiredPermission: { action: 'read', subject: 'Role' },
     requiredFlag: 'canManageRoles',
   },
 
@@ -249,7 +249,7 @@ const MENU_CONFIG = [
     icon: 'Settings',
     path: '/settings',
     requiredModule: null,
-    requiredCasl: { action: 'update', subject: 'Tenant' },
+    requiredPermission: { action: 'update', subject: 'Tenant' },
     requiredFlag: 'canManageSettings',
   },
 
@@ -260,7 +260,7 @@ const MENU_CONFIG = [
     icon: 'ScrollText',
     path: '/logs',
     requiredModule: null,
-    requiredCasl: { action: 'read', subject: 'Log' },
+    requiredPermission: { action: 'read', subject: 'Log' },
     requiredFlag: 'canViewLogs',
   },
 
@@ -271,7 +271,7 @@ const MENU_CONFIG = [
     icon: 'Building2',
     path: '/tenants',
     requiredModule: null,
-    requiredCasl: null,
+    requiredPermission: null,
     superAdminOnly: true,
   },
   {
@@ -280,7 +280,7 @@ const MENU_CONFIG = [
     icon: 'CreditCard',
     path: '/billing',
     requiredModule: null,
-    requiredCasl: null,
+    requiredPermission: null,
     superAdminOnly: true,
   },
   {
@@ -289,7 +289,7 @@ const MENU_CONFIG = [
     icon: 'ServerCog',
     path: '/system',
     requiredModule: null,
-    requiredCasl: null,
+    requiredPermission: null,
     superAdminOnly: true,
   },
 ];

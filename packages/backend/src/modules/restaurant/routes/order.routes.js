@@ -13,7 +13,7 @@ const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
 const { authenticate, authenticateSSE } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 
 // ===== PUBLIC ROUTES (no auth required) =====
@@ -76,7 +76,7 @@ router.use(requireModule('restaurant'));
  * @access Private - requires 'read' permission on 'Transaction'
  */
 router.get('/',
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   orderController.getAllOrders
 );
 
@@ -86,7 +86,7 @@ router.get('/',
  * @access Private - requires 'read' permission on 'Transaction'
  */
 router.get('/kitchen',
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   orderController.getKitchenOrders
 );
 
@@ -98,7 +98,7 @@ router.get('/kitchen',
  * @access Private - requires 'read' permission on 'Transaction'
  */
 router.get('/queue',
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   orderController.getQueueList
 );
 
@@ -108,7 +108,7 @@ router.get('/queue',
  * @access Private - requires 'read' permission on 'Transaction'
  */
 router.get('/queue/stats',
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   orderController.getQueueStreamStats
 );
 
@@ -118,7 +118,7 @@ router.get('/queue/stats',
  * @access Private - requires 'read' permission on 'Transaction'
  */
 router.get('/table/:tableId',
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   orderController.getOrdersByTable
 );
 
@@ -128,7 +128,7 @@ router.get('/table/:tableId',
  * @access Private - requires 'read' permission on 'Transaction'
  */
 router.get('/:id',
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   orderController.getOrderById
 );
 
@@ -138,7 +138,7 @@ router.get('/:id',
  * @access Private - requires 'create' permission on 'Transaction'
  */
 router.post('/',
-  authorizeCasl('create', 'Transaction'),
+  authorize('create', 'Transaction'),
   orderController.createOrder
 );
 
@@ -157,7 +157,7 @@ router.post('/',
  * @body {String} [deliveryAddress] - Required for delivery
  */
 router.post('/direct',
-  authorizeCasl('create', 'Transaction'),
+  authorize('create', 'Transaction'),
   orderController.createDirectOrder
 );
 
@@ -169,7 +169,7 @@ router.post('/direct',
  * @body {Number} amount - Order amount to calculate discount
  */
 router.post('/validate-voucher',
-  authorizeCasl('read', 'Voucher'),
+  authorize('read', 'Voucher'),
   orderController.validateVoucher
 );
 
@@ -180,7 +180,7 @@ router.post('/validate-voucher',
  * @body {Array} orderIds - Array of order IDs to merge
  */
 router.post('/merge',
-  authorizeCasl('update', 'Transaction'),
+  authorize('update', 'Transaction'),
   orderController.mergeBills
 );
 
@@ -190,7 +190,7 @@ router.post('/merge',
  * @access Private - requires 'update' permission on 'Transaction'
  */
 router.put('/:id/status',
-  authorizeCasl('update', 'Transaction'),
+  authorize('update', 'Transaction'),
   orderController.updateOrderStatus
 );
 
@@ -203,7 +203,7 @@ router.put('/:id/status',
  * @body {UUID}   targetTableId - Destination table ID
  */
 router.post('/:id/transfer-items',
-  authorizeCasl('update', 'Transaction'),
+  authorize('update', 'Transaction'),
   orderController.transferItems
 );
 
@@ -214,7 +214,7 @@ router.post('/:id/transfer-items',
  * @body {UUID} newTableId - Target table ID to move the order to
  */
 router.put('/:id/move-table',
-  authorizeCasl('update', 'Transaction'),
+  authorize('update', 'Transaction'),
   orderController.moveTable
 );
 
@@ -224,7 +224,7 @@ router.put('/:id/move-table',
  * @access Private - requires 'update' permission on 'Transaction'
  */
 router.post('/:id/items',
-  authorizeCasl('update', 'Transaction'),
+  authorize('update', 'Transaction'),
   orderController.addOrderItems
 );
 
@@ -234,7 +234,7 @@ router.post('/:id/items',
  * @access Private - requires 'read' permission on 'Transaction'
  */
 router.get('/:orderId/items/grouped',
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   orderController.getItemsGroupedByStatus
 );
 
@@ -245,7 +245,7 @@ router.get('/:orderId/items/grouped',
  * @body {String} status - New status (pending, preparing, ready, served, cancelled)
  */
 router.put('/:orderId/items/:itemId/status',
-  authorizeCasl('update', 'Transaction'),
+  authorize('update', 'Transaction'),
   orderController.updateItemStatus
 );
 
@@ -260,7 +260,7 @@ router.put('/:orderId/items/:itemId/status',
  * @body {String} [notes] - Additional notes
  */
 router.post('/:id/complete',
-  authorizeCasl('update', 'Transaction'),
+  authorize('update', 'Transaction'),
   orderController.completeOrder
 );
 
@@ -272,7 +272,7 @@ router.post('/:id/complete',
  * @body {Number|Array} splits - Number for equal split, or Array of { itemIds, customerName } for by_items
  */
 router.post('/:id/split',
-  authorizeCasl('update', 'Transaction'),
+  authorize('update', 'Transaction'),
   orderController.splitBill
 );
 
@@ -282,7 +282,7 @@ router.post('/:id/split',
  * @access Private - requires 'read' permission on 'Transaction'
  */
 router.get('/:id/splits',
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   orderController.getSplitOrders
 );
 
@@ -293,7 +293,7 @@ router.get('/:id/splits',
  * @query {String} [type=receipt] - 'receipt' or 'kitchen'
  */
 router.post('/:id/print',
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   orderController.printReceipt
 );
 
@@ -303,7 +303,7 @@ router.post('/:id/print',
  * @access Private - requires 'update' permission on 'Transaction'
  */
 router.post('/drawer/open',
-  authorizeCasl('update', 'Transaction'),
+  authorize('update', 'Transaction'),
   orderController.openDrawer
 );
 
@@ -316,7 +316,7 @@ router.post('/drawer/open',
  * @access Private - requires 'update' permission on 'Transaction'
  */
 router.put('/queue/:id/status',
-  authorizeCasl('update', 'Transaction'),
+  authorize('update', 'Transaction'),
   orderController.updateQueueStatus
 );
 
@@ -326,7 +326,7 @@ router.put('/queue/:id/status',
  * @access Private - requires 'update' permission on 'Transaction'
  */
 router.post('/queue/:id/call',
-  authorizeCasl('update', 'Transaction'),
+  authorize('update', 'Transaction'),
   orderController.callQueueNumber
 );
 

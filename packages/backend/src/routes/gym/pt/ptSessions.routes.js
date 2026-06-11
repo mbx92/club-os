@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const ptSessionController = require('../../../controllers/gym/pt/ptSessionController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 
@@ -14,7 +14,7 @@ router.use(requireModule('serviceManagement'));
  * @desc  Get all PT sessions with filters and pagination
  */
 router.get('/',
-  authorizeCasl('read', 'PTSession'),
+  authorize('read', 'PTSession'),
   auditLog('GET_PT_SESSIONS'),
   ptSessionController.getAllPTSessions
 );
@@ -24,7 +24,7 @@ router.get('/',
  * @desc  Get a single PT session by ID
  */
 router.get('/:id',
-  authorizeCasl('read', 'PTSession'),
+  authorize('read', 'PTSession'),
   auditLog('GET_PT_SESSION'),
   ptSessionController.getPTSessionById
 );
@@ -35,7 +35,7 @@ router.get('/:id',
  * @body  activeServiceId, trainerId, memberId, sessionDate, durationMinutes, notes
  */
 router.post('/',
-  authorizeCasl('create', 'PTSession'),
+  authorize('create', 'PTSession'),
   auditLog('CREATE_PT_SESSION'),
   ptSessionController.createPTSession
 );
@@ -47,7 +47,7 @@ router.post('/',
  *        deductSession (boolean, default true) — deduct from remainingSessions when completing
  */
 router.put('/:id',
-  authorizeCasl('update', 'PTSession'),
+  authorize('update', 'PTSession'),
   auditLog('UPDATE_PT_SESSION'),
   ptSessionController.updatePTSession
 );
@@ -57,7 +57,7 @@ router.put('/:id',
  * @desc  Soft-delete a PT session. Refunds session to active service if sessionUsed=true.
  */
 router.delete('/:id',
-  authorizeCasl('delete', 'PTSession'),
+  authorize('delete', 'PTSession'),
   auditLog('DELETE_PT_SESSION'),
   ptSessionController.deletePTSession
 );

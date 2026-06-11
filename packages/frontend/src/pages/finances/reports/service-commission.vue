@@ -9,7 +9,7 @@ meta:
     <!-- Header -->
     <div class="mb-6">
       <div class="flex items-center gap-3 mb-1">
-        <router-link to="/finances/reports" class="btn btn-ghost btn-sm">
+        <router-link to="/finances/reports" class="btn btn-ghost btn-sm btn-circle">
           <IconArrowLeft class="w-4 h-4" />
         </router-link>
         <h1 class="text-3xl font-bold">Service Commission Income</h1>

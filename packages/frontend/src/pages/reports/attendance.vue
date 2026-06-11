@@ -74,14 +74,14 @@ onMounted(() => { loadData() })
   <div class="container mx-auto px-4 py-6">
     <!-- Header -->
     <div class="flex items-center gap-4 mb-6">
-      <button class="btn btn-ghost btn-sm" @click="router.back()">
+      <button class="btn btn-ghost btn-sm btn-circle" @click="router.back()">
         <IconArrowLeft class="w-5 h-5" />
       </button>
       <div class="flex-1">
         <h1 class="text-3xl font-bold">Attendance Report</h1>
         <p class="text-base-content/60 mt-1">Check-in statistics and forecast</p>
       </div>
-      <button class="btn btn-ghost btn-sm" @click="loadData" :disabled="loading">
+      <button class="btn btn-ghost btn-sm btn-circle" @click="loadData" :disabled="loading">
         <IconRefresh class="w-4 h-4" :class="{ 'animate-spin': loading }" />
       </button>
       <button class="btn btn-primary btn-sm" @click="handleExport" :disabled="!trends.length">

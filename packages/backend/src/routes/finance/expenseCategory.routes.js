@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const auditLog = require('../../middlewares/auditMiddleware');
 const {
   createExpenseCategory,
@@ -18,7 +18,7 @@ const router = express.Router();
  */
 router.post('/',
   authenticate,
-  authorizeCasl('create', 'ExpenseCategory'),
+  authorize('create', 'ExpenseCategory'),
   createExpenseCategory,
   auditLog('CREATE_EXPENSE_CATEGORY')
 );
@@ -30,7 +30,7 @@ router.post('/',
  */
 router.get('/',
   authenticate,
-  authorizeCasl('read', 'ExpenseCategory'),
+  authorize('read', 'ExpenseCategory'),
   getAllExpenseCategories
 );
 
@@ -41,7 +41,7 @@ router.get('/',
  */
 router.put('/:id',
   authenticate,
-  authorizeCasl('update', 'ExpenseCategory'),
+  authorize('update', 'ExpenseCategory'),
   updateExpenseCategory,
   auditLog('UPDATE_EXPENSE_CATEGORY')
 );
@@ -53,7 +53,7 @@ router.put('/:id',
  */
 router.delete('/:id',
   authenticate,
-  authorizeCasl('delete', 'ExpenseCategory'),
+  authorize('delete', 'ExpenseCategory'),
   deleteExpenseCategory,
   auditLog('DELETE_EXPENSE_CATEGORY')
 );

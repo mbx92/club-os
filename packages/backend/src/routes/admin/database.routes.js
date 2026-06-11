@@ -49,4 +49,11 @@ router.delete('/backups/:filename', databaseController.deleteBackup);
  */
 router.get('/info', databaseController.getDatabaseInfo);
 
+router.get('/import/sources', databaseController.listImportSources);
+router.get('/import/analyze', databaseController.analyzeImportSource);
+router.get('/import/status', databaseController.getImportDatabaseStatus);
+router.post('/import/drop-legacy', databaseController.dropLegacyTables);
+router.post('/import/migrate', databaseController.runImportMigrations);
+router.post('/import/restore', databaseController.restoreImportSource);
+
 module.exports = router;

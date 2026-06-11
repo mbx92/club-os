@@ -10,7 +10,7 @@ const express = require('express');
 const router = express.Router();
 const stockMovementController = require('../controllers/stockMovementController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 
 // All routes require authentication and restaurant module access
@@ -28,7 +28,7 @@ router.use(requireModule('restaurant'));
  * @query endDate - Required for 'movements' report type
  */
 router.get('/report',
-  authorizeCasl('read', 'StockMovement'),
+  authorize('read', 'StockMovement'),
   stockMovementController.getStockReport
 );
 
@@ -38,7 +38,7 @@ router.get('/report',
  * @access Private - requires 'read' permission on 'StockMovement'
  */
 router.get('/',
-  authorizeCasl('read', 'StockMovement'),
+  authorize('read', 'StockMovement'),
   stockMovementController.getAllMovements
 );
 
@@ -48,7 +48,7 @@ router.get('/',
  * @access Private - requires 'read' permission on 'StockMovement'
  */
 router.get('/summary',
-  authorizeCasl('read', 'StockMovement'),
+  authorize('read', 'StockMovement'),
   stockMovementController.getSummary
 );
 
@@ -58,7 +58,7 @@ router.get('/summary',
  * @access Private - requires 'read' permission on 'StockMovement'
  */
 router.get('/most-moved',
-  authorizeCasl('read', 'StockMovement'),
+  authorize('read', 'StockMovement'),
   stockMovementController.getMostMovedProducts
 );
 
@@ -68,7 +68,7 @@ router.get('/most-moved',
  * @access Private - requires 'read' permission on 'StockMovement'
  */
 router.get('/product/:productId',
-  authorizeCasl('read', 'StockMovement'),
+  authorize('read', 'StockMovement'),
   stockMovementController.getProductHistory
 );
 
@@ -78,7 +78,7 @@ router.get('/product/:productId',
  * @access Private - requires 'read' permission on 'StockMovement'
  */
 router.get('/:id',
-  authorizeCasl('read', 'StockMovement'),
+  authorize('read', 'StockMovement'),
   stockMovementController.getMovementById
 );
 
@@ -88,7 +88,7 @@ router.get('/:id',
  * @access Private - requires 'create' permission on 'StockMovement'
  */
 router.post('/stock-in',
-  authorizeCasl('create', 'StockMovement'),
+  authorize('create', 'StockMovement'),
   stockMovementController.recordStockIn
 );
 
@@ -98,7 +98,7 @@ router.post('/stock-in',
  * @access Private - requires 'create' permission on 'StockMovement'
  */
 router.post('/stock-out',
-  authorizeCasl('create', 'StockMovement'),
+  authorize('create', 'StockMovement'),
   stockMovementController.recordStockOut
 );
 
@@ -108,7 +108,7 @@ router.post('/stock-out',
  * @access Private - requires 'create' permission on 'StockMovement'
  */
 router.post('/adjustment',
-  authorizeCasl('create', 'StockMovement'),
+  authorize('create', 'StockMovement'),
   stockMovementController.recordAdjustment
 );
 
@@ -118,7 +118,7 @@ router.post('/adjustment',
  * @access Private - requires 'create' permission on 'StockMovement'
  */
 router.post('/bulk-stock-in',
-  authorizeCasl('create', 'StockMovement'),
+  authorize('create', 'StockMovement'),
   stockMovementController.bulkStockIn
 );
 

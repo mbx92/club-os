@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule, enforceLimit } = require('../../../middlewares/featureGateMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const {
@@ -25,7 +25,7 @@ const router = express.Router();
 router.get('/',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('read', 'ServicePlan'),
+  authorize('read', 'ServicePlan'),
   auditLog('LIST_SERVICE_PLANS'),
   getServicePlans
 );
@@ -39,7 +39,7 @@ router.get('/',
 router.get('/stats',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('read', 'ServicePlan'),
+  authorize('read', 'ServicePlan'),
   getServiceTypeStats
 );
 
@@ -52,7 +52,7 @@ router.get('/stats',
 router.get('/:id',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('read', 'ServicePlan'),
+  authorize('read', 'ServicePlan'),
   auditLog('GET_SERVICE_PLAN'),
   getServicePlanById
 );
@@ -67,7 +67,7 @@ router.get('/:id',
 router.post('/',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('create', 'ServicePlan'),
+  authorize('create', 'ServicePlan'),
   enforceLimit('maxServicePlans', async (tenantId) => {
     return await ServicePlan.count({ where: { tenantId, isActive: true } });
   }),
@@ -84,7 +84,7 @@ router.post('/',
 router.put('/:id',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('update', 'ServicePlan'),
+  authorize('update', 'ServicePlan'),
   auditLog('UPDATE_SERVICE_PLAN'),
   updateServicePlan
 );
@@ -98,7 +98,7 @@ router.put('/:id',
 router.delete('/:id',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('delete', 'ServicePlan'),
+  authorize('delete', 'ServicePlan'),
   auditLog('DELETE_SERVICE_PLAN'),
   deleteServicePlan
 );

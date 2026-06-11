@@ -26,7 +26,7 @@ const {
   refundPayment
 } = require('../../controllers/subscription/paymentController');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const { requireSuperAdmin } = require('../../middlewares/superAdminMiddleware');
 const auditLog = require('../../middlewares/auditMiddleware');
 
@@ -58,7 +58,7 @@ router.get('/subscription/plans', authenticate, getAvailablePlans, auditLog('GET
  * @desc Upgrade to a new subscription plan
  * @access Private - Authenticated users with Subscription management permission
  */
-router.post('/subscription/upgrade', authenticate, authorizeCasl('update', 'Subscription'), upgradeSubscription, auditLog('UPGRADE_SUBSCRIPTION'));
+router.post('/subscription/upgrade', authenticate, authorize('update', 'Subscription'), upgradeSubscription, auditLog('UPGRADE_SUBSCRIPTION'));
 
 // ============================================
 // Subscription Plans Routes
@@ -111,7 +111,7 @@ router.delete('/plans/:id', authenticate, requireSuperAdmin, deleteSubscriptionP
  * @desc Create a new subscription
  * @access Private
  */
-router.post('/subscriptions', authenticate, authorizeCasl('create', 'Subscription'), createSubscription, auditLog('CREATE_SUBSCRIPTION'));
+router.post('/subscriptions', authenticate, authorize('create', 'Subscription'), createSubscription, auditLog('CREATE_SUBSCRIPTION'));
 
 /**
  * @route GET /billing/subscriptions/tenant/:tenantId
@@ -119,7 +119,7 @@ router.post('/subscriptions', authenticate, authorizeCasl('create', 'Subscriptio
  * @desc Get tenant's subscription
  * @access Private
  */
-router.get('/subscriptions/tenant/:tenantId', authenticate, authorizeCasl('read', 'Subscription'), getTenantSubscription, auditLog('GET_TENANT_SUBSCRIPTION'));
+router.get('/subscriptions/tenant/:tenantId', authenticate, authorize('read', 'Subscription'), getTenantSubscription, auditLog('GET_TENANT_SUBSCRIPTION'));
 
 /**
  * @route PUT /billing/subscriptions/:id
@@ -127,7 +127,7 @@ router.get('/subscriptions/tenant/:tenantId', authenticate, authorizeCasl('read'
  * @desc Update a subscription
  * @access Private
  */
-router.put('/subscriptions/:id', authenticate, authorizeCasl('update', 'Subscription'), updateSubscription, auditLog('UPDATE_SUBSCRIPTION'));
+router.put('/subscriptions/:id', authenticate, authorize('update', 'Subscription'), updateSubscription, auditLog('UPDATE_SUBSCRIPTION'));
 
 /**
  * @route DELETE /billing/subscriptions/:id
@@ -135,7 +135,7 @@ router.put('/subscriptions/:id', authenticate, authorizeCasl('update', 'Subscrip
  * @desc Cancel a subscription
  * @access Private
  */
-router.delete('/subscriptions/:id', authenticate, authorizeCasl('delete', 'Subscription'), cancelSubscription, auditLog('CANCEL_SUBSCRIPTION'));
+router.delete('/subscriptions/:id', authenticate, authorize('delete', 'Subscription'), cancelSubscription, auditLog('CANCEL_SUBSCRIPTION'));
 
 /**
  * @route POST /billing/subscriptions/:id/renew
@@ -143,7 +143,7 @@ router.delete('/subscriptions/:id', authenticate, authorizeCasl('delete', 'Subsc
  * @desc Renew a subscription
  * @access Private
  */
-router.post('/subscriptions/:id/renew', authenticate, authorizeCasl('update', 'Subscription'), renewSubscription, auditLog('RENEW_SUBSCRIPTION'));
+router.post('/subscriptions/:id/renew', authenticate, authorize('update', 'Subscription'), renewSubscription, auditLog('RENEW_SUBSCRIPTION'));
 
 /**
  * @route POST /billing/subscriptions/:id/activate
@@ -151,7 +151,7 @@ router.post('/subscriptions/:id/renew', authenticate, authorizeCasl('update', 'S
  * @desc Activate a subscription (after payment)
  * @access Private
  */
-router.post('/subscriptions/:id/activate', authenticate, authorizeCasl('update', 'Subscription'), activateSubscription, auditLog('ACTIVATE_SUBSCRIPTION'));
+router.post('/subscriptions/:id/activate', authenticate, authorize('update', 'Subscription'), activateSubscription, auditLog('ACTIVATE_SUBSCRIPTION'));
 
 // Invoice Routes
 /**
@@ -160,7 +160,7 @@ router.post('/subscriptions/:id/activate', authenticate, authorizeCasl('update',
  * @desc Create a new invoice
  * @access Private
  */
-router.post('/invoices', authenticate, authorizeCasl('create', 'Invoice'), createInvoice, auditLog('CREATE_INVOICE'));
+router.post('/invoices', authenticate, authorize('create', 'Invoice'), createInvoice, auditLog('CREATE_INVOICE'));
 
 /**
  * @route GET /billing/invoices
@@ -168,7 +168,7 @@ router.post('/invoices', authenticate, authorizeCasl('create', 'Invoice'), creat
  * @desc Get all invoices
  * @access Private
  */
-router.get('/invoices', authenticate, authorizeCasl('read', 'Invoice'), getInvoices, auditLog('GET_INVOICES'));
+router.get('/invoices', authenticate, authorize('read', 'Invoice'), getInvoices, auditLog('GET_INVOICES'));
 
 /**
  * @route GET /billing/invoices/:id
@@ -176,7 +176,7 @@ router.get('/invoices', authenticate, authorizeCasl('read', 'Invoice'), getInvoi
  * @desc Get a specific invoice
  * @access Private
  */
-router.get('/invoices/:id', authenticate, authorizeCasl('read', 'Invoice'), getInvoice, auditLog('GET_INVOICE'));
+router.get('/invoices/:id', authenticate, authorize('read', 'Invoice'), getInvoice, auditLog('GET_INVOICE'));
 
 /**
  * @route PUT /billing/invoices/:id/status
@@ -184,7 +184,7 @@ router.get('/invoices/:id', authenticate, authorizeCasl('read', 'Invoice'), getI
  * @desc Update invoice status
  * @access Private
  */
-router.put('/invoices/:id/status', authenticate, authorizeCasl('update', 'Invoice'), updateInvoiceStatus, auditLog('UPDATE_INVOICE_STATUS'));
+router.put('/invoices/:id/status', authenticate, authorize('update', 'Invoice'), updateInvoiceStatus, auditLog('UPDATE_INVOICE_STATUS'));
 
 // Payment Routes
 /**
@@ -193,7 +193,7 @@ router.put('/invoices/:id/status', authenticate, authorizeCasl('update', 'Invoic
  * @desc Process a payment
  * @access Private
  */
-router.post('/payments', authenticate, authorizeCasl('create', 'Payment'), processPayment, auditLog('PROCESS_PAYMENT'));
+router.post('/payments', authenticate, authorize('create', 'Payment'), processPayment, auditLog('PROCESS_PAYMENT'));
 
 /**
  * @route GET /billing/payments
@@ -201,7 +201,7 @@ router.post('/payments', authenticate, authorizeCasl('create', 'Payment'), proce
  * @desc Get all payments
  * @access Private
  */
-router.get('/payments', authenticate, authorizeCasl('read', 'Payment'), getPayments, auditLog('GET_PAYMENTS'));
+router.get('/payments', authenticate, authorize('read', 'Payment'), getPayments, auditLog('GET_PAYMENTS'));
 
 /**
  * @route GET /billing/payments/:id
@@ -209,7 +209,7 @@ router.get('/payments', authenticate, authorizeCasl('read', 'Payment'), getPayme
  * @desc Get a specific payment
  * @access Private
  */
-router.get('/payments/:id', authenticate, authorizeCasl('read', 'Payment'), getPayment, auditLog('GET_PAYMENT'));
+router.get('/payments/:id', authenticate, authorize('read', 'Payment'), getPayment, auditLog('GET_PAYMENT'));
 
 /**
  * @route POST /billing/payments/:id/refund
@@ -217,6 +217,6 @@ router.get('/payments/:id', authenticate, authorizeCasl('read', 'Payment'), getP
  * @desc Refund a payment
  * @access Private
  */
-router.post('/payments/:id/refund', authenticate, authorizeCasl('update', 'Payment'), refundPayment, auditLog('REFUND_PAYMENT'));
+router.post('/payments/:id/refund', authenticate, authorize('update', 'Payment'), refundPayment, auditLog('REFUND_PAYMENT'));
 
 module.exports = router;

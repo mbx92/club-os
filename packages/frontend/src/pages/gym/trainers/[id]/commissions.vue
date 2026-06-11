@@ -189,7 +189,7 @@ onMounted(() => {
   <div class="container mx-auto px-4 py-6">
     <!-- Header -->
     <div class="flex items-center gap-4 mb-6">
-      <button class="btn btn-ghost btn-sm" @click="goBack">
+      <button class="btn btn-ghost btn-sm btn-circle" @click="goBack">
         <IconArrowLeft class="w-5 h-5" />
       </button>
       <div class="flex-1">
@@ -198,7 +198,7 @@ onMounted(() => {
           {{ trainer?.name || 'Loading...' }}
         </p>
       </div>
-      <button class="btn btn-ghost btn-sm" @click="loadData" :disabled="loading">
+      <button class="btn btn-ghost btn-sm btn-circle" @click="loadData" :disabled="loading">
         <IconRefresh class="w-4 h-4" :class="{ 'animate-spin': loading }" />
       </button>
       <button 
@@ -353,7 +353,7 @@ onMounted(() => {
         </div>
 
         <div class="flex justify-end mt-4">
-          <button class="btn btn-ghost btn-sm" @click="resetFilters">
+          <button class="btn btn-ghost btn-sm btn-circle" @click="resetFilters">
             Reset Filters
           </button>
         </div>

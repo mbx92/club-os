@@ -349,7 +349,7 @@ watch(() => newItem.value.productId, (productId) => {
                 </td>
                 <td>
                   <button
-                    class="btn btn-ghost btn-sm btn-square text-error"
+                    class="btn btn-ghost btn-sm btn-circle text-error"
                     @click="removeItem(index)"
                   >
                     <IconTrash class="w-4 h-4" />

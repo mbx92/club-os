@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const {
@@ -24,7 +24,7 @@ const router = express.Router();
 router.get('/list',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('read', 'ActiveService'),
+  authorize('read', 'ActiveService'),
   auditLog('LIST_ALL_ACTIVE_SERVICES'),
   getAllActiveServices
 );
@@ -39,7 +39,7 @@ router.get('/list',
 router.get('/calendar',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('read', 'ActiveService'),
+  authorize('read', 'ActiveService'),
   auditLog('GET_SERVICES_CALENDAR'),
   getServicesCalendar
 );
@@ -54,7 +54,7 @@ router.get('/calendar',
 router.get('/alerts',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('read', 'ActiveService'),
+  authorize('read', 'ActiveService'),
   auditLog('GET_SERVICE_ALERTS'),
   getServiceAlerts
 );
@@ -68,7 +68,7 @@ router.get('/alerts',
 router.get('/stats',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('read', 'ActiveService'),
+  authorize('read', 'ActiveService'),
   auditLog('GET_SERVICE_STATISTICS'),
   getServiceStatistics
 );
@@ -83,7 +83,7 @@ router.get('/stats',
 router.get('/member/:memberId',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('read', 'ActiveService'),
+  authorize('read', 'ActiveService'),
   auditLog('GET_SERVICES_BY_MEMBER'),
   getServicesByMemberId
 );
@@ -98,7 +98,7 @@ router.get('/member/:memberId',
 router.post('/:serviceId/assign-trainer',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('update', 'ActiveService'),
+  authorize('update', 'ActiveService'),
   auditLog('ASSIGN_TRAINER_SERVICE_MANAGEMENT'),
   assignTrainerToService
 );

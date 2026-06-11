@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const {
@@ -24,7 +24,7 @@ const router = express.Router();
 router.get('/revenue',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   auditLog('GYM_REVENUE_REPORT'),
   getRevenueReport
 );
@@ -39,7 +39,7 @@ router.get('/revenue',
 router.get('/profit-loss',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   auditLog('GYM_PROFIT_LOSS_REPORT'),
   getProfitLossReport
 );
@@ -54,7 +54,7 @@ router.get('/profit-loss',
 router.get('/attendance',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'CheckIn'),
+  authorize('read', 'CheckIn'),
   auditLog('GYM_ATTENDANCE_REPORT'),
   getAttendanceReport
 );
@@ -69,7 +69,7 @@ router.get('/attendance',
 router.get('/service-status',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'ActiveService'),
+  authorize('read', 'ActiveService'),
   auditLog('GYM_SERVICE_STATUS_REPORT'),
   getServiceStatusReport
 );
@@ -85,7 +85,7 @@ router.get('/service-status',
 router.get('/trainer-commissions',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'TrainerCommission'),
+  authorize('read', 'TrainerCommission'),
   auditLog('GYM_TRAINER_COMMISSION_REPORT'),
   getTrainerCommissionReport
 );
@@ -101,7 +101,7 @@ router.get('/trainer-commissions',
 router.get('/service-commission-income',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'TrainerCommission'),
+  authorize('read', 'TrainerCommission'),
   auditLog('GYM_SERVICE_COMMISSION_INCOME_REPORT'),
   getServiceCommissionIncomeReport
 );

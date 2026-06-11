@@ -85,7 +85,7 @@ const isActive = computed(() => {
       <!-- Expand/Collapse Button -->
       <button
         v-if="hasChildren"
-        class="btn btn-ghost btn-xs btn-square"
+        class="btn btn-ghost btn-xs btn-circle"
         @click.stop="$emit('toggle', category.id)"
       >
         <IconChevronDown v-if="expanded" class="w-4 h-4 transition-transform" />
@@ -126,7 +126,7 @@ const isActive = computed(() => {
       <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <!-- Toggle Active -->
         <button
-          class="btn btn-ghost btn-xs btn-square"
+          class="btn btn-ghost btn-xs btn-circle"
           :class="isActive ? 'text-success' : 'text-warning'"
           @click.stop="$emit('toggle-active', category)"
           :title="isActive ? 'Deactivate' : 'Activate'"
@@ -137,7 +137,7 @@ const isActive = computed(() => {
 
         <!-- Add Subcategory -->
         <button
-          class="btn btn-ghost btn-xs btn-square"
+          class="btn btn-ghost btn-xs btn-circle"
           @click.stop="$emit('add-child', category)"
           title="Add subcategory"
         >
@@ -146,7 +146,7 @@ const isActive = computed(() => {
 
         <!-- Edit -->
         <button
-          class="btn btn-ghost btn-xs btn-square"
+          class="btn btn-ghost btn-xs btn-circle"
           @click.stop="$emit('edit', category)"
           title="Edit category"
         >
@@ -155,7 +155,7 @@ const isActive = computed(() => {
 
         <!-- Delete -->
         <button
-          class="btn btn-ghost btn-xs btn-square text-error"
+          class="btn btn-ghost btn-xs btn-circle text-error"
           @click.stop="$emit('delete', category)"
           title="Delete category"
         >

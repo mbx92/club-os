@@ -122,11 +122,30 @@ export const useSubscriptionStore = defineStore('subscription', () => {
     return features.value?.modules?.[moduleName] === true
   })
   
-  // Feature access checks - super admin bypasses
-  const hasFeature = computed(() => (category, featureName) => {
+  // Feature access checks - super admin bypasses, flat key lookup
+  const hasFeature = computed(() => (flatKey) => {
     if (isSuperAdmin()) return true
     if (isTrialActive.value) return true
-    return features.value?.[category]?.[featureName] === true
+    if (!features.value) return true // graceful degradation
+
+    // Dot notation: "transactions.vouchers" → features.transactions.vouchers
+    if (flatKey.includes('.')) {
+      const parts = flatKey.split('.')
+      let val = features.value
+      for (const p of parts) {
+        val = val?.[p]
+        if (val === undefined) return false
+      }
+      return val === true
+    }
+
+    // Flat key: search all categories
+    for (const [, catFeatures] of Object.entries(features.value)) {
+      if (catFeatures && typeof catFeatures === 'object' && catFeatures[flatKey] === true) {
+        return true
+      }
+    }
+    return false
   })
   
   // Limit checks - super admin gets unlimited

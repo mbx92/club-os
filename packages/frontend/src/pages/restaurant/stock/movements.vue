@@ -245,7 +245,7 @@ onMounted(async () => {
   <div class="container mx-auto px-4 py-8">
     <!-- Header -->
     <div class="flex items-center gap-4 mb-6">
-      <button class="btn btn-ghost btn-sm" @click="router.push('/restaurant/stock')">
+      <button class="btn btn-ghost btn-sm btn-circle" @click="router.push('/restaurant/stock')">
         <IconArrowLeft class="w-5 h-5" />
       </button>
       <div class="flex-1">
@@ -267,7 +267,7 @@ onMounted(async () => {
           <IconTransfer class="w-4 h-4 mr-1" />
           Transfer
         </button>
-        <button class="btn btn-ghost btn-sm" @click="loadMovements">
+        <button class="btn btn-ghost btn-sm btn-circle" @click="loadMovements">
           <IconRefresh class="w-4 h-4" />
         </button>
         <ExportButton 

@@ -10,7 +10,7 @@ const express = require('express');
 const router = express.Router();
 const productCategoryController = require('../controllers/productCategoryController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 
 // All routes require authentication and restaurant module access
@@ -26,7 +26,7 @@ router.use(requireModule('restaurant'));
  * @access Private - requires 'read' permission on 'ProductCategory'
  */
 router.get('/',
-  authorizeCasl('read', 'ProductCategory'),
+  authorize('read', 'ProductCategory'),
   productCategoryController.getAllCategories
 );
 
@@ -36,7 +36,7 @@ router.get('/',
  * @access Private - requires 'read' permission on 'ProductCategory'
  */
 router.get('/tree',
-  authorizeCasl('read', 'ProductCategory'),
+  authorize('read', 'ProductCategory'),
   productCategoryController.getCategoryTree
 );
 
@@ -46,7 +46,7 @@ router.get('/tree',
  * @access Private - requires 'update' permission on 'ProductCategory'
  */
 router.post('/reorder',
-  authorizeCasl('update', 'ProductCategory'),
+  authorize('update', 'ProductCategory'),
   productCategoryController.reorderCategories
 );
 
@@ -56,7 +56,7 @@ router.post('/reorder',
  * @access Private - requires 'read' permission on 'ProductCategory'
  */
 router.get('/:id',
-  authorizeCasl('read', 'ProductCategory'),
+  authorize('read', 'ProductCategory'),
   productCategoryController.getCategoryById
 );
 
@@ -66,7 +66,7 @@ router.get('/:id',
  * @access Private - requires 'create' permission on 'ProductCategory'
  */
 router.post('/',
-  authorizeCasl('create', 'ProductCategory'),
+  authorize('create', 'ProductCategory'),
   productCategoryController.createCategory
 );
 
@@ -76,7 +76,7 @@ router.post('/',
  * @access Private - requires 'update' permission on 'ProductCategory'
  */
 router.put('/:id',
-  authorizeCasl('update', 'ProductCategory'),
+  authorize('update', 'ProductCategory'),
   productCategoryController.updateCategory
 );
 
@@ -87,7 +87,7 @@ router.put('/:id',
  * @access Private - requires 'delete' permission on 'ProductCategory'
  */
 router.delete('/:id',
-  authorizeCasl('delete', 'ProductCategory'),
+  authorize('delete', 'ProductCategory'),
   productCategoryController.deleteCategory
 );
 

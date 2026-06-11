@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const {
@@ -23,7 +23,7 @@ const router = express.Router();
 router.get('/overview',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   auditLog('GYM_DASHBOARD_OVERVIEW'),
   getDashboardOverview
 );
@@ -37,7 +37,7 @@ router.get('/overview',
 router.get('/stats',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'Member'),
+  authorize('read', 'Member'),
   auditLog('GYM_DASHBOARD_STATS'),
   getDashboardStats
 );
@@ -52,7 +52,7 @@ router.get('/stats',
 router.get('/comprehensive',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   auditLog('GYM_DASHBOARD_COMPREHENSIVE'),
   getGymComprehensive
 );
@@ -67,7 +67,7 @@ router.get('/comprehensive',
 router.get('/petty-cash',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'CashRegisterSession'),
+  authorize('read', 'CashRegisterSession'),
   getPettyCashDashboard
 );
 
@@ -81,7 +81,7 @@ router.get('/petty-cash',
 router.post('/petty-cash/print-shift-report',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'CashRegisterSession'),
+  authorize('read', 'CashRegisterSession'),
   auditLog('PRINT_SHIFT_REPORT'),
   cashRegisterController.printShiftReport
 );
@@ -96,7 +96,7 @@ router.post('/petty-cash/print-shift-report',
 router.get('/petty-cash/daily-report',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'CashRegisterSession'),
+  authorize('read', 'CashRegisterSession'),
   cashRegisterController.getDailyReport
 );
 
@@ -110,7 +110,7 @@ router.get('/petty-cash/daily-report',
 router.post('/petty-cash/print-daily-report',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'CashRegisterSession'),
+  authorize('read', 'CashRegisterSession'),
   auditLog('PRINT_DAILY_REPORT'),
   cashRegisterController.printDailyReport
 );

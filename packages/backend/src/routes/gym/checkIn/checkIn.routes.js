@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const {
@@ -24,7 +24,7 @@ const router = express.Router();
 router.get('/',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'CheckIn'),
+  authorize('read', 'CheckIn'),
   auditLog('LIST_CHECK_INS'),
   getCheckIns
 );
@@ -39,7 +39,7 @@ router.get('/',
 router.get('/stats',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'CheckIn'),
+  authorize('read', 'CheckIn'),
   auditLog('GET_CHECK_IN_STATS'),
   getCheckInStats
 );
@@ -53,7 +53,7 @@ router.get('/stats',
 router.get('/:id',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'CheckIn'),
+  authorize('read', 'CheckIn'),
   auditLog('GET_CHECK_IN'),
   getCheckInById
 );
@@ -69,7 +69,7 @@ router.get('/:id',
 router.post('/',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('create', 'CheckIn'),
+  authorize('create', 'CheckIn'),
   auditLog('CREATE_CHECK_IN'),
   createCheckIn
 );
@@ -84,7 +84,7 @@ router.post('/',
 router.put('/:id',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'CheckIn'),
+  authorize('update', 'CheckIn'),
   auditLog('UPDATE_CHECK_IN'),
   updateCheckIn
 );
@@ -98,7 +98,7 @@ router.put('/:id',
 router.delete('/:id',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('delete', 'CheckIn'),
+  authorize('delete', 'CheckIn'),
   auditLog('DELETE_CHECK_IN'),
   deleteCheckIn
 );

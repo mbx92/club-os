@@ -13,12 +13,12 @@ const express = require('express');
 const router = express.Router();
 const printerSettingsController = require('../../../controllers/core/system/printerSettingsController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireFeature } = require('../../../middlewares/featureGateMiddleware');
 
 // All routes require authentication and thermalPrinting feature
 router.use(authenticate);
-router.use(requireFeature('printing', 'thermalPrinting'));
+router.use(requireFeature('thermalPrinting'));
 
 /**
  * @route GET /api/v1/system/printers
@@ -31,7 +31,7 @@ router.use(requireFeature('printing', 'thermalPrinting'));
  * @access Private - requires 'read' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.get('/',
-  authorizeCasl('read', 'PrinterSettings'),
+  authorize('read', 'PrinterSettings'),
   printerSettingsController.getAllPrinters
 );
 
@@ -42,7 +42,7 @@ router.get('/',
  * @access Private - requires 'read' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.get('/statistics',
-  authorizeCasl('read', 'PrinterSettings'),
+  authorize('read', 'PrinterSettings'),
   printerSettingsController.getPrinterStatistics
 );
 
@@ -54,7 +54,7 @@ router.get('/statistics',
  * @access Private - requires 'create' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.get('/scan',
-  authorizeCasl('create', 'PrinterSettings'),
+  authorize('create', 'PrinterSettings'),
   printerSettingsController.scanNetworkPrinters
 );
 
@@ -64,7 +64,7 @@ router.get('/scan',
  * @access Private - requires 'create' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.get('/scan/quick',
-  authorizeCasl('create', 'PrinterSettings'),
+  authorize('create', 'PrinterSettings'),
   printerSettingsController.quickScanPrinters
 );
 
@@ -74,7 +74,7 @@ router.get('/scan/quick',
  * @access Private - requires 'read' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.get('/:id',
-  authorizeCasl('read', 'PrinterSettings'),
+  authorize('read', 'PrinterSettings'),
   printerSettingsController.getPrinterById
 );
 
@@ -85,7 +85,7 @@ router.get('/:id',
  * @access Private - requires 'create' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.post('/',
-  authorizeCasl('create', 'PrinterSettings'),
+  authorize('create', 'PrinterSettings'),
   printerSettingsController.createPrinter
 );
 
@@ -96,7 +96,7 @@ router.post('/',
  * @access Private - requires 'update' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.put('/:id',
-  authorizeCasl('update', 'PrinterSettings'),
+  authorize('update', 'PrinterSettings'),
   printerSettingsController.updatePrinter
 );
 
@@ -106,7 +106,7 @@ router.put('/:id',
  * @access Private - requires 'delete' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.delete('/:id',
-  authorizeCasl('delete', 'PrinterSettings'),
+  authorize('delete', 'PrinterSettings'),
   printerSettingsController.deletePrinter
 );
 
@@ -116,7 +116,7 @@ router.delete('/:id',
  * @access Private - requires 'update' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.post('/:id/test',
-  authorizeCasl('update', 'PrinterSettings'),
+  authorize('update', 'PrinterSettings'),
   printerSettingsController.testPrinterConnection
 );
 
@@ -126,7 +126,7 @@ router.post('/:id/test',
  * @access Private - requires 'update' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.post('/health-check/bulk',
-  authorizeCasl('update', 'PrinterSettings'),
+  authorize('update', 'PrinterSettings'),
   printerSettingsController.bulkHealthCheck
 );
 
@@ -136,7 +136,7 @@ router.post('/health-check/bulk',
  * @access Private - requires 'update' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.post('/cash-drawer/open',
-  authorizeCasl('update', 'PrinterSettings'),
+  authorize('update', 'PrinterSettings'),
   printerSettingsController.openCashDrawer
 );
 
@@ -148,7 +148,7 @@ router.post('/cash-drawer/open',
  * @access Private - requires 'read' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.get('/:id/stream/connection',
-  authorizeCasl('read', 'PrinterSettings'),
+  authorize('read', 'PrinterSettings'),
   printerSettingsController.streamConnection
 );
 
@@ -161,7 +161,7 @@ router.get('/:id/stream/connection',
  * @access Private - requires 'read' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.get('/:id/stream/health',
-  authorizeCasl('read', 'PrinterSettings'),
+  authorize('read', 'PrinterSettings'),
   printerSettingsController.streamHealth
 );
 
@@ -175,7 +175,7 @@ router.get('/:id/stream/health',
  * @access Private - requires 'read' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.get('/:id/jobs',
-  authorizeCasl('read', 'PrinterSettings'),
+  authorize('read', 'PrinterSettings'),
   printerSettingsController.getPrinterJobs
 );
 
@@ -188,7 +188,7 @@ router.get('/:id/jobs',
  * @access Private - requires 'update' permission on 'PrinterSettings' + thermalPrinting feature
  */
 router.post('/:id/test-print',
-  authorizeCasl('update', 'PrinterSettings'),
+  authorize('update', 'PrinterSettings'),
   printerSettingsController.testPrint
 );
 

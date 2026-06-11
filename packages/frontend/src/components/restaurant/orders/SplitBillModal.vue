@@ -273,7 +273,7 @@ watch(() => props.show, (val) => {
             </label>
             <div class="flex items-center gap-2">
               <button
-                class="btn btn-square btn-outline"
+                class="btn btn-circle btn-outline"
                 :disabled="equalSplits <= 2"
                 @click="equalSplits--"
               >-</button>
@@ -285,7 +285,7 @@ watch(() => props.show, (val) => {
                 max="10"
               />
               <button
-                class="btn btn-square btn-outline"
+                class="btn btn-circle btn-outline"
                 :disabled="equalSplits >= 10"
                 @click="equalSplits++"
               >+</button>
@@ -338,7 +338,7 @@ watch(() => props.show, (val) => {
                     </span>
                     <button
                       v-if="itemSplits.length > 2"
-                      class="btn btn-ghost btn-sm btn-square text-error"
+                      class="btn btn-ghost btn-sm btn-circle text-error"
                       @click="removePerson(index)"
                       title="Remove person"
                     >
@@ -378,7 +378,7 @@ watch(() => props.show, (val) => {
                     <div class="flex items-center gap-1 flex-shrink-0">
                       <button
                         type="button"
-                        class="btn btn-xs btn-square btn-outline"
+                        class="btn btn-xs btn-circle btn-outline"
                         :disabled="getPersonQty(index, item.id) <= 0"
                         @click.stop="decrementQty(index, item.id)"
                       >
@@ -389,7 +389,7 @@ watch(() => props.show, (val) => {
                       </span>
                       <button
                         type="button"
-                        class="btn btn-xs btn-square btn-outline"
+                        class="btn btn-xs btn-circle btn-outline"
                         :disabled="getRemainingQty(item.id) <= 0"
                         @click.stop="incrementQty(index, item.id)"
                       >

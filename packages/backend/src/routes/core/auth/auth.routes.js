@@ -1,7 +1,7 @@
 const express = require('express');
 const { register, login, refreshToken, logout } = require('../../../controllers/core/auth/authController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const operatorRoutes = require('./operator.routes');
 
@@ -29,7 +29,7 @@ router.post('/login', login, auditLog('USER_LOGIN'));
  * @desc Get user profile
  * @access Private
  */
-router.get('/profile', authenticate, authorizeCasl('read', 'User'), auditLog('VIEW_PROFILE'), (req, res) => {
+router.get('/profile', authenticate, authorize('read', 'User'), auditLog('VIEW_PROFILE'), (req, res) => {
   res.json({ user: req.user });
 });
 

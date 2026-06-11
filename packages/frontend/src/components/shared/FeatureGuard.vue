@@ -10,19 +10,13 @@
     </div>
     <p class="locked-message">{{ lockedMessage }}</p>
     <button @click="showUpgrade" class="btn btn-primary btn-sm mt-4">
-      🔓 Unlock This Feature
+      Unlock This Feature
     </button>
-    <p class="redirect-message" v-if="redirectCountdown > 0">
-      Redirecting in {{ redirectCountdown }}s...
-    </p>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useFeatureGate } from '@/composables/subscription/useFeatureGate'
-import { useFeatureAccess } from '@/composables/subscription/useFeatureAccess'
+import { computed } from 'vue'
 import { useSubscriptionStore } from '@/stores/subscription'
 
 const props = defineProps({
@@ -31,49 +25,30 @@ const props = defineProps({
     default: null
   },
   feature: {
-    type: Object, // { category: 'transactions', name: 'combinedBilling' }
+    type: String,  // flat key e.g. "vouchers" or "transactions.vouchers"
     default: null
   },
   showUpgradePrompt: {
     type: Boolean,
     default: true
-  },
-  autoRedirect: {
-    type: Boolean,
-    default: true
-  },
-  redirectDelay: {
-    type: Number,
-    default: 5000 // 5 seconds
   }
 })
 
-const router = useRouter()
-const { canAccessModule, canUseFeature } = useFeatureGate()
-const { guardFeature } = useFeatureAccess()
 const subscriptionStore = useSubscriptionStore()
-
-const redirectCountdown = ref(0)
-let redirectTimer = null
-let countdownInterval = null
 
 const hasAccess = computed(() => {
   if (props.module) {
-    return canAccessModule(props.module).value
+    return subscriptionStore.hasModule(props.module)
   }
   if (props.feature) {
-    return canUseFeature(props.feature.category, props.feature.name).value
+    return subscriptionStore.hasFeature(props.feature)
   }
   return false
 })
 
 const lockedMessage = computed(() => {
-  if (props.module) {
-    return `Module ${props.module} tidak tersedia di plan Anda`
-  }
-  if (props.feature) {
-    return `Fitur ini tidak tersedia di plan Anda`
-  }
+  if (props.module) return `Module ${props.module} tidak tersedia di plan Anda`
+  if (props.feature) return `Fitur ini tidak tersedia di plan Anda`
   return 'Fitur ini dikunci'
 })
 
@@ -81,68 +56,11 @@ function showUpgrade() {
   subscriptionStore.showUpgradeModal({
     type: props.module ? 'module' : 'feature',
     module: props.module,
-    feature: props.feature ? `${props.feature.category}.${props.feature.name}` : null,
+    feature: props.feature || null,
     message: lockedMessage.value,
     currentPlan: subscriptionStore.currentPlan
   })
 }
-
-// AGGRESSIVE: Auto-redirect if access denied
-function setupAutoRedirect() {
-  if (!hasAccess.value && props.autoRedirect) {
-    console.warn('[FeatureGuard] 🚫 Access denied, setting up auto-redirect')
-    
-    // Start countdown
-    redirectCountdown.value = Math.ceil(props.redirectDelay / 1000)
-    
-    countdownInterval = setInterval(() => {
-      redirectCountdown.value--
-      if (redirectCountdown.value <= 0) {
-        clearInterval(countdownInterval)
-      }
-    }, 1000)
-    
-    // Set redirect timer
-    redirectTimer = setTimeout(() => {
-      console.warn('[FeatureGuard] ⏱️ Redirecting to no-subscription page')
-      router.push('/errors/no-subscription')
-    }, props.redirectDelay)
-  }
-}
-
-function cleanupRedirect() {
-  if (redirectTimer) {
-    clearTimeout(redirectTimer)
-    redirectTimer = null
-  }
-  if (countdownInterval) {
-    clearInterval(countdownInterval)
-    countdownInterval = null
-  }
-  redirectCountdown.value = 0
-}
-
-onMounted(() => {
-  // Use guardFeature for aggressive protection
-  if (props.module || props.feature) {
-    const options = {
-      module: props.module,
-      feature: props.feature,
-      redirect: '/errors/no-subscription',
-      showModal: false // We show our own UI
-    }
-    
-    const allowed = guardFeature(options)
-    
-    if (!allowed && props.autoRedirect) {
-      setupAutoRedirect()
-    }
-  }
-})
-
-onUnmounted(() => {
-  cleanupRedirect()
-})
 </script>
 
 <style scoped>
@@ -163,12 +81,5 @@ onUnmounted(() => {
 .locked-message {
   color: #4b5563;
   font-size: 0.875rem;
-}
-
-.redirect-message {
-  margin-top: 1rem;
-  color: #ef4444;
-  font-size: 0.75rem;
-  font-weight: 600;
 }
 </style>

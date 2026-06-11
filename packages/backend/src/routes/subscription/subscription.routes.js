@@ -9,7 +9,7 @@ const {
   renewSubscription
 } = require('../../controllers/subscription/subscriptionController');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const auditLog = require('../../middlewares/auditMiddleware');
 
 const router = express.Router();
@@ -36,7 +36,7 @@ router.get('/plans', authenticate, getAvailablePlans, auditLog('GET_AVAILABLE_PL
  * @desc Create a new subscription for tenant
  * @access Private - Tenant owner or admin
  */
-router.post('/', authenticate, authorizeCasl('create', 'Subscription'), createSubscription, auditLog('CREATE_SUBSCRIPTION'));
+router.post('/', authenticate, authorize('create', 'Subscription'), createSubscription, auditLog('CREATE_SUBSCRIPTION'));
 
 /**
  * @route PUT /subscription/:id
@@ -44,7 +44,7 @@ router.post('/', authenticate, authorizeCasl('create', 'Subscription'), createSu
  * @desc Update subscription details
  * @access Private - Tenant owner or admin
  */
-router.put('/:id', authenticate, authorizeCasl('update', 'Subscription'), updateSubscription, auditLog('UPDATE_SUBSCRIPTION'));
+router.put('/:id', authenticate, authorize('update', 'Subscription'), updateSubscription, auditLog('UPDATE_SUBSCRIPTION'));
 
 /**
  * @route POST /subscription/:id/upgrade
@@ -52,7 +52,7 @@ router.put('/:id', authenticate, authorizeCasl('update', 'Subscription'), update
  * @desc Upgrade subscription to a higher plan
  * @access Private - Tenant owner or admin
  */
-router.post('/:id/upgrade', authenticate, authorizeCasl('update', 'Subscription'), upgradeSubscription, auditLog('UPGRADE_SUBSCRIPTION'));
+router.post('/:id/upgrade', authenticate, authorize('update', 'Subscription'), upgradeSubscription, auditLog('UPGRADE_SUBSCRIPTION'));
 
 /**
  * @route POST /subscription/:id/cancel
@@ -60,7 +60,7 @@ router.post('/:id/upgrade', authenticate, authorizeCasl('update', 'Subscription'
  * @desc Cancel subscription
  * @access Private - Tenant owner or admin
  */
-router.post('/:id/cancel', authenticate, authorizeCasl('delete', 'Subscription'), cancelSubscription, auditLog('CANCEL_SUBSCRIPTION'));
+router.post('/:id/cancel', authenticate, authorize('delete', 'Subscription'), cancelSubscription, auditLog('CANCEL_SUBSCRIPTION'));
 
 /**
  * @route POST /subscription/:id/renew
@@ -68,6 +68,6 @@ router.post('/:id/cancel', authenticate, authorizeCasl('delete', 'Subscription')
  * @desc Renew subscription
  * @access Private - Tenant owner or admin
  */
-router.post('/:id/renew', authenticate, authorizeCasl('update', 'Subscription'), renewSubscription, auditLog('RENEW_SUBSCRIPTION'));
+router.post('/:id/renew', authenticate, authorize('update', 'Subscription'), renewSubscription, auditLog('RENEW_SUBSCRIPTION'));
 
 module.exports = router;

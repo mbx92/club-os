@@ -202,7 +202,7 @@ onMounted(async () => {
 
             <!-- Dropdown Menu -->
             <div class="dropdown dropdown-end">
-              <label tabindex="0" class="btn btn-ghost btn-sm btn-square">
+              <label tabindex="0" class="btn btn-ghost btn-sm btn-circle">
                 <IconDotsVertical class="w-5 h-5" />
               </label>
               <ul

@@ -1,0 +1,61 @@
+const { can } = require('../utils/rbac');
+
+/**
+ * Tenant-level admin roles that should have full access within their tenant.
+ */
+const TENANT_ADMIN_ROLES = ['admin', 'owner'];
+
+function isTenantAdmin(user) {
+  return TENANT_ADMIN_ROLES.includes(user?.role?.name);
+}
+
+/**
+ * Permission middleware — replaces the old CASL authorize.
+ *
+ * @param {string} action - RBAC action (read, create, update, delete, manage)
+ * @param {string} subject - RBAC subject (Member, Tenant, etc.)
+ *
+ * @example
+ * router.get('/', authenticate, authorize('read', 'Member'), getMembers);
+ */
+function authorize(action, subject) {
+  return (req, res, next) => {
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
+
+    // Super admin bypasses everything
+    if (req.user.isSuperAdmin) {
+      return next();
+    }
+
+    // Tenant admin/owner roles get full access within their tenant
+    if (isTenantAdmin(req.user)) {
+      return next();
+    }
+
+    // For object subjects with tenantId, validate tenant ownership
+    if (typeof subject === 'object' && subject.tenantId && subject.tenantId !== req.user.tenantId) {
+      return res.status(403).json({ message: 'Forbidden: resource belongs to different tenant' });
+    }
+
+    if (typeof subject === 'string') {
+      if (can(req.user, action, subject)) {
+        return next();
+      }
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`[permission] 403 Forbidden: ${req.method} ${req.originalUrl} — user role="${req.user.role?.name}", action="${action}", subject="${subject}"`);
+      }
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    // Fallback: if subject is some other object, just check via string
+    if (can(req.user, action, String(subject))) {
+      return next();
+    }
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`[permission] 403 Forbidden (object subject): ${req.method} ${req.originalUrl} — user role="${req.user.role?.name}"`);
+    }
+    return res.status(403).json({ message: 'Forbidden' });
+  };
+}
+
+module.exports = { authorize };

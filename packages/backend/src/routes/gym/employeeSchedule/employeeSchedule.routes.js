@@ -13,7 +13,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 
 const {
@@ -37,7 +37,7 @@ const {
 router.get('/export',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'EmployeeSchedule'),
+  authorize('read', 'EmployeeSchedule'),
   exportSchedules
 );
 
@@ -51,7 +51,7 @@ router.get('/export',
 router.get('/',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'EmployeeSchedule'),
+  authorize('read', 'EmployeeSchedule'),
   listSchedules
 );
 
@@ -65,7 +65,7 @@ router.get('/',
 router.post('/generate-from-templates',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('create', 'EmployeeSchedule'),
+  authorize('create', 'EmployeeSchedule'),
   generateFromTemplates
 );
 
@@ -80,7 +80,7 @@ router.post('/generate-from-templates',
 router.post('/assign-shifts',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('create', 'EmployeeSchedule'),
+  authorize('create', 'EmployeeSchedule'),
   assignShifts
 );
 
@@ -93,7 +93,7 @@ router.post('/assign-shifts',
 router.post('/',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('create', 'EmployeeSchedule'),
+  authorize('create', 'EmployeeSchedule'),
   createSchedule
 );
 
@@ -106,7 +106,7 @@ router.post('/',
 router.put('/:id',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'EmployeeSchedule'),
+  authorize('update', 'EmployeeSchedule'),
   updateSchedule
 );
 
@@ -120,7 +120,7 @@ router.put('/:id',
 router.delete('/employee/:employeeId',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('delete', 'EmployeeSchedule'),
+  authorize('delete', 'EmployeeSchedule'),
   deleteUserSchedules
 );
 
@@ -133,7 +133,7 @@ router.delete('/employee/:employeeId',
 router.delete('/user/:userId',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('delete', 'EmployeeSchedule'),
+  authorize('delete', 'EmployeeSchedule'),
   deleteUserSchedules
 );
 
@@ -146,7 +146,7 @@ router.delete('/user/:userId',
 router.delete('/employee/:employeeId',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('delete', 'EmployeeSchedule'),
+  authorize('delete', 'EmployeeSchedule'),
   deleteUserSchedules
 );
 
@@ -159,7 +159,7 @@ router.delete('/employee/:employeeId',
 router.delete('/:id',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('delete', 'EmployeeSchedule'),
+  authorize('delete', 'EmployeeSchedule'),
   deleteSchedule
 );
 

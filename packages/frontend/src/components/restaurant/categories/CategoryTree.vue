@@ -141,7 +141,7 @@ const totalCategories = computed(() => {
 
         <!-- Refresh -->
         <button
-          class="btn btn-ghost btn-sm btn-square"
+          class="btn btn-ghost btn-sm btn-circle"
           @click="$emit('refresh')"
           :disabled="loading"
           title="Refresh"

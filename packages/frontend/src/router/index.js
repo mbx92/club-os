@@ -3,6 +3,7 @@ import generatedRoutes from 'virtual:generated-pages'
 import { setupLayouts } from './setupLayouts'
 import { useAuthStore } from '@/stores/auth'
 import { useSubscriptionStore } from '@/stores/subscription'
+import { checkPermission } from '@/composables/usePermissions'
 import { debug } from '@/utils/debug'
 
 // Wrap pages with layouts
@@ -103,9 +104,9 @@ router.beforeEach(async (to, from) => {
     allowAuthenticated
   })
 
-  // Special handling for error pages - let them through
-  if (to.path === '/404' || to.path === '/403' || to.path === '/core/errors/no-subscription' || to.name === 'NotFound' || to.name === 'errors.404' || to.name === 'errors.403' || to.name === 'core-errors-no-subscription') {
-    debug.log('✅ Allowing error page')
+  // Public error pages (full-screen, no sidebar)
+  if (to.path === '/404' || to.path === '/core/errors/no-subscription' || to.name === 'NotFound' || to.name === 'errors.404' || to.name === 'core-errors-no-subscription') {
+    debug.log('✅ Allowing public error page')
     return true
   }
 
@@ -150,7 +151,7 @@ router.beforeEach(async (to, from) => {
   // This allows error messages to be shown after failed login attempts
   if (isPublic && !allowAuthenticated) {
     // Don't redirect from error pages - let user see the error
-    if (to.path.startsWith('/core/errors/')) {
+    if (to.path.startsWith('/core/errors/') || to.path === '/403' || to.path === '/404') {
       debug.log('✅ Allowing authenticated user to view error page:', to.path)
       return true
     }
@@ -330,65 +331,28 @@ router.beforeEach(async (to, from) => {
     // If route requires super-admin but user is not super-admin
     if (requiredRole === 'super-admin' && !isSuperAdmin) {
       debug.log('[Router Guard] Access denied - redirecting to 403')
-      return { path: '/403' }
+      return {
+        path: '/403',
+        query: { from: to.fullPath, reason: 'role' },
+        replace: true,
+      }
     }
   }
 
-  // Check CASL permission if private page and has meta.action + meta.subject
+  // Check permission if private page and has meta.action + meta.subject
   if (!isPublic && to.meta?.action && to.meta?.subject) {
-    const perms = auth.permissions
-    // Only enforce if permissions are loaded and user is not super-admin
-    if (!isSuperAdmin && perms) {
+    // Only enforce if user is not super-admin
+    if (!isSuperAdmin) {
       const action = to.meta.action
       const subject = to.meta.subject
 
-      // 1. Check caslRules
-      const rules = perms.caslRules || []
-      const hasCaslRule = rules.some(rule => {
-        if (rule.inverted) return false
-        // Use rule.actions (array) from backend, not rule.action (string)
-        const actions = rule.actions || []
-        const actionMatch = actions.includes('manage') || actions.includes(action)
-        const subjectMatch = rule.subject === 'all' || rule.subject === subject
-        return actionMatch && subjectMatch
-      })
-
-      // 2. Fallback: check rolePermissions
-      let hasRolePerm = false
-      if (!hasCaslRule && perms.rolePermissions) {
-        const lowerExactKey = subject.toLowerCase()
-        const pluralKey = lowerExactKey.endsWith('y')
-          ? lowerExactKey.slice(0, -1) + 'ies'
-          : (lowerExactKey.endsWith('s') || lowerExactKey.endsWith('x') || lowerExactKey.endsWith('ch') || lowerExactKey.endsWith('sh'))
-            ? lowerExactKey + 'es'
-            : lowerExactKey + 's'
-
-        let perm = perms.rolePermissions[subject] || perms.rolePermissions[lowerExactKey] || perms.rolePermissions[pluralKey]
-
-        if (!perm) {
-          const matchedKey = Object.keys(perms.rolePermissions).find(k => {
-            const lk = k.toLowerCase()
-            return lk === lowerExactKey || lk === pluralKey
-          })
-          if (matchedKey) perm = perms.rolePermissions[matchedKey]
-        }
-
-        if (perm) {
-          if (Array.isArray(perm)) {
-            hasRolePerm = action === 'manage'
-              ? perm.some(a => ['create', 'read', 'update', 'delete', 'manage'].includes(a))
-              : perm.includes(action);
-          } else {
-            hasRolePerm = action === 'manage'
-              ? (perm.create || perm.read || perm.update || perm.delete)
-              : !!perm[action];
-          }
-        }
-      }
-
-      if (!hasCaslRule && !hasRolePerm) {
+      if (!checkPermission(action, subject)) {
         debug.log('[Router Guard] Permission denied:', { action, subject, path: to.path })
-        return { path: '/403', replace: true }
+        return {
+          path: '/403',
+          query: { from: to.fullPath, reason: 'permission' },
+          replace: true,
+        }
       }
     }
   }

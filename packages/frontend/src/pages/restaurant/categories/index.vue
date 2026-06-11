@@ -313,21 +313,21 @@ onMounted(() => {
         </div>
         <div class="flex items-start gap-2">
           <button
-            class="btn btn-sm btn-ghost btn-square"
+            class="btn btn-sm btn-ghost btn-circle"
             @click="handleCloseDetails"
             title="Close details"
           >
             <IconX class="w-4 h-4" />
           </button>
           <button
-            class="btn btn-sm btn-ghost btn-square"
+            class="btn btn-sm btn-ghost btn-circle"
             @click="handleEdit(selectedCategory)"
             title="Edit"
           >
             <IconEdit class="w-4 h-4" />
           </button>
           <button
-            class="btn btn-sm btn-ghost btn-square text-error"
+            class="btn btn-sm btn-ghost btn-circle text-error"
             @click="handleDelete(selectedCategory)"
             title="Delete"
           >

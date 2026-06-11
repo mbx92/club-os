@@ -4,7 +4,7 @@
  */
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const {
   getCommissionSummary,
   getCommissionTrends,
@@ -21,7 +21,7 @@ const router = express.Router();
  */
 router.get('/summary',
   authenticate,
-  authorizeCasl('read', 'TrainerCommission'),
+  authorize('read', 'TrainerCommission'),
   getCommissionSummary
 );
 
@@ -33,7 +33,7 @@ router.get('/summary',
  */
 router.get('/trends',
   authenticate,
-  authorizeCasl('read', 'TrainerCommission'),
+  authorize('read', 'TrainerCommission'),
   getCommissionTrends
 );
 
@@ -45,7 +45,7 @@ router.get('/trends',
  */
 router.get('/by-trainer/:trainerId',
   authenticate,
-  authorizeCasl('read', 'TrainerCommission'),
+  authorize('read', 'TrainerCommission'),
   getTrainerCommissionDetail
 );
 

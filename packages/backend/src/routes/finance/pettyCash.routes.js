@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../middlewares/featureGateMiddleware');
 const auditLog = require('../../middlewares/auditMiddleware');
 const {
@@ -33,7 +33,7 @@ router.use(authenticate, requireModule('finance'));
  * @access Private (read PettyCash)
  */
 router.get('/summary',
-  authorizeCasl('read', 'PettyCash'),
+  authorize('read', 'PettyCash'),
   getPettyCashSummary
 );
 
@@ -47,7 +47,7 @@ router.get('/summary',
  * @access Private (create PettyCash)
  */
 router.post('/',
-  authorizeCasl('create', 'PettyCash'),
+  authorize('create', 'PettyCash'),
   createPettyCash,
   auditLog('CREATE_PETTY_CASH')
 );
@@ -58,7 +58,7 @@ router.post('/',
  * @access Private (read PettyCash)
  */
 router.get('/',
-  authorizeCasl('read', 'PettyCash'),
+  authorize('read', 'PettyCash'),
   getAllPettyCash
 );
 
@@ -68,7 +68,7 @@ router.get('/',
  * @access Private (read PettyCash)
  */
 router.get('/:id',
-  authorizeCasl('read', 'PettyCash'),
+  authorize('read', 'PettyCash'),
   getPettyCashById
 );
 
@@ -78,7 +78,7 @@ router.get('/:id',
  * @access Private (update PettyCash)
  */
 router.put('/:id',
-  authorizeCasl('update', 'PettyCash'),
+  authorize('update', 'PettyCash'),
   updatePettyCash,
   auditLog('UPDATE_PETTY_CASH')
 );
@@ -89,7 +89,7 @@ router.put('/:id',
  * @access Private (delete PettyCash)
  */
 router.delete('/:id',
-  authorizeCasl('delete', 'PettyCash'),
+  authorize('delete', 'PettyCash'),
   deletePettyCash,
   auditLog('DELETE_PETTY_CASH')
 );
@@ -104,7 +104,7 @@ router.delete('/:id',
  * @access Private (update PettyCash)
  */
 router.post('/:id/top-up',
-  authorizeCasl('update', 'PettyCash'),
+  authorize('update', 'PettyCash'),
   topUpPettyCash,
   auditLog('TOP_UP_PETTY_CASH')
 );
@@ -115,7 +115,7 @@ router.post('/:id/top-up',
  * @access Private (update PettyCash)
  */
 router.post('/:id/expense',
-  authorizeCasl('update', 'PettyCash'),
+  authorize('update', 'PettyCash'),
   payExpenseFromPettyCash,
   auditLog('PAY_EXPENSE_PETTY_CASH')
 );
@@ -129,13 +129,13 @@ router.post('/:id/expense',
  */
 // Route utama
 router.post('/:id/sales-return',
-  authorizeCasl('update', 'PettyCash'),
+  authorize('update', 'PettyCash'),
   addSalesReturnToPettyCash,
   auditLog('SALES_RETURN_PETTY_CASH')
 );
 // Backward compat alias
 router.post('/:id/income',
-  authorizeCasl('update', 'PettyCash'),
+  authorize('update', 'PettyCash'),
   addSalesReturnToPettyCash,
   auditLog('SALES_RETURN_PETTY_CASH')
 );
@@ -146,7 +146,7 @@ router.post('/:id/income',
  * @access Private (update PettyCash)
  */
 router.post('/:id/adjustment',
-  authorizeCasl('update', 'PettyCash'),
+  authorize('update', 'PettyCash'),
   adjustPettyCash,
   auditLog('ADJUST_PETTY_CASH')
 );
@@ -157,7 +157,7 @@ router.post('/:id/adjustment',
  * @access Private (update PettyCash)
  */
 router.post('/:id/withdrawal',
-  authorizeCasl('update', 'PettyCash'),
+  authorize('update', 'PettyCash'),
   withdrawPettyCash,
   auditLog('WITHDRAW_PETTY_CASH')
 );
@@ -172,7 +172,7 @@ router.post('/:id/withdrawal',
  * @access Private (read PettyCash)
  */
 router.get('/:id/transactions',
-  authorizeCasl('read', 'PettyCash'),
+  authorize('read', 'PettyCash'),
   getPettyCashTransactions
 );
 

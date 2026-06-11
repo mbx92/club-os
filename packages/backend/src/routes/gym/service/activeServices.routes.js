@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule, requireFeature, enforceLimit } = require('../../../middlewares/featureGateMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const {
@@ -25,7 +25,7 @@ const router = express.Router();
 router.get('/walkin',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('read', 'ActiveService'),
+  authorize('read', 'ActiveService'),
   auditLog('LIST_WALKIN_ACTIVE_SERVICES'),
   getWalkInActiveServices
 );
@@ -40,7 +40,7 @@ router.get('/walkin',
 router.get('/:memberId',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('read', 'ActiveService'),
+  authorize('read', 'ActiveService'),
   auditLog('LIST_MEMBER_ACTIVE_SERVICES'),
   getMemberActiveServices
 );
@@ -54,7 +54,7 @@ router.get('/:memberId',
 router.get('/detail/:id',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('read', 'ActiveService'),
+  authorize('read', 'ActiveService'),
   auditLog('GET_ACTIVE_SERVICE'),
   getActiveServiceById
 );
@@ -71,7 +71,7 @@ router.get('/detail/:id',
 router.post('/purchase',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('create', 'ActiveService'),
+  authorize('create', 'ActiveService'),
   auditLog('PURCHASE_SERVICE_PLAN'),
   purchaseServices
 );
@@ -86,7 +86,7 @@ router.post('/purchase',
 router.post('/bulk-purchase',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('create', 'ActiveService'),
+  authorize('create', 'ActiveService'),
   auditLog('BULK_PURCHASE_SERVICE_PLANS'),
   purchaseServices
 );
@@ -103,7 +103,7 @@ router.post('/:id/use-session',
   authenticate,
   requireModule('serviceManagement'),
   requireFeature('services.sessionTracking'),
-  authorizeCasl('update', 'ActiveService'),
+  authorize('update', 'ActiveService'),
   auditLog('USE_SERVICE_SESSION'),
   useSession
 );
@@ -120,7 +120,7 @@ router.post('/:id/assign-trainer',
   authenticate,
   requireModule('serviceManagement'),
   requireFeature('services.trainerAssignment'),
-  authorizeCasl('update', 'ActiveService'),
+  authorize('update', 'ActiveService'),
   auditLog('ASSIGN_TRAINER_TO_SERVICE'),
   assignTrainer
 );
@@ -135,7 +135,7 @@ router.post('/:id/assign-trainer',
 router.post('/:id/cancel',
   authenticate,
   requireModule('serviceManagement'),
-  authorizeCasl('delete', 'ActiveService'),
+  authorize('delete', 'ActiveService'),
   auditLog('CANCEL_ACTIVE_SERVICE'),
   cancelActiveService
 );

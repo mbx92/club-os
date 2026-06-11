@@ -3,7 +3,7 @@
 /**
  * Seeder: Fix ActiveService permissions for cashier, manager, trainer roles
  *
- * Masalah: Route POST /services/purchase membutuhkan authorizeCasl('create', 'ActiveService')
+ * Masalah: Route POST /services/purchase membutuhkan authorize('create', 'ActiveService')
  * tapi role cashier & manager hanya punya 'read' → Forbidden by CASL policy
  *
  * Fix:
@@ -48,8 +48,8 @@ module.exports = {
       }
 
       // Cek apakah sudah punya ActiveService create/manage
-      const caslRules = existing.caslRules || [];
-      const alreadyFixed = caslRules.some(
+      const rules = existing.rules || [];
+      const alreadyFixed = rules.some(
         r => r.subject === 'ActiveService' && (r.action === 'create' || r.action === 'manage')
       );
 
@@ -60,7 +60,7 @@ module.exports = {
 
       const newPermissions = {
         ...existing,
-        caslRules:  defaults.caslRules,
+        rules:      defaults.rules,
         uiFlags:    defaults.uiFlags,
         menuAccess: defaults.menuAccess,
       };
@@ -70,7 +70,7 @@ module.exports = {
         { replacements: { permissions: JSON.stringify(newPermissions), id: role.id } }
       );
 
-      const ruleCount = defaults.caslRules.length;
+      const ruleCount = defaults.rules.length;
       console.log(`[fix-active-service-permissions] ✓ "${role.name}" updated (${ruleCount} rules)`);
     }
 
@@ -95,7 +95,7 @@ module.exports = {
 
       const cleaned = {
         ...existing,
-        caslRules: (existing.caslRules || []).filter(
+        rules: (existing.rules || []).filter(
           r => !(r.subject === 'ActiveService' && r.action !== 'read')
         ),
       };

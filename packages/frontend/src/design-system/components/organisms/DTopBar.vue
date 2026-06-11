@@ -109,13 +109,13 @@ function onLogout() {
         </div>
 
         <!-- Search toggle (mobile) -->
-        <button class="btn btn-ghost btn-sm btn-square lg:hidden" aria-label="Search">
+        <button class="btn btn-ghost btn-sm btn-circle lg:hidden" aria-label="Search">
           <span class="i-tabler-search size-5" />
         </button>
 
         <!-- Notification bell -->
         <button
-          class="btn btn-ghost btn-sm btn-square relative"
+          class="btn btn-ghost btn-sm btn-circle relative"
           @click="emit('notification-click')"
           aria-label="Notifications"
         >
@@ -130,7 +130,7 @@ function onLogout() {
 
         <!-- Theme toggle -->
         <button
-          class="btn btn-ghost btn-sm btn-square"
+          class="btn btn-ghost btn-sm btn-circle"
           @click="emit('theme-toggle')"
           aria-label="Toggle theme"
         >

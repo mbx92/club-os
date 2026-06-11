@@ -10,7 +10,7 @@ const express = require('express');
 const router = express.Router();
 const locationController = require('../controllers/locationController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 
 // All routes require authentication and restaurant module access
@@ -23,7 +23,7 @@ router.use(requireModule('restaurant'));
  * @access Private - requires 'read' permission on 'Location'
  */
 router.get('/',
-  authorizeCasl('read', 'Location'),
+  authorize('read', 'Location'),
   locationController.getAllLocations
 );
 
@@ -33,7 +33,7 @@ router.get('/',
  * @access Private - requires 'read' permission on 'Location'
  */
 router.get('/with-stock',
-  authorizeCasl('read', 'Location'),
+  authorize('read', 'Location'),
   locationController.getLocationsWithStock
 );
 
@@ -43,7 +43,7 @@ router.get('/with-stock',
  * @access Private - requires 'read' permission on 'Location'
  */
 router.get('/:id',
-  authorizeCasl('read', 'Location'),
+  authorize('read', 'Location'),
   locationController.getLocationById
 );
 
@@ -53,7 +53,7 @@ router.get('/:id',
  * @access Private - requires 'read' permission on 'Location'
  */
 router.get('/:id/stock-summary',
-  authorizeCasl('read', 'Location'),
+  authorize('read', 'Location'),
   locationController.getStockSummary
 );
 
@@ -63,7 +63,7 @@ router.get('/:id/stock-summary',
  * @access Private - requires 'read' permission on 'Location'
  */
 router.get('/distance/:fromId/:toId',
-  authorizeCasl('read', 'Location'),
+  authorize('read', 'Location'),
   locationController.calculateDistance
 );
 
@@ -73,7 +73,7 @@ router.get('/distance/:fromId/:toId',
  * @access Private - requires 'create' permission on 'Location'
  */
 router.post('/',
-  authorizeCasl('create', 'Location'),
+  authorize('create', 'Location'),
   locationController.createLocation
 );
 
@@ -83,7 +83,7 @@ router.post('/',
  * @access Private - requires 'update' permission on 'Location'
  */
 router.put('/:id',
-  authorizeCasl('update', 'Location'),
+  authorize('update', 'Location'),
   locationController.updateLocation
 );
 
@@ -93,7 +93,7 @@ router.put('/:id',
  * @access Private - requires 'update' permission on 'Location'
  */
 router.patch('/:id/toggle',
-  authorizeCasl('update', 'Location'),
+  authorize('update', 'Location'),
   locationController.toggleActive
 );
 
@@ -103,7 +103,7 @@ router.patch('/:id/toggle',
  * @access Private - requires 'delete' permission on 'Location'
  */
 router.delete('/:id',
-  authorizeCasl('delete', 'Location'),
+  authorize('delete', 'Location'),
   locationController.deleteLocation
 );
 

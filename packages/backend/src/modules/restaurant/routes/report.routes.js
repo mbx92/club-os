@@ -11,7 +11,7 @@ const express = require('express');
 const router = express.Router();
 const reportController = require('../controllers/reportController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 
 // All routes require authentication and restaurant module
@@ -29,7 +29,7 @@ router.use(requireModule('restaurant'));
  * @access Private - requires 'read' permission on 'Transaction'
  */
 router.get('/sales',
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   reportController.getSalesReport
 );
 
@@ -44,7 +44,7 @@ router.get('/sales',
  * @access Private - requires 'read' permission on 'Transaction'
  */
 router.get('/products',
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   reportController.getProductReport
 );
 
@@ -57,7 +57,7 @@ router.get('/products',
  * @access Private - requires 'read' permission on 'Transaction'
  */
 router.get('/tables',
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   reportController.getTableReport
 );
 
@@ -69,7 +69,7 @@ router.get('/tables',
  * @access Private - requires 'read' permission on 'Transaction'
  */
 router.get('/daily-summary',
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   reportController.getDailySummary
 );
 

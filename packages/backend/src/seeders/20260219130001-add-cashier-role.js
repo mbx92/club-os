@@ -20,7 +20,7 @@ module.exports = {
         name: 'cashier',
         description: 'Kasir — mengelola transaksi, pembayaran, shift kas, dan check-in member',
         permissions: JSON.stringify({
-          caslRules: [
+          rules: [
             // Products & Categories (read only)
             { subject: 'Product', actions: ['read'], conditions: { tenantId: '$tenantId' } },
             { subject: 'ProductCategory', actions: ['read'], conditions: { tenantId: '$tenantId' } },

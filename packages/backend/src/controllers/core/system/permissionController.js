@@ -1,5 +1,5 @@
 const { User, Role } = require('../../../models');
-const { defineAbilitiesFor } = require('../../../utils/casl');
+const { can } = require('../../../utils/rbac');
 const { buildUserPermissions, initDefaultPermissionsForRole } = require('../../../services/permissionService');
 const { getDefaultPermissionsForRole, getAvailableDefaultRoles } = require('../../../utils/defaultRolePermissions');
 const { getAllSubjects, getSubjectForRoute, getRoutesForSubject } = require('../../../config/routePermissions');
@@ -25,7 +25,7 @@ const getUserPermissions = async (req, res) => {
       method: req.method,
       path: req.path,
       role: payload.user.role?.name ?? 'no-role',
-      rulesCount: payload.caslRules.length,
+      rulesCount: payload.rules.length,
       menuItemCount: payload.menuItems.length,
     });
 
@@ -102,12 +102,11 @@ const getAllRoles = async (req, res) => {
       rolesCount: roles.length
     });
     
-    // Normalize caslRules for frontend: ensure `actions` is always an array
-    // (DB stores CASL standard `action: string`, frontend management UI expects `actions: string[]`)
+    // Normalize rules for frontend: ensure `actions` is always an array
     const normalizedRoles = roles.map(role => {
       const raw = role.toJSON();
-      if (raw.permissions?.caslRules) {
-        raw.permissions.caslRules = raw.permissions.caslRules.map(rule => ({
+      if (raw.permissions?.rules) {
+        raw.permissions.rules = raw.permissions.rules.map(rule => ({
           ...rule,
           actions: Array.isArray(rule.actions)
             ? rule.actions
@@ -146,7 +145,7 @@ const getAllRoles = async (req, res) => {
  */
 const createRole = async (req, res) => {
   try {
-    const { name, description, permissions } = req.body;
+    const { name, description, permissions, menuAccess } = req.body;
     
     // Validate required fields
     if (!name) {
@@ -165,11 +164,17 @@ const createRole = async (req, res) => {
       });
     }
     
+    // Merge menuAccess into permissions if provided
+    const mergedPermissions = { ...(permissions || {}) };
+    if (Array.isArray(menuAccess)) {
+      mergedPermissions.menuAccess = menuAccess;
+    }
+    
     // Create role
     const role = await Role.create({
       name,
       description: description || '',
-      permissions: permissions || {},
+      permissions: mergedPermissions,
       isActive: true
     });
     
@@ -215,7 +220,7 @@ const createRole = async (req, res) => {
 const updateRole = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, isActive, permissions } = req.body;
+    const { name, description, isActive, permissions, menuAccess } = req.body;
     
     const role = await Role.findByPk(id);
     if (!role) {
@@ -234,13 +239,22 @@ const updateRole = async (req, res) => {
       });
     }
     
+    // Build merged permissions
+    const currentPermissions = role.permissions || {};
+    let mergedPermissions = { ...currentPermissions };
+    if (permissions !== undefined && typeof permissions === 'object') {
+      mergedPermissions = { ...mergedPermissions, ...permissions };
+    }
+    // Merge menuAccess into permissions if provided (top-level, not nested)
+    if (Array.isArray(menuAccess)) {
+      mergedPermissions.menuAccess = menuAccess;
+    }
+    
     // Update role
     if (name) role.name = name;
     if (description !== undefined) role.description = description;
     if (isActive !== undefined) role.isActive = isActive;
-    if (permissions !== undefined && typeof permissions === 'object') {
-      role.permissions = permissions;
-    }
+    role.permissions = mergedPermissions;
     
     await role.save();
     
@@ -307,11 +321,10 @@ const updateRolePermissions = async (req, res) => {
     // Merge permissions (partial update)
     const currentPermissions = role.permissions || {};
 
-    // De-normalize incoming caslRules: frontend sends `actions: string[]`, DB stores CASL `action`
-    if (permissions.caslRules && Array.isArray(permissions.caslRules)) {
-      permissions.caslRules = permissions.caslRules.map(({ actions, action, ...rest }) => ({
+    // De-normalize incoming rules: frontend sends `actions: string[]`, DB stores `action`
+    if (permissions.rules && Array.isArray(permissions.rules)) {
+      permissions.rules = permissions.rules.map(({ actions, action, ...rest }) => ({
         ...rest,
-        // Prefer `actions` array from frontend, fall back to existing `action`
         action: actions !== undefined
           ? (Array.isArray(actions) && actions.length === 1 ? actions[0] : actions)
           : action,
@@ -516,7 +529,7 @@ const resetRolePermissions = async (req, res) => {
 
     await role.update({
       permissions: {
-        caslRules:  defaults.caslRules,
+        rules:     defaults.rules,
         uiFlags:    defaults.uiFlags,
         menuAccess: defaults.menuAccess,
       },
@@ -622,16 +635,16 @@ const previewRolePermissions = async (req, res) => {
     
     // Get stored permissions
     const permissions = role.permissions || {};
-    const caslRules = permissions.caslRules || [];
+    const rules = permissions.rules || [];
     const uiFlags = permissions.uiFlags || {};
     const menuAccess = permissions.menuAccess || [];
     
-    // Compute allowed routes based on CASL rules
+    // Compute allowed routes based on rules
     const allowedRoutes = [];
     const subjectActionsMap = {};
     
-    // Build subject-actions map from caslRules
-    caslRules.forEach(rule => {
+    // Build subject-actions map from rules
+    rules.forEach(rule => {
       const subject = rule.subject;
       const actions = rule.actions || (rule.action ? [rule.action] : []);
       
@@ -692,12 +705,12 @@ const previewRolePermissions = async (req, res) => {
           description: role.description,
         },
         permissions: {
-          caslRules,
+          rules,
           uiFlags,
           menuAccess,
           allowedRoutes,
           summary: {
-            totalRules: caslRules.length,
+            totalRules: rules.length,
             totalRoutes: allowedRoutes.length,
             totalMenus: menuAccess.length,
             subjects: Object.keys(subjectActionsMap),
@@ -716,18 +729,18 @@ const previewRolePermissions = async (req, res) => {
 };
 
 /**
- * POST /permissions/roles/:roleId/generate-casl
+ * POST /permissions/roles/:roleId/generate-rules
  *
- * Generate CASL rules from simplified frontend form.
+ * Generate RBAC rules from simplified frontend form.
  * Frontend sends: { subjects: [{ subject, actions }] }
- * Backend returns: { caslRules: [...] }
+ * Backend returns: { rules: [...] }
  */
-const generateCaslRules = async (req, res) => {
+const generateRules = async (req, res) => {
   try {
     const { roleId } = req.params;
-    const { subjects } = req.body;
+    const { subjects, fullAccess } = req.body;
     
-    if (!Array.isArray(subjects)) {
+    if (!fullAccess && !Array.isArray(subjects)) {
       return res.status(400).json({
         success: false,
         message: 'subjects must be an array',
@@ -742,47 +755,49 @@ const generateCaslRules = async (req, res) => {
       });
     }
     
-    // Generate CASL rules
-    const caslRules = subjects.map(({ subject, actions }) => ({
-      subject,
-      actions: Array.isArray(actions) ? actions : [actions],
-      conditions: { tenantId: '$tenantId' }, // Default condition for multi-tenancy
-    }));
+    // Full access: single manage-all rule (admin/owner pattern)
+    const rules = fullAccess
+      ? [{ subject: 'all', actions: ['manage'], conditions: { tenantId: '$tenantId' } }]
+      : subjects.map(({ subject, actions }) => ({
+          subject,
+          actions: Array.isArray(actions) ? actions : [actions],
+          conditions: { tenantId: '$tenantId' },
+        }));
     
     // Get current permissions
     const currentPermissions = role.permissions || {};
     
-    // Update role with new CASL rules
+    // Update role with new rules
     await role.update({
       permissions: {
         ...currentPermissions,
-        caslRules,
+        rules,
       },
     });
     
-    logger.logAudit('CASL rules generated for role', {
-      action: 'GENERATE_CASL_RULES',
+    logger.logAudit('Rules generated for role', {
+      action: 'GENERATE_RULES',
       userId: req.user.id,
       roleId: role.id,
       roleName: role.name,
-      rulesCount: caslRules.length,
+      rulesCount: rules.length,
       ip: getClientIp(req),
       userAgent: getUserAgent(req),
     });
     
     return res.status(200).json({
       success: true,
-      message: `Generated ${caslRules.length} CASL rules for role "${role.name}"`,
+      message: `Generated ${rules.length} rules for role "${role.name}"`,
       data: {
         role: {
           id: role.id,
           name: role.name,
         },
-        caslRules,
+        rules,
       },
     });
   } catch (error) {
-    logger.error('Error generating CASL rules', { error: error.message, userId: req.user?.id });
+    logger.error('Error generating rules', { error: error.message, userId: req.user?.id });
     return res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -803,6 +818,6 @@ module.exports = {
   getMenuConfig,
   getAllSubjectsList,
   previewRolePermissions,
-  generateCaslRules,
+  generateRules,
   deleteRole,
 };

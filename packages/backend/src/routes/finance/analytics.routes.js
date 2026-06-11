@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const {
   getTopSellingProducts,
   getTopSellingServices,
@@ -17,7 +17,7 @@ const router = express.Router();
  */
 router.get('/top-products',
   authenticate,
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   getTopSellingProducts
 );
 
@@ -28,7 +28,7 @@ router.get('/top-products',
  */
 router.get('/top-services',
   authenticate,
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   getTopSellingServices
 );
 
@@ -39,7 +39,7 @@ router.get('/top-services',
  */
 router.get('/not-selling-products',
   authenticate,
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   getNotSellingProducts
 );
 
@@ -50,7 +50,7 @@ router.get('/not-selling-products',
  */
 router.get('/not-selling-services',
   authenticate,
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   getNotSellingServices
 );
 

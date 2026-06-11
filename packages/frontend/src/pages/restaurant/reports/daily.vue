@@ -207,14 +207,14 @@ onMounted(async () => {
   <div class="container mx-auto px-4 py-6">
     <!-- Header -->
     <div class="flex items-center gap-4 mb-6">
-      <button class="btn btn-ghost btn-sm" @click="router.push('/restaurant/reports')">
+      <button class="btn btn-ghost btn-sm btn-circle" @click="router.push('/restaurant/reports')">
         <IconArrowLeft class="w-5 h-5" />
       </button>
       <div class="flex-1">
         <h1 class="text-3xl font-bold">Daily Summary</h1>
         <p class="text-base-content/60 mt-1">Comprehensive daily performance report</p>
       </div>
-      <button class="btn btn-ghost btn-sm" @click="loadData" :disabled="loading">
+      <button class="btn btn-ghost btn-sm btn-circle" @click="loadData" :disabled="loading">
         <IconRefresh class="w-4 h-4" :class="{ 'animate-spin': loading }" />
       </button>
       <button class="btn btn-ghost btn-sm print:hidden" @click="handlePrint">
@@ -232,7 +232,7 @@ onMounted(async () => {
         <div class="flex flex-col md:flex-row items-center justify-between gap-4">
           <!-- Date Picker -->
           <div class="flex items-center gap-2">
-            <button class="btn btn-ghost btn-sm" @click="goToPreviousDay">
+            <button class="btn btn-ghost btn-sm btn-circle" @click="goToPreviousDay">
               <IconChevronLeft class="w-5 h-5" />
             </button>
             
@@ -247,7 +247,7 @@ onMounted(async () => {
             </div>
             
             <button 
-              class="btn btn-ghost btn-sm" 
+              class="btn btn-ghost btn-sm btn-circle" 
               @click="goToNextDay"
               :disabled="!canGoNext"
             >

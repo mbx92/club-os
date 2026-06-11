@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const {
   getTransactionSettings,
@@ -32,7 +32,7 @@ const router = express.Router();
  */
 router.get('/',
   authenticate,
-  authorizeCasl('read', 'Tenant'),
+  authorize('read', 'Tenant'),
   getTransactionSettings
 );
 
@@ -44,7 +44,7 @@ router.get('/',
  */
 router.put('/',
   authenticate,
-  authorizeCasl('update', 'Tenant'),
+  authorize('update', 'Tenant'),
   auditLog('UPDATE_TRANSACTION_SETTINGS'),
   updateTransactionSettings
 );
@@ -57,7 +57,7 @@ router.put('/',
  */
 router.post('/reset',
   authenticate,
-  authorizeCasl('update', 'Tenant'),
+  authorize('update', 'Tenant'),
   auditLog('RESET_TRANSACTION_SETTINGS'),
   resetTransactionSettings
 );
@@ -72,7 +72,7 @@ router.post('/reset',
  */
 router.get('/tax',
   authenticate,
-  authorizeCasl('read', 'Tenant'),
+  authorize('read', 'Tenant'),
   getTaxConfiguration
 );
 
@@ -85,7 +85,7 @@ router.get('/tax',
  */
 router.put('/tax',
   authenticate,
-  authorizeCasl('update', 'Tenant'),
+  authorize('update', 'Tenant'),
   auditLog('UPDATE_TAX_CONFIGURATION'),
   updateTaxConfiguration
 );
@@ -100,7 +100,7 @@ router.put('/tax',
  */
 router.get('/service-charge',
   authenticate,
-  authorizeCasl('read', 'Tenant'),
+  authorize('read', 'Tenant'),
   getServiceChargeConfiguration
 );
 
@@ -113,7 +113,7 @@ router.get('/service-charge',
  */
 router.put('/service-charge',
   authenticate,
-  authorizeCasl('update', 'Tenant'),
+  authorize('update', 'Tenant'),
   auditLog('UPDATE_SERVICE_CHARGE_CONFIGURATION'),
   updateServiceChargeConfiguration
 );
@@ -128,7 +128,7 @@ router.put('/service-charge',
  */
 router.get('/currency',
   authenticate,
-  authorizeCasl('read', 'Tenant'),
+  authorize('read', 'Tenant'),
   getCurrencyConfiguration
 );
 
@@ -140,7 +140,7 @@ router.get('/currency',
  */
 router.put('/currency',
   authenticate,
-  authorizeCasl('update', 'Tenant'),
+  authorize('update', 'Tenant'),
   auditLog('UPDATE_CURRENCY_CONFIGURATION'),
   updateCurrencyConfiguration
 );
@@ -155,7 +155,7 @@ router.put('/currency',
  */
 router.get('/invoice',
   authenticate,
-  authorizeCasl('read', 'Tenant'),
+  authorize('read', 'Tenant'),
   getInvoiceConfiguration
 );
 
@@ -167,7 +167,7 @@ router.get('/invoice',
  */
 router.put('/invoice',
   authenticate,
-  authorizeCasl('update', 'Tenant'),
+  authorize('update', 'Tenant'),
   auditLog('UPDATE_INVOICE_CONFIGURATION'),
   updateInvoiceConfiguration
 );
@@ -182,7 +182,7 @@ router.put('/invoice',
  */
 router.get('/payment',
   authenticate,
-  authorizeCasl('read', 'Tenant'),
+  authorize('read', 'Tenant'),
   getPaymentConfiguration
 );
 
@@ -194,7 +194,7 @@ router.get('/payment',
  */
 router.put('/payment',
   authenticate,
-  authorizeCasl('update', 'Tenant'),
+  authorize('update', 'Tenant'),
   auditLog('UPDATE_PAYMENT_CONFIGURATION'),
   updatePaymentConfiguration
 );
@@ -209,7 +209,7 @@ router.put('/payment',
  */
 router.get('/discount',
   authenticate,
-  authorizeCasl('read', 'Tenant'),
+  authorize('read', 'Tenant'),
   getDiscountConfiguration
 );
 
@@ -221,7 +221,7 @@ router.get('/discount',
  */
 router.put('/discount',
   authenticate,
-  authorizeCasl('update', 'Tenant'),
+  authorize('update', 'Tenant'),
   auditLog('UPDATE_DISCOUNT_CONFIGURATION'),
   updateDiscountConfiguration
 );
@@ -236,7 +236,7 @@ router.put('/discount',
  */
 router.get('/shipping',
   authenticate,
-  authorizeCasl('read', 'Tenant'),
+  authorize('read', 'Tenant'),
   getShippingConfiguration
 );
 
@@ -248,7 +248,7 @@ router.get('/shipping',
  */
 router.put('/shipping',
   authenticate,
-  authorizeCasl('update', 'Tenant'),
+  authorize('update', 'Tenant'),
   auditLog('UPDATE_SHIPPING_CONFIGURATION'),
   updateShippingConfiguration
 );

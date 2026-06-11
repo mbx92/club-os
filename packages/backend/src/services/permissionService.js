@@ -2,13 +2,12 @@
  * Permission Service
  *
  * Membangun unified permission payload yang dikirim ke frontend.
- * Frontend menerima data lengkap dalam satu request dan TIDAK perlu
- * hard-code logika show/hide menu.
+ * Frontend menerima data lengkap dalam satu request.
  *
  * Response shape:
  * {
  *   user:               { id, email, role, isSuperAdmin, tenantId }
- *   caslRules:          [ { action, subject, conditions, inverted } ]
+ *   rules:              [ { action, subject, conditions, inverted } ]
  *   uiFlags:            { canManageUsers, canManageRoles, ... }
  *   subscription: {
  *     modules:          { gym: true, pos: false, ... }
@@ -24,15 +23,15 @@
  */
 
 const { Subscription, SubscriptionPlan, Tenant, User, Role } = require('../models');
-const { defineAbilitiesFor } = require('../utils/casl');
+const { can, getEffectiveRules } = require('../utils/rbac');
 const { MENU_CONFIG } = require('../utils/menuConfig');
 const { getDefaultPermissionsForRole } = require('../utils/defaultRolePermissions');
+const { normalizeMenuAccess, getMenuAccessForRole, hasManageAllRule } = require('../utils/menuKeys');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
  * Fetch subscription info for a tenant.
- * Returns { modules, limits, features, status, planName, isInTrial }
  */
 async function getSubscriptionInfo(tenantId) {
   if (!tenantId) {
@@ -47,9 +46,8 @@ async function getSubscriptionInfo(tenantId) {
   );
 
   if (isInTrial) {
-    // Trial: semua modul terbuka
     return {
-      modules:    { _trial: true },          // sentinel agar frontend tahu ini trial
+      modules:    { _trial: true },
       limits:     {},
       features:   {},
       status:     'trial',
@@ -81,34 +79,27 @@ async function getSubscriptionInfo(tenantId) {
 
 /**
  * Decide whether a single menu item is visible for the user.
- *
- * @param {object}  item        - entry from MENU_CONFIG
- * @param {object}  ability     - CASL Ability instance
- * @param {object}  subInfo     - subscription info from getSubscriptionInfo
- * @param {object}  uiFlags     - { canManageUsers, … }
- * @param {boolean} isSuperAdmin
- * @returns {boolean}
  */
-function isMenuItemVisible(item, ability, subInfo, uiFlags, isSuperAdmin) {
-  // SuperAdmin sees everything (except regular items are already included)
-  if (isSuperAdmin) return true;
-
-  // SuperAdmin-only items
+function isMenuItemVisible(item, user, subInfo, uiFlags) {
+  if (user?.isSuperAdmin) return true;
   if (item.superAdminOnly) return false;
+
+  // Admin/owner roles are tenant-level administrators — show everything
+  const isAdmin = user?.role?.name === 'admin' || user?.role?.name === 'owner';
+  if (isAdmin) return true;
 
   // Module check
   if (item.requiredModule) {
-    // Trial => all modules open
     if (!subInfo.isInTrial && !subInfo.modules[item.requiredModule]) return false;
   }
 
-  // CASL check
-  if (item.requiredCasl) {
-    const { action, subject } = item.requiredCasl;
-    if (!ability.can(action, subject)) return false;
+  // Permission check
+  if (item.requiredPermission) {
+    const { action, subject } = item.requiredPermission;
+    if (!can(user, action, subject)) return false;
   }
 
-  // UI flag check (role-level flag)
+  // UI flag check
   if (item.requiredFlag) {
     if (!uiFlags[item.requiredFlag]) return false;
   }
@@ -117,19 +108,17 @@ function isMenuItemVisible(item, ability, subInfo, uiFlags, isSuperAdmin) {
 }
 
 /**
- * Recursively filter a menu tree, returning only visible items.
- * A parent with no visible children is also hidden.
+ * Recursively filter a menu tree.
  */
-function filterMenu(items, ability, subInfo, uiFlags, isSuperAdmin) {
+function filterMenu(items, user, subInfo, uiFlags) {
   const result = [];
   for (const item of items) {
-    const visible = isMenuItemVisible(item, ability, subInfo, uiFlags, isSuperAdmin);
+    const visible = isMenuItemVisible(item, user, subInfo, uiFlags);
     if (!visible) continue;
 
     const entry = { ...item };
     if (item.children?.length) {
-      entry.children = filterMenu(item.children, ability, subInfo, uiFlags, isSuperAdmin);
-      // hide parent if no visible children and it has no direct path
+      entry.children = filterMenu(item.children, user, subInfo, uiFlags);
       if (!item.path && entry.children.length === 0) continue;
     }
     result.push(entry);
@@ -138,28 +127,25 @@ function filterMenu(items, ability, subInfo, uiFlags, isSuperAdmin) {
 }
 
 /**
- * Serialize CASL rules from an Ability instance.
- * Converts to frontend-compatible format with 'actions' array.
+ * Serialize rules to frontend-compatible format.
  */
-function serializeAbility(ability) {
-  return ability.rules.map(rule => ({
-    subject:    typeof rule.subject === 'function' ? rule.subject.modelName : rule.subject,
-    actions:    Array.isArray(rule.action) ? rule.action : [rule.action],  // Convert to array
-    conditions: rule.conditions || undefined,
-    fields:     rule.fields     || undefined,
-    inverted:   rule.inverted   || undefined,
+function serializeRules(user) {
+  const rules = getEffectiveRules(user);
+  return rules.map(rule => ({
+    subject:    rule.subject,
+    actions:    rule.actions,
+    conditions: rule.resolvedConditions || undefined,
+    inverted:   rule.inverted   || false,
   }));
 }
 
 /**
- * Resolve uiFlags for a user: checks stored DB flags first, then defaults.
+ * Resolve uiFlags for a user.
  */
 function resolveUiFlags(user) {
-  // If role has custom uiFlags stored in DB
   const stored = user.role?.permissions?.uiFlags;
   if (stored && typeof stored === 'object') return stored;
 
-  // Fallback to compiled defaults
   const defaults = getDefaultPermissionsForRole(user.role?.name);
   return defaults?.uiFlags || {};
 }
@@ -168,9 +154,6 @@ function resolveUiFlags(user) {
 
 /**
  * Build the complete permission payload for a user.
- *
- * @param {string} userId
- * @returns {Promise<object>}
  */
 async function buildUserPermissions(userId) {
   const user = await User.findByPk(userId, {
@@ -179,21 +162,25 @@ async function buildUserPermissions(userId) {
 
   if (!user) throw new Error('User not found');
 
-  const ability    = defineAbilitiesFor(user);
-  const caslRules  = serializeAbility(ability);
-  const uiFlags    = resolveUiFlags(user);
-  const subInfo    = await getSubscriptionInfo(user.tenantId);
+  const rules     = serializeRules(user);
+  const uiFlags   = resolveUiFlags(user);
+  const subInfo   = await getSubscriptionInfo(user.tenantId);
 
-  const menuItems  = filterMenu(
-    MENU_CONFIG,
-    ability,
-    subInfo,
-    uiFlags,
-    user.isSuperAdmin,
-  );
+  const menuItems = filterMenu(MENU_CONFIG, user, subInfo, uiFlags);
 
-  // Resolve menuAccess list as a flat set for quick frontend lookup
-  const menuAccessSet = new Set(menuItems.flatMap(i => [i.key, ...(i.children || []).map(c => c.key)]));
+  // menuAccess: prefer role-stored keys (navigation.js format), fallback to filtered menuConfig
+  let menuAccess;
+  const storedMenu = user.role?.permissions?.menuAccess;
+  if (user.isSuperAdmin || hasManageAllRule(rules) || ['admin', 'owner'].includes(user.role?.name)) {
+    menuAccess = getMenuAccessForRole(user.role?.name) || getMenuAccessForRole('admin');
+  } else if (Array.isArray(storedMenu) && storedMenu.length > 0) {
+    menuAccess = normalizeMenuAccess(storedMenu);
+  } else {
+    const defaults = getDefaultPermissionsForRole(user.role?.name);
+    menuAccess = defaults?.menuAccess
+      ? normalizeMenuAccess(defaults.menuAccess)
+      : [...new Set(menuItems.flatMap(i => [i.key, ...(i.children || []).map(c => c.key)]))];
+  }
 
   return {
     user: {
@@ -205,7 +192,7 @@ async function buildUserPermissions(userId) {
       tenantId:    user.tenantId,
       role: user.role ? { id: user.role.id, name: user.role.name } : null,
     },
-    caslRules,
+    rules,
     uiFlags,
     subscription: {
       modules:  subInfo.modules,
@@ -216,29 +203,24 @@ async function buildUserPermissions(userId) {
       isInTrial: subInfo.isInTrial,
     },
     menuItems,
-    menuAccess: Array.from(menuAccessSet),
+    menuAccess,
   };
 }
 
 /**
- * Populate Role.permissions with default caslRules + uiFlags for a given role name.
- * Used by admin seeder or "reset to default" endpoint.
- *
- * @param {object} roleInstance  – Sequelize Role model instance
- * @returns {Promise<void>}
+ * Populate Role.permissions with default rules + uiFlags for a given role name.
  */
 async function initDefaultPermissionsForRole(roleInstance) {
   const defaults = getDefaultPermissionsForRole(roleInstance.name);
-  if (!defaults) return; // custom role without defaults – skip
+  if (!defaults) return;
 
   const current = roleInstance.permissions || {};
-  // Only overwrite if caslRules not yet set
-  if (!current.caslRules || current.caslRules.length === 0) {
+  if (!current.rules || current.rules.length === 0) {
     await roleInstance.update({
       permissions: {
         ...current,
-        caslRules: defaults.caslRules,
-        uiFlags:   defaults.uiFlags,
+        rules: defaults.rules,
+        uiFlags: defaults.uiFlags,
         menuAccess: defaults.menuAccess,
       },
     });

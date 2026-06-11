@@ -11,8 +11,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@casl/ability": "^6.7.3",
-    "@casl/vue": "^2.2.2",
     "@tabler/icons": "^3.35.0",
     "@tabler/icons-vue": "^3.35.0",
     "@vueuse/core": "^13.9.0",

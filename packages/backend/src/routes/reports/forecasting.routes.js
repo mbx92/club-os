@@ -4,7 +4,7 @@
  */
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const {
   getRevenueForecast,
   getMemberForecast,
@@ -23,7 +23,7 @@ const router = express.Router();
  */
 router.get('/revenue',
   authenticate,
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   getRevenueForecast
 );
 
@@ -35,7 +35,7 @@ router.get('/revenue',
  */
 router.get('/members',
   authenticate,
-  authorizeCasl('read', 'Member'),
+  authorize('read', 'Member'),
   getMemberForecast
 );
 
@@ -47,7 +47,7 @@ router.get('/members',
  */
 router.get('/attendance',
   authenticate,
-  authorizeCasl('read', 'CheckIn'),
+  authorize('read', 'CheckIn'),
   getAttendanceForecast
 );
 
@@ -59,7 +59,7 @@ router.get('/attendance',
  */
 router.get('/expenses',
   authenticate,
-  authorizeCasl('read', 'Expense'),
+  authorize('read', 'Expense'),
   getExpenseForecast
 );
 
@@ -71,7 +71,7 @@ router.get('/expenses',
  */
 router.get('/comprehensive',
   authenticate,
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   getComprehensiveForecast
 );
 

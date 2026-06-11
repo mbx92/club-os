@@ -38,30 +38,56 @@
                   </button>
                 </div>
                 
-                <!-- Quick Actions -->
-                <div class="mt-4 flex gap-3">
-                  <button
-                    class="btn btn-success btn-sm gap-2"
-                    :disabled="isCreatingBackup"
-                    @click="handleCreateBackup"
-                  >
-                    <span v-if="isCreatingBackup" class="loading loading-spinner loading-sm"></span>
-                    <IconPlus v-else class="w-4 h-4" />
-                    Create Backup
-                  </button>
-                  <button
-                    class="btn btn-ghost btn-sm gap-2"
-                    :disabled="isLoading"
-                    @click="handleRefresh"
-                  >
-                    <IconRefresh class="w-4 h-4" :class="{ 'animate-spin': isLoading }" />
-                    Refresh
-                  </button>
+                <!-- Tabs -->
+                <div class="mt-4 flex flex-wrap items-center gap-3">
+                  <div role="tablist" class="tabs tabs-boxed tabs-sm">
+                    <button
+                      role="tab"
+                      class="tab gap-1.5"
+                      :class="{ 'tab-active': activeTab === 'backup' }"
+                      @click="activeTab = 'backup'"
+                    >
+                      <IconDatabase class="w-4 h-4" />
+                      Backup
+                    </button>
+                    <button
+                      role="tab"
+                      class="tab gap-1.5"
+                      :class="{ 'tab-active': activeTab === 'import' }"
+                      @click="activeTab = 'import'"
+                    >
+                      <IconFileImport class="w-4 h-4" />
+                      Import Production
+                    </button>
+                  </div>
+
+                  <template v-if="activeTab === 'backup'">
+                    <button
+                      class="btn btn-success btn-sm gap-2"
+                      :disabled="isCreatingBackup"
+                      @click="handleCreateBackup"
+                    >
+                      <span v-if="isCreatingBackup" class="loading loading-spinner loading-sm"></span>
+                      <IconPlus v-else class="w-4 h-4" />
+                      Create Backup
+                    </button>
+                    <button
+                      class="btn btn-ghost btn-sm gap-2"
+                      :disabled="isLoading"
+                      @click="handleRefresh"
+                    >
+                      <IconRefresh class="w-4 h-4" :class="{ 'animate-spin': isLoading }" />
+                      Refresh
+                    </button>
+                  </template>
                 </div>
               </div>
               
               <!-- Content -->
               <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <ProductionImportPanel v-if="activeTab === 'import'" />
+
+                <template v-else>
                 <!-- Google Drive Backup Settings -->
                 <div class="card bg-base-200 shadow">
                   <div class="card-body">
@@ -315,6 +341,7 @@
                     </ul>
                   </div>
                 </div>
+                </template>
               </div>
             </div>
           </div>
@@ -354,6 +381,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useDatabaseBackup } from '@/composables/admin/useDatabaseBackup'
+import ProductionImportPanel from '@/components/settings/ProductionImportPanel.vue'
 import { useTenantSettings } from '@/composables/admin/useTenantSettings'
 import { useNotification } from '@/composables/core/useNotification'
 import { useAuthStore } from '@/stores/auth'
@@ -374,7 +402,8 @@ import {
   IconFile,
   IconDownload,
   IconTrash,
-  IconAlertTriangle
+  IconAlertTriangle,
+  IconFileImport
 } from '@tabler/icons-vue'
 
 const props = defineProps({
@@ -408,6 +437,7 @@ const {
 } = useTenantSettings()
 
 // Refs
+const activeTab = ref('backup')
 const deleteModal = ref(null)
 const backupToDelete = ref(null)
 const createDefaultGoogleDriveSettings = () => ({

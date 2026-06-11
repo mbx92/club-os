@@ -2,13 +2,11 @@ const express = require('express');
 const router = express.Router();
 const transactionController = require('../../../controllers/gym/transaction/transactionController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { checkSubscription } = require('../../../middlewares/subscriptionMiddleware');
 const { requireFeature } = require('../../../middlewares/featureGateMiddleware');
 const { requireActiveShift } = require('../../../middlewares/shiftMiddleware');
 
 // All routes require authentication and active subscription
 router.use(authenticate);
-router.use(checkSubscription);
 
 /**
  * @route   POST /api/transactions
@@ -53,7 +51,7 @@ router.put('/:id/status', transactionController.updateTransactionStatus);
  * @access  Private (requires 'combinedBilling' feature)
  */
 router.post('/combined',
-  requireFeature('transactions', 'combinedBilling'),
+  requireFeature('combinedBilling'),
   async (req, res) => {
     // Placeholder - implementation coming in Fase 6
     res.json({
@@ -70,7 +68,7 @@ router.post('/combined',
  * @access  Private (requires 'installments' feature)
  */
 router.post('/:id/installment',
-  requireFeature('transactions', 'installments'),
+  requireFeature('installments'),
   async (req, res) => {
     // Placeholder - implementation coming in future phase
     res.json({
@@ -88,7 +86,7 @@ router.post('/:id/installment',
  * @body    notes - Cancellation reason (required)
  */
 router.post('/:id/cancel',
-  requireFeature('transactions', 'refunds'),
+  requireFeature('refunds'),
   transactionController.cancelTransaction
 );
 
@@ -98,7 +96,7 @@ router.post('/:id/cancel',
  * @access  Private (requires 'refunds' feature)
  */
 router.post('/:id/refund',
-  requireFeature('transactions', 'refunds'),
+  requireFeature('refunds'),
   transactionController.refundTransaction
 );
 
@@ -111,7 +109,7 @@ router.post('/:id/refund',
  * @body    notes - Refund reason (required)
  */
 router.post('/:id/refund-items',
-  requireFeature('transactions', 'refunds'),
+  requireFeature('refunds'),
   transactionController.refundItems
 );
 
@@ -136,7 +134,7 @@ router.post('/:id/pre-print',
  * @body    splits[] - Array of { itemIds: [uuid], customerName?, notes? }
  */
 router.post('/:id/split-bill',
-  requireFeature('transactions', 'splitPayment'),
+  requireFeature('splitPayment'),
   transactionController.splitBillByItem
 );
 

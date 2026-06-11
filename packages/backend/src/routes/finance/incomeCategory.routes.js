@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const auditLog = require('../../middlewares/auditMiddleware');
 const {
   createIncomeCategory,
@@ -18,7 +18,7 @@ const router = express.Router();
  */
 router.post('/',
   authenticate,
-  authorizeCasl('create', 'IncomeCategory'),
+  authorize('create', 'IncomeCategory'),
   createIncomeCategory,
   auditLog('CREATE_INCOME_CATEGORY')
 );
@@ -30,7 +30,7 @@ router.post('/',
  */
 router.get('/',
   authenticate,
-  authorizeCasl('read', 'IncomeCategory'),
+  authorize('read', 'IncomeCategory'),
   getAllIncomeCategories
 );
 
@@ -41,7 +41,7 @@ router.get('/',
  */
 router.put('/:id',
   authenticate,
-  authorizeCasl('update', 'IncomeCategory'),
+  authorize('update', 'IncomeCategory'),
   updateIncomeCategory,
   auditLog('UPDATE_INCOME_CATEGORY')
 );
@@ -53,7 +53,7 @@ router.put('/:id',
  */
 router.delete('/:id',
   authenticate,
-  authorizeCasl('delete', 'IncomeCategory'),
+  authorize('delete', 'IncomeCategory'),
   deleteIncomeCategory,
   auditLog('DELETE_INCOME_CATEGORY')
 );

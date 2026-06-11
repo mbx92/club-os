@@ -305,7 +305,7 @@ meta:
                 <p v-if="preset.description" class="text-xs text-base-content/60 mt-1">{{ preset.description }}</p>
               </div>
               <div class="dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-square">
+                <div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle">
                   <IconDotsVertical class="w-4 h-4" />
                 </div>
                 <ul tabindex="0" class="dropdown-content z-[1] menu p-1 shadow bg-base-100 rounded-box w-36">
@@ -400,10 +400,10 @@ meta:
                   </td>
                   <td class="text-right">
                     <div class="flex justify-end gap-2">
-                      <button class="btn btn-xs btn-ghost btn-square" @click="openEditShift(shift)" title="Edit">
+                      <button class="btn btn-xs btn-ghost btn-circle" @click="openEditShift(shift)" title="Edit">
                         <IconEdit class="w-4 h-4" />
                       </button>
-                      <button class="btn btn-xs btn-ghost btn-square text-error" @click="confirmDeleteShift(shift)" title="Hapus">
+                      <button class="btn btn-xs btn-ghost btn-circle text-error" @click="confirmDeleteShift(shift)" title="Hapus">
                         <IconTrash class="w-4 h-4" />
                       </button>
                     </div>

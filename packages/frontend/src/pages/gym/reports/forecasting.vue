@@ -95,7 +95,7 @@ onMounted(loadData)
   <div class="container mx-auto px-4 py-6">
     <!-- Header -->
     <div class="flex items-center gap-4 mb-6">
-      <button class="btn btn-ghost btn-sm" @click="router.push('/gym/reports')">
+      <button class="btn btn-ghost btn-sm btn-circle" @click="router.push('/gym/reports')">
         <IconArrowLeft class="w-5 h-5" />
       </button>
       <div class="flex-1">
@@ -107,7 +107,7 @@ onMounted(loadData)
           </span>
         </p>
       </div>
-      <button class="btn btn-ghost btn-sm" @click="loadData" :disabled="loading">
+      <button class="btn btn-ghost btn-sm btn-circle" @click="loadData" :disabled="loading">
         <IconRefresh class="w-4 h-4" :class="{ 'animate-spin': loading }" />
       </button>
     </div>

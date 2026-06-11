@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireSuperAdmin } = require('../../../middlewares/superAdminMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const {
@@ -24,7 +24,7 @@ const router = express.Router();
  */
 router.get('/',
   authenticate,
-  authorizeCasl('read', 'Log'),
+  authorize('read', 'Log'),
   getLogs
 );
 
@@ -37,7 +37,7 @@ router.get('/',
  */
 router.get('/stats',
   authenticate,
-  authorizeCasl('read', 'Log'),
+  authorize('read', 'Log'),
   getLogStats
 );
 
@@ -50,7 +50,7 @@ router.get('/stats',
  */
 router.get('/export',
   authenticate,
-  authorizeCasl('read', 'Log'),
+  authorize('read', 'Log'),
   auditLog('EXPORT_LOGS'),
   exportLogs
 );
@@ -63,7 +63,7 @@ router.get('/export',
  */
 router.get('/:id',
   authenticate,
-  authorizeCasl('read', 'Log'),
+  authorize('read', 'Log'),
   getLogById
 );
 
@@ -76,7 +76,7 @@ router.get('/:id',
  */
 router.post('/cleanup',
   authenticate,
-  authorizeCasl('delete', 'Log'),
+  authorize('delete', 'Log'),
   auditLog('CLEANUP_LOGS'),
   cleanupLogs
 );
@@ -104,7 +104,7 @@ router.post('/cleanup-files',
  */
 router.post('/delete',
   authenticate,
-  authorizeCasl('delete', 'Log'),
+  authorize('delete', 'Log'),
   auditLog('DELETE_LOGS'),
   deleteLogs
 );
@@ -119,7 +119,7 @@ router.post('/delete',
  */
 router.delete('/',
   authenticate,
-  authorizeCasl('delete', 'Log'),
+  authorize('delete', 'Log'),
   auditLog('DELETE_LOGS'),
   deleteLogs
 );

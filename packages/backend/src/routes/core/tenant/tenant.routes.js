@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const { getTenants, getTenant, createTenant, updateTenant, deleteTenant, updateTenantSettings } = require('../../../controllers/core/tenant/tenantController');
 
@@ -12,7 +12,7 @@ const router = express.Router();
  * @desc Get all tenants
  * @access Private (Admin only)
  */
-router.get('/', authenticate, authorizeCasl('read', 'Tenant'), auditLog('LIST_TENANTS'), getTenants);
+router.get('/', authenticate, authorize('read', 'Tenant'), auditLog('LIST_TENANTS'), getTenants);
 
 /**
  * @route GET /tenants/:id
@@ -20,7 +20,7 @@ router.get('/', authenticate, authorizeCasl('read', 'Tenant'), auditLog('LIST_TE
  * @desc Get tenant by ID
  * @access Private
  */
-router.get('/:id', authenticate, authorizeCasl('read', 'Tenant'), auditLog('GET_TENANT'), getTenant);
+router.get('/:id', authenticate, authorize('read', 'Tenant'), auditLog('GET_TENANT'), getTenant);
 
 /**
  * @route POST /tenants
@@ -28,7 +28,7 @@ router.get('/:id', authenticate, authorizeCasl('read', 'Tenant'), auditLog('GET_
  * @desc Create a new tenant
  * @access Private (Admin only)
  */
-router.post('/', authenticate, authorizeCasl('create', 'Tenant'), auditLog('CREATE_TENANT'), createTenant);
+router.post('/', authenticate, authorize('create', 'Tenant'), auditLog('CREATE_TENANT'), createTenant);
 
 /**
  * @route PUT /tenants/:id
@@ -36,7 +36,7 @@ router.post('/', authenticate, authorizeCasl('create', 'Tenant'), auditLog('CREA
  * @desc Update tenant
  * @access Private
  */
-router.put('/:id', authenticate, authorizeCasl('update', 'Tenant'), auditLog('UPDATE_TENANT'), updateTenant);
+router.put('/:id', authenticate, authorize('update', 'Tenant'), auditLog('UPDATE_TENANT'), updateTenant);
 
 /**
  * @route DELETE /tenants/:id
@@ -44,7 +44,7 @@ router.put('/:id', authenticate, authorizeCasl('update', 'Tenant'), auditLog('UP
  * @desc Delete tenant
  * @access Private (Admin only)
  */
-router.delete('/:id', authenticate, authorizeCasl('delete', 'Tenant'), auditLog('DELETE_TENANT'), deleteTenant);
+router.delete('/:id', authenticate, authorize('delete', 'Tenant'), auditLog('DELETE_TENANT'), deleteTenant);
 
 /**
  * @route PATCH /tenants/settings

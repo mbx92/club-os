@@ -70,7 +70,9 @@ async function getProfitLossReport(req, res, next) {
         'transactionType',
         [literal(`DATE_TRUNC('${groupBy}', "Transaction"."createdAt")`), 'period'],
         [fn('SUM', col('Transaction.subtotal')), 'subtotal'],
+        [fn('SUM', col('Transaction.voucherDiscount')), 'voucherDiscount'],
         [fn('SUM', col('Transaction.tax')), 'tax'],
+        [fn('SUM', col('Transaction.serviceCharge')), 'serviceCharge'],
         [fn('SUM', col('Transaction.totalAmount')), 'total'],
         [fn('COUNT', col('Transaction.id')), 'transactionCount']
       ],
@@ -150,7 +152,7 @@ async function getProfitLossReport(req, res, next) {
       }
 
       const periodData = periodMap.get(periodKey);
-      const grossRevenueAmount = parseFloat(r.subtotal || 0) + parseFloat(r.tax || 0);
+      const grossRevenueAmount = (parseFloat(r.subtotal || 0) - parseFloat(r.voucherDiscount || 0)) + parseFloat(r.tax || 0) + parseFloat(r.serviceCharge || 0);
       const netRevenueAmount = parseFloat(r.total || 0);
       periodData.revenue.total += grossRevenueAmount;
       periodData.netRevenue = (periodData.netRevenue || 0) + netRevenueAmount;

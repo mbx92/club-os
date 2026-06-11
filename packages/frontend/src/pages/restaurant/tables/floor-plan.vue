@@ -269,7 +269,7 @@ onMounted(async () => {
   <div class="container mx-auto px-4 py-8">
     <!-- Header -->
     <div class="flex items-center gap-4 mb-6">
-      <button class="btn btn-ghost btn-sm" @click="router.push('/restaurant/tables')">
+      <button class="btn btn-ghost btn-sm btn-circle" @click="router.push('/restaurant/tables')">
         <IconArrowLeft class="w-5 h-5" />
       </button>
       <div class="flex-1">

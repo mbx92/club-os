@@ -1,5 +1,12 @@
 import { ofetch } from 'ofetch'
-import { FeatureGateError, LimitReachedError, SubscriptionRequiredError, TenantInactiveError } from '@/utils/errors'
+import {
+  AccessDeniedError,
+  FeatureGateError,
+  LimitReachedError,
+  SubscriptionRequiredError,
+  TenantInactiveError,
+} from '@/utils/errors'
+import { redirectToAccessDenied, shouldRedirectOn403 } from '@/utils/accessDenied'
 import { debug } from '@/utils/debug'
 
 class ApiService {
@@ -178,6 +185,17 @@ class ApiService {
               })
             }
             throw new LimitReachedError(data)
+          }
+
+          // Permission / role 403 — redirect to dedicated access denied page
+          if (shouldRedirectOn403(data)) {
+            const from = window.location.pathname + window.location.search
+            redirectToAccessDenied({
+              from,
+              reason: 'api',
+              message: data.message,
+            })
+            throw new AccessDeniedError(data)
           }
         }
         

@@ -285,7 +285,7 @@ const endRow = computed(() => Math.min(props.pagination.page * props.pagination.
                   v-for="(action, ai) in rowActions"
                   :key="ai"
                   :class="[
-                    'btn btn-ghost btn-xs btn-square',
+                    'btn btn-ghost btn-xs btn-circle',
                     action.color === 'error' ? 'text-error hover:bg-error/10' : 'text-base-content/40 hover:text-base-content/70',
                   ]"
                   :title="action.label"

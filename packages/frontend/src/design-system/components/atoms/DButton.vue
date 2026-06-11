@@ -69,7 +69,7 @@ const classes = computed(() => [
   sizeClass[props.size] || '',
   props.pill ? 'rounded-full' : '',
   props.block ? 'btn-block' : '',
-  props.iconOnly ? 'btn-square' : '',
+  props.iconOnly ? 'btn-circle' : '',
   'font-semibold',
   'transition-all duration-200',
 ])

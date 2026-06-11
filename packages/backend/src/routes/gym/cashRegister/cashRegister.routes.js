@@ -3,7 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const cashRegisterController = require('../../../controllers/gym/cashRegister/cashRegisterController');
@@ -16,7 +16,7 @@ router.get(
   '/',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'CashRegisterSession'),
+  authorize('read', 'CashRegisterSession'),
   cashRegisterController.listSessions
 );
 
@@ -29,7 +29,7 @@ router.post(
   '/print-daily-report',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'CashRegisterSession'),
+  authorize('read', 'CashRegisterSession'),
   cashRegisterController.printDailyReport
 );
 
@@ -42,7 +42,7 @@ router.get(
   '/daily-report',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'CashRegisterSession'),
+  authorize('read', 'CashRegisterSession'),
   cashRegisterController.getDailyReport
 );
 
@@ -54,7 +54,7 @@ router.get(
   '/current',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'CashRegisterSession'),
+  authorize('read', 'CashRegisterSession'),
   cashRegisterController.getCurrentSession
 );
 
@@ -67,7 +67,7 @@ router.get(
   '/:id/report',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'CashRegisterSession'),
+  authorize('read', 'CashRegisterSession'),
   cashRegisterController.getShiftReport
 );
 
@@ -79,7 +79,7 @@ router.get(
   '/:id',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'CashRegisterSession'),
+  authorize('read', 'CashRegisterSession'),
   cashRegisterController.getSession
 );
 
@@ -91,7 +91,7 @@ router.post(
   '/open',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('create', 'CashRegisterSession'),
+  authorize('create', 'CashRegisterSession'),
   auditLog('open_shift', 'CashRegisterSession'),
   cashRegisterController.openShift
 );
@@ -104,7 +104,7 @@ router.post(
   '/:id/close',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'CashRegisterSession'),
+  authorize('update', 'CashRegisterSession'),
   auditLog('close_shift', 'CashRegisterSession'),
   cashRegisterController.closeShift
 );
@@ -118,7 +118,7 @@ router.patch(
   '/:id/correct-payment',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'CashRegisterSession'),
+  authorize('update', 'CashRegisterSession'),
   auditLog('correct_payment', 'CashRegisterSession'),
   cashRegisterController.correctPayment
 );
@@ -135,7 +135,7 @@ router.post(
   '/:id/diagnose-report',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'CashRegisterSession'),
+  authorize('update', 'CashRegisterSession'),
   cashRegisterController.diagnoseReport
 );
 

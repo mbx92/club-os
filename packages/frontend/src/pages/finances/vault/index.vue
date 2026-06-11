@@ -8,6 +8,7 @@ meta:
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { redirectToAccessDenied } from '@/utils/accessDenied'
 import { useAuthStore } from '@/stores/auth'
 import { useVault } from '@/composables/finances'
 import { useRestaurantLocations } from '@/composables/restaurant/useRestaurantLocations'
@@ -332,7 +333,7 @@ const submitCollect = async () => {
 
 onMounted(async () => {
   if (isCashier.value) {
-    router.replace('/403')
+    redirectToAccessDenied({ from: route.fullPath, reason: 'permission' })
     return
   }
 

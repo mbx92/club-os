@@ -4,7 +4,7 @@
  */
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const {
   getDailySummaryReport,
   exportDailySummaryReport,
@@ -20,7 +20,7 @@ const router = express.Router();
  */
 router.get('/daily-summary',
   authenticate,
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   getDailySummaryReport
 );
 
@@ -32,7 +32,7 @@ router.get('/daily-summary',
  */
 router.get('/daily-summary/export',
   authenticate,
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   exportDailySummaryReport
 );
 

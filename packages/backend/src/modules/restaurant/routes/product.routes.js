@@ -11,7 +11,7 @@ const router = express.Router();
 const productController = require('../controllers/productController');
 const productExtraRoutes = require('./productExtra.routes');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 const { productUpload } = require('../../../middlewares/uploadMiddleware');
 
@@ -25,7 +25,7 @@ router.use(requireModule('restaurant'));
  * @access Private - requires 'read' permission on 'Product'
  */
 router.get('/',
-  authorizeCasl('read', 'Product'),
+  authorize('read', 'Product'),
   productController.getAllProducts
 );
 
@@ -35,7 +35,7 @@ router.get('/',
  * @access Private - requires 'read' permission on 'Product'
  */
 router.get('/low-stock',
-  authorizeCasl('read', 'Product'),
+  authorize('read', 'Product'),
   productController.getLowStockProducts
 );
 
@@ -45,7 +45,7 @@ router.get('/low-stock',
  * @access Private - requires 'read' permission on 'Product'
  */
 router.get('/:id',
-  authorizeCasl('read', 'Product'),
+  authorize('read', 'Product'),
   productController.getProductById
 );
 
@@ -55,7 +55,7 @@ router.get('/:id',
  * @access Private - requires 'create' permission on 'Product'
  */
 router.post('/',
-  authorizeCasl('create', 'Product'),
+  authorize('create', 'Product'),
   productUpload.single('image'),
   productController.createProduct
 );
@@ -66,7 +66,7 @@ router.post('/',
  * @access Private - requires 'update' permission on 'Product'
  */
 router.put('/:id',
-  authorizeCasl('update', 'Product'),
+  authorize('update', 'Product'),
   productUpload.single('image'),
   productController.updateProduct
 );
@@ -77,7 +77,7 @@ router.put('/:id',
  * @access Private - requires 'delete' permission on 'Product'
  */
 router.delete('/:id',
-  authorizeCasl('delete', 'Product'),
+  authorize('delete', 'Product'),
   productController.deleteProduct
 );
 
@@ -87,7 +87,7 @@ router.delete('/:id',
  * @access Private - requires 'update' permission on 'Product'
  */
 router.post('/:id/adjust-stock',
-  authorizeCasl('update', 'Product'),
+  authorize('update', 'Product'),
   productController.adjustStock
 );
 

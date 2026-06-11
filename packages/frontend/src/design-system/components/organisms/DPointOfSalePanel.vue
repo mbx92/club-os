@@ -163,14 +163,14 @@ function cancelNote() {
             <!-- Qty controls -->
             <div class="flex items-center gap-1.5 shrink-0">
               <button
-                class="btn btn-ghost btn-xs btn-square"
+                class="btn btn-ghost btn-xs btn-circle"
                 @click="oi.qty <= 1 ? emit('remove-item', oi.id) : emit('update-qty', { id: oi.id, qty: oi.qty - 1 })"
               >
                 <span class="i-tabler-minus size-3.5" />
               </button>
               <span class="text-sm font-mono font-semibold w-6 text-center">{{ oi.qty }}</span>
               <button
-                class="btn btn-ghost btn-xs btn-square"
+                class="btn btn-ghost btn-xs btn-circle"
                 @click="emit('update-qty', { id: oi.id, qty: oi.qty + 1 })"
               >
                 <span class="i-tabler-plus size-3.5" />

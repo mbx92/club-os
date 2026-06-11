@@ -23,7 +23,7 @@ const dashboardRoutes = require('./dashboard.routes');
 const stockMovementController = require('../controllers/stockMovementController');
 const orderController = require('../controllers/orderController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 
 // ===== PUBLIC ROUTES (no auth required) =====
@@ -58,7 +58,7 @@ router.use('/dashboard', dashboardRoutes);
 router.get('/stock-report',
   authenticate,
   requireModule('restaurant'),
-  authorizeCasl('read', 'StockMovement'),
+  authorize('read', 'StockMovement'),
   stockMovementController.getStockReport
 );
 

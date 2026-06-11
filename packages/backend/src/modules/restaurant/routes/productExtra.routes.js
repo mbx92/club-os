@@ -13,7 +13,7 @@ const express = require('express');
 const router = express.Router({ mergeParams: true }); // mergeParams to access :productId from parent router
 const productExtraController = require('../controllers/productExtraController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 
 // All routes require authentication and restaurant module access
@@ -26,7 +26,7 @@ router.use(requireModule('restaurant'));
  * @access Private - requires 'read' permission on 'Product'
  */
 router.get('/',
-  authorizeCasl('read', 'Product'),
+  authorize('read', 'Product'),
   productExtraController.getProductExtras
 );
 
@@ -36,7 +36,7 @@ router.get('/',
  * @access Private - requires 'read' permission on 'Product'
  */
 router.get('/groups',
-  authorizeCasl('read', 'Product'),
+  authorize('read', 'Product'),
   productExtraController.getExtrasByGroup
 );
 
@@ -46,7 +46,7 @@ router.get('/groups',
  * @access Private - requires 'create' permission on 'Product'
  */
 router.post('/',
-  authorizeCasl('create', 'Product'),
+  authorize('create', 'Product'),
   productExtraController.createProductExtra
 );
 
@@ -56,7 +56,7 @@ router.post('/',
  * @access Private - requires 'create' permission on 'Product'
  */
 router.post('/bulk',
-  authorizeCasl('create', 'Product'),
+  authorize('create', 'Product'),
   productExtraController.bulkCreateExtras
 );
 
@@ -66,7 +66,7 @@ router.post('/bulk',
  * @access Private - requires 'update' permission on 'Product'
  */
 router.post('/migrate',
-  authorizeCasl('update', 'Product'),
+  authorize('update', 'Product'),
   productExtraController.migrateExtrasToTable
 );
 
@@ -76,7 +76,7 @@ router.post('/migrate',
  * @access Private - requires 'update' permission on 'Product'
  */
 router.post('/migrate-all',
-  authorizeCasl('update', 'Product'),
+  authorize('update', 'Product'),
   productExtraController.migrateAllExtrasToTable
 );
 
@@ -86,7 +86,7 @@ router.post('/migrate-all',
  * @access Private - requires 'delete' permission on 'Product'
  */
 router.delete('/json/:extraName',
-  authorizeCasl('delete', 'Product'),
+  authorize('delete', 'Product'),
   productExtraController.deleteJsonExtra
 );
 
@@ -96,7 +96,7 @@ router.delete('/json/:extraName',
  * @access Private - requires 'update' permission on 'Product'
  */
 router.put('/:extraId',
-  authorizeCasl('update', 'Product'),
+  authorize('update', 'Product'),
   productExtraController.updateProductExtra
 );
 
@@ -106,7 +106,7 @@ router.put('/:extraId',
  * @access Private - requires 'update' permission on 'Product'
  */
 router.patch('/:extraId/toggle',
-  authorizeCasl('update', 'Product'),
+  authorize('update', 'Product'),
   productExtraController.toggleExtraStatus
 );
 
@@ -116,7 +116,7 @@ router.patch('/:extraId/toggle',
  * @access Private - requires 'delete' permission on 'Product'
  */
 router.delete('/:extraId',
-  authorizeCasl('delete', 'Product'),
+  authorize('delete', 'Product'),
   productExtraController.deleteProductExtra
 );
 

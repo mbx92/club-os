@@ -131,7 +131,7 @@ function handlePhotoUpload(e) {
             <h2 class="text-lg font-bold">{{ title }}</h2>
             <p class="text-xs text-base-content/40 mt-0.5">Lengkapin semua informasi anggota.</p>
           </div>
-          <button class="btn btn-ghost btn-sm btn-square" @click="close">
+          <button class="btn btn-ghost btn-sm btn-circle" @click="close">
             <span class="i-tabler-x size-5" />
           </button>
         </div>

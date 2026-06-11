@@ -64,3 +64,14 @@ export class TenantInactiveError extends Error {
     this.code = data.code || 'TENANT_INACTIVE'
   }
 }
+
+export class AccessDeniedError extends Error {
+  constructor(data = {}) {
+    super(data.message || 'Akses ditolak')
+    this.name = 'AccessDeniedError'
+    this.code = data.code || 'ACCESS_DENIED'
+    this.statusCode = 403
+    this.redirected = true
+    this.skipNotification = true
+  }
+}

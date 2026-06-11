@@ -4,7 +4,7 @@
  */
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const {
   getServicePerformance,
   getActiveServicesReport
@@ -20,7 +20,7 @@ const router = express.Router();
  */
 router.get('/performance',
   authenticate,
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   getServicePerformance
 );
 
@@ -31,7 +31,7 @@ router.get('/performance',
  */
 router.get('/active',
   authenticate,
-  authorizeCasl('read', 'ActiveService'),
+  authorize('read', 'ActiveService'),
   getActiveServicesReport
 );
 

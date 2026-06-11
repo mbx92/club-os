@@ -15,7 +15,7 @@ module.exports = {
         name: 'Member',
         description: 'Gym member with limited access to their own data',
         permissions: JSON.stringify({
-          caslRules: [
+          rules: [
             // Members can view their own profile and memberships
             { subject: 'Member', actions: ['read'], conditions: { tenantId: '$tenantId', userId: '$userId' } },
             { subject: 'Membership', actions: ['read'], conditions: { tenantId: '$tenantId', memberId: '$userId' } },

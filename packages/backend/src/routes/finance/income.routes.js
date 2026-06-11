@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const auditLog = require('../../middlewares/auditMiddleware');
 const {
   createIncome,
@@ -19,7 +19,7 @@ const router = express.Router();
  */
 router.post('/',
   authenticate,
-  authorizeCasl('create', 'Income'),
+  authorize('create', 'Income'),
   createIncome,
   auditLog('CREATE_INCOME')
 );
@@ -31,7 +31,7 @@ router.post('/',
  */
 router.get('/',
   authenticate,
-  authorizeCasl('read', 'Income'),
+  authorize('read', 'Income'),
   getAllIncomes
 );
 
@@ -42,7 +42,7 @@ router.get('/',
  */
 router.get('/:id',
   authenticate,
-  authorizeCasl('read', 'Income'),
+  authorize('read', 'Income'),
   getIncomeById
 );
 
@@ -53,7 +53,7 @@ router.get('/:id',
  */
 router.put('/:id',
   authenticate,
-  authorizeCasl('update', 'Income'),
+  authorize('update', 'Income'),
   updateIncome,
   auditLog('UPDATE_INCOME')
 );
@@ -65,7 +65,7 @@ router.put('/:id',
  */
 router.delete('/:id',
   authenticate,
-  authorizeCasl('delete', 'Income'),
+  authorize('delete', 'Income'),
   deleteIncome,
   auditLog('DELETE_INCOME')
 );

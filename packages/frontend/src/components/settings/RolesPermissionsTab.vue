@@ -48,14 +48,14 @@
           <div class="flex gap-2">
             <button
               @click="viewMode = 'cards'"
-              class="btn btn-sm btn-square"
+              class="btn btn-sm btn-circle"
               :class="{ 'btn-primary': viewMode === 'cards', 'btn-ghost': viewMode !== 'cards' }"
             >
               <IconLayoutGrid class="w-4 h-4" />
             </button>
             <button
               @click="viewMode = 'list'"
-              class="btn btn-sm btn-square"
+              class="btn btn-sm btn-circle"
               :class="{ 'btn-primary': viewMode === 'list', 'btn-ghost': viewMode !== 'list' }"
             >
               <IconList class="w-4 h-4" />
@@ -116,8 +116,8 @@
                 <span class="font-semibold">{{ getMenuAccessCount(role.permissions) }}</span>
               </div>
               <div class="flex items-center justify-between text-sm">
-                <span class="opacity-70">CASL Rules</span>
-                <span class="font-semibold">{{ getCaslRulesCount(role.permissions) }}</span>
+                <span class="opacity-70">RBAC Rules</span>
+                <span class="font-semibold">{{ getRulesCount(role.permissions) }}</span>
               </div>
             </div>
 
@@ -144,7 +144,6 @@
               <button
                 class="btn btn-sm btn-primary gap-2"
                 @click="openEditModal(role)"
-                :disabled="role.name === 'admin'"
               >
                 <IconEdit class="w-4 h-4" />
                 Edit
@@ -213,22 +212,21 @@
                 <td>
                   <div class="flex gap-1 justify-end">
                     <button
-                      class="btn btn-ghost btn-sm btn-square"
+                      class="btn btn-ghost btn-sm btn-circle"
                       @click="openPermissionsModal(role)"
                       title="View Details"
                     >
                       <IconEye class="w-4 h-4" />
                     </button>
                     <button
-                      class="btn btn-ghost btn-sm btn-square"
+                      class="btn btn-ghost btn-sm btn-circle"
                       @click="openEditModal(role)"
-                      :disabled="role.name === 'admin'"
                       title="Edit Role"
                     >
                       <IconEdit class="w-4 h-4" />
                     </button>
                     <button
-                      class="btn btn-ghost btn-sm btn-square text-error"
+                      class="btn btn-ghost btn-sm btn-circle text-error"
                       @click="confirmDelete(role)"
                       :disabled="role.name === 'admin' || role.name === 'manager'"
                       title="Delete Role"
@@ -606,11 +604,11 @@
           </a>
           <a
             class="tab gap-2"
-            :class="{ 'tab-active': permissionView === 'casl' }"
-            @click="permissionView = 'casl'"
+            :class="{ 'tab-active': permissionView === 'rules-tab' }"
+            @click="permissionView = 'rules-tab'"
           >
             <IconShield class="w-4 h-4" />
-            CASL Rules
+            RBAC Rules
           </a>
           <a
             class="tab gap-2"
@@ -637,8 +635,8 @@
               <div class="stat-figure text-secondary">
                 <IconShield class="w-8 h-8" />
               </div>
-              <div class="stat-title">CASL Rules</div>
-              <div class="stat-value text-secondary">{{ getCaslRulesCount(viewingRole?.permissions) }}</div>
+              <div class="stat-title">RBAC Rules</div>
+              <div class="stat-value text-secondary">{{ getRulesCount(viewingRole?.permissions) }}</div>
               <div class="stat-desc">Defined permission rules</div>
             </div>
             <div class="stat">
@@ -725,10 +723,10 @@
           </div>
         </div>
 
-        <!-- CASL Rules View -->
-        <div v-if="permissionView === 'casl'" class="space-y-3 max-h-[500px] overflow-y-auto">
+        <!-- RBAC Rules View -->
+        <div v-if="permissionView === 'rules-tab'" class="space-y-3 max-h-[500px] overflow-y-auto">
           <div
-            v-for="(rule, index) in viewingRole?.permissions?.caslRules || []"
+            v-for="(rule, index) in viewingRole?.permissions?.rules || []"
             :key="index"
             class="card bg-base-200"
           >
@@ -756,9 +754,9 @@
               </div>
             </div>
           </div>
-          <div v-if="!viewingRole?.permissions?.caslRules || viewingRole.permissions.caslRules.length === 0" class="text-center py-8 opacity-50">
+          <div v-if="!viewingRole?.permissions?.rules || viewingRole.permissions.rules.length === 0" class="text-center py-8 opacity-50">
             <IconShield class="w-12 h-12 mx-auto mb-2" />
-            <p>No CASL rules defined</p>
+            <p>No RBAC rules defined</p>
           </div>
         </div>
 
@@ -793,7 +791,6 @@
           <button
             class="btn btn-primary gap-2"
             @click="editFromView"
-            :disabled="viewingRole?.name === 'admin'"
           >
             <IconEdit class="w-4 h-4" />
             Edit Role
@@ -813,7 +810,14 @@ import { ref, computed, onMounted, inject } from 'vue'
 import { useRolesPermissions } from '@/composables/admin/useRolesPermissions'
 import { useNotification } from '@/composables/core/useNotification'
 import { useAuthStore } from '@/stores/auth'
-import { ALL_MENU_KEYS, ROLE_MENU_MAP } from '@/navigation/roleMenuConfig'
+import { ALL_MENU_KEYS, ROLE_MENU_MAP } from '@/navigation/menuKeys'
+import {
+  getAllMenuKeyValues,
+  resolveMenuAccessForRole,
+  resolvePermissionsFromRules,
+  mapLegacyPermissions,
+  buildAllResourcePermissions
+} from '@/navigation/menuKeyUtils'
 import {
   IconShield,
   IconShieldPlus,
@@ -864,7 +868,7 @@ const {
   updateRole,
   deleteRole,
   regenerateRoutes,
-  caslRulesToFormPermissions
+  rulesToFormPermissions
 } = useRolesPermissions()
 
 const roleModal = ref(null)
@@ -876,7 +880,7 @@ const searchQuery = ref('')
 const permissionSearch = ref('')
 const viewMode = ref('cards') // 'cards' or 'list'
 const activeModule = ref('all')
-const permissionView = ref('summary') // 'summary', 'resources', 'casl', 'menu'
+const permissionView = ref('summary') // 'summary', 'resources', 'rules-tab', 'menu'
 
 // Check if user is superadmin
 const isSuperAdmin = ref(authStore.user?.isSuperAdmin || false)
@@ -991,14 +995,7 @@ const toggleParentMenuAccess = (menu) => {
 
 // Select all menu access (parent + all children)
 const selectAllMenuAccess = () => {
-  const allKeys = []
-  allMenuKeys.forEach(menu => {
-    allKeys.push(menu.key)
-    if (menu.children) {
-      menu.children.forEach(child => allKeys.push(child.key))
-    }
-  })
-  formData.value.menuAccess = allKeys
+  formData.value.menuAccess = getAllMenuKeyValues()
 }
 
 // Get count of checked children for a parent
@@ -1057,95 +1054,83 @@ const activeModuleName = computed(() => {
 })
 
 // Helper: Get resource module by subject name (PascalCase from backend)
-// Based on COMPLETE-SUBJECT-MAPPING-AUDIT.md (65+ subjects)
-const getResourceModule = (resourceName) => {
-  const MODULE_MAP = {
-    // Dashboard
-    'Dashboard':           'dashboard',
+  const getResourceModule = (resourceName) => {
+    const MODULE_MAP = {
+      // Dashboard
+      'Dashboard':           'dashboard',
 
-    // Gym (15)
-    'Member':              'gym',
-    'Membership':          'gym',
-    'MembershipPayment':   'gym',
-    'CheckIn':             'gym',
-    'Staff':               'gym',
-    'StaffAttendance':     'gym',
-    'Shift':               'gym',
-    'Trainer':             'gym',
-    'Coach':               'gym',
-    'TrainingPackage':     'gym',
-    'TrainingSession':     'gym',
-    'ClassSchedule':       'gym',
-    'ClassEnrollment':     'gym',
-    'GymProduct':          'gym',
-    'GymReport':           'gym',
+      // Gym
+      'Member':              'gym',
+      'Membership':          'gym',
+      'MembershipPayment':   'gym',
+      'CheckIn':             'gym',
+      'Staff':               'gym',
+      'StaffAttendance':     'gym',
+      'Shift':               'gym',
+      'Trainer':             'gym',
+      'Coach':               'gym',
+      'TrainingPackage':     'gym',
+      'TrainingSession':     'gym',
+      'ClassSchedule':       'gym',
+      'ClassEnrollment':     'gym',
+      'GymProduct':          'gym',
+      'GymReport':           'gym',
 
-    // Restaurant (8)
-    'Restaurant':          'restaurant',
-    'RestaurantCategory':  'restaurant',
-    'RestaurantProduct':   'restaurant',
-    'RestaurantLocation':  'restaurant',
-    'RestaurantTable':     'restaurant',
-    'Order':               'restaurant',
-    'RestaurantStock':     'restaurant',
-    'RestaurantReport':    'restaurant',
+      // Restaurant
+      'Restaurant':          'restaurant',
+      'RestaurantCategory':  'restaurant',
+      'RestaurantProduct':   'restaurant',
+      'RestaurantLocation':  'restaurant',
+      'RestaurantTable':     'restaurant',
+      'Order':               'restaurant',
+      'RestaurantStock':     'restaurant',
+      'RestaurantReport':    'restaurant',
 
-    // Finance (6)
-    'Transaction':         'finance',
-    'Expense':             'finance',
-    'CashRegisterSession': 'finance',
-    'Invoice':             'finance',
-    'Payment':             'finance',
-    'FinanceReport':       'finance',
+      // Finance
+      'Transaction':         'finance',
+      'Expense':             'finance',
+      'CashRegisterSession': 'finance',
+      'Invoice':             'finance',
+      'Payment':             'finance',
+      'FinanceReport':       'finance',
+      'Subscription':        'finance',
+      'SubscriptionPlan':    'finance',
 
-    // Subscription & Billing (4) — grouped under finance
-    'Subscription':        'finance',
-    'SubscriptionPlan':    'finance',
+      // POS
+      'POSProduct':          'pos',
+      'POSCategory':         'pos',
+      'POSTransaction':      'pos',
+      'POSReport':           'pos',
+      'Voucher':             'pos',
+      'MidtransPayment':     'pos',
 
-    // POS (4)
-    'POSProduct':          'pos',
-    'POSCategory':         'pos',
-    'POSTransaction':      'pos',
-    'POSReport':           'pos',
-    'Voucher':             'pos',
-    'MidtransPayment':     'pos',
+      // System / Core
+      'Tenant':              'system',
+      'User':                'system',
+      'Role':                'system',
+      'Permission':          'system',
+      'Auth':                'system',
+      'Metrics':             'system',
+      'Notification':        'system',
+      'AuditLog':            'system',
+      'SystemSetting':       'system',
+      'HikvisionDevice':     'system',
+    }
 
-    // Reports
-    'AdvancedReport':      'reports',
-    'CustomReport':        'reports',
+    // Direct lookup (exact PascalCase match)
+    if (MODULE_MAP[resourceName]) return MODULE_MAP[resourceName]
 
-    // System / Core (10)
-    'Tenant':              'system',
-    'User':                'system',
-    'Role':                'system',
-    'Permission':          'system',
-    'Auth':                'system',
-    'Metrics':             'system',
-    'Notification':        'system',
-    'AuditLog':            'system',
-    'SystemSetting':       'system',
-    'HikvisionDevice':     'system',
-    'Inventory':           'system',
-    'Supplier':            'system',
-    'PurchaseOrder':       'system',
-    'Campaign':            'system',
-    'Promotion':           'system',
+    // Fallback: prefix-based detection
+    const name = resourceName.toLowerCase()
+    if (name.startsWith('restaurant')) return 'restaurant'
+    if (name.startsWith('gym'))        return 'gym'
+    if (name.startsWith('pos'))        return 'pos'
+    if (name.startsWith('finance'))    return 'finance'
+    if (name.includes('report'))       return 'reports'
+    if (name === 'dashboard')          return 'dashboard'
+
+    return 'system'
   }
-
-  // Direct lookup (exact PascalCase match)
-  if (MODULE_MAP[resourceName]) return MODULE_MAP[resourceName]
-
-  // Fallback: prefix-based detection (for dynamic / unknown subjects)
-  const name = resourceName.toLowerCase()
-  if (name.startsWith('restaurant')) return 'restaurant'
-  if (name.startsWith('gym'))        return 'gym'
-  if (name.startsWith('pos'))        return 'pos'
-  if (name.startsWith('finance'))    return 'finance'
-  if (name.includes('report'))       return 'reports'
-  if (name === 'dashboard')          return 'dashboard'
-
-  return 'system'
-}
 
 // Helper: Get module selected count
 const getModuleSelectedCount = (moduleId) => {
@@ -1160,14 +1145,14 @@ const getSelectedActions = (resourceName) => {
   return formData.value.permissions[resourceName] || []
 }
 
-// Helper: Filter permissions - exclude caslRules and uiFlags for display
+// Helper: Filter permissions - exclude rules and uiFlags for display
 const getDisplayPermissions = (permissions) => {
   if (!permissions) return {}
   
   const filtered = {}
   for (const [key, value] of Object.entries(permissions)) {
-    // Skip caslRules and uiFlags - only show legacy resource permissions
-    if (key !== 'caslRules' && key !== 'uiFlags' && key !== 'menuAccess' && Array.isArray(value)) {
+    // Skip rules and uiFlags - only show legacy resource permissions
+    if (key !== 'rules' && key !== 'uiFlags' && key !== 'menuAccess' && Array.isArray(value)) {
       filtered[key] = value
     }
   }
@@ -1186,16 +1171,44 @@ const getMenuAccessCount = (permissions) => {
   return permissions.menuAccess.length
 }
 
-// Helper: Get CASL rules count
-const getCaslRulesCount = (permissions) => {
-  if (!permissions?.caslRules) return 0
-  return permissions.caslRules.length
+// Helper: Get RBAC rules count
+const getRulesCount = (permissions) => {
+  if (!permissions?.rules) return 0
+  return permissions.rules.length
 }
 
-// Helper: Get accessible modules
+// Helper: Get accessible modules — extract unique top-level names from menuAccess keys
 const getAccessibleModules = (permissions) => {
   if (!permissions?.menuAccess) return []
-  return permissions.menuAccess
+  
+  const moduleLabels = {
+    dashboard: 'Dashboard',
+    gym: 'Gym',
+    pos: 'POS',
+    restaurant: 'Restaurant',
+    classes: 'Classes',
+    finance: 'Finance',
+    finances: 'Finance',
+    reports: 'Reports',
+    subscription: 'Subscription',
+    'back-office': 'Back Office',
+    'cash-register': 'Cash Register',
+    vouchers: 'Vouchers',
+    settings: 'Settings',
+  }
+  
+  const seen = new Set()
+  const modules = []
+  for (const key of permissions.menuAccess) {
+    // Extract top-level module: "gym.members" → "gym", "dashboard" → "dashboard"
+    const topLevel = key.includes('.') ? key.split('.')[0] : key
+    if (seen.has(topLevel)) continue
+    // Only show known modules (filter out stale/unknown keys from old data)
+    if (!moduleLabels[topLevel]) continue
+    seen.add(topLevel)
+    modules.push(moduleLabels[topLevel])
+  }
+  return modules
 }
 
 // Helper: Get role icon
@@ -1272,7 +1285,7 @@ const openCreateModal = () => {
   roleModal.value?.showModal()
 }
 
-// Open edit modal — prefer caslRules as source of truth, fallback to legacy permissions
+// Open edit modal — prefer rules as source of truth, fallback to legacy permissions
 const openEditModal = (role) => {
   editingRole.value = role
 
@@ -1284,11 +1297,13 @@ const openEditModal = (role) => {
 
   let existingPermissions = {}
 
-  // Priority 1: caslRules array (new backend format)
-  const caslRulesSrc = perms.caslRules || role.caslRules
-  if (Array.isArray(caslRulesSrc) && caslRulesSrc.length > 0) {
-    existingPermissions = caslRulesToFormPermissions(caslRulesSrc)
-    if (import.meta.env.DEV) console.log('[EditModal] Loaded from caslRules:', existingPermissions)
+  const roleName = role.name?.toLowerCase()
+
+  // Priority 1: rules array (new backend format)
+  const rulesSrc = perms.rules || role.rules
+  if (Array.isArray(rulesSrc) && rulesSrc.length > 0) {
+    existingPermissions = resolvePermissionsFromRules(rulesSrc, availableResources.value, role)
+    if (import.meta.env.DEV) console.log('[EditModal] Loaded from rules:', existingPermissions)
   }
   // Priority 2: rolePermissions object
   else if (perms.rolePermissions && Object.keys(perms.rolePermissions).length > 0) {
@@ -1302,17 +1317,23 @@ const openEditModal = (role) => {
     })
     if (import.meta.env.DEV) console.log('[EditModal] Loaded from rolePermissions:', existingPermissions)
   }
-  // Priority 3: flat permissions object (legacy)
+  // Priority 3: flat permissions object (legacy camelCase pre-RBAC)
   else {
-    existingPermissions = getDisplayPermissions(perms)
+    const legacy = getDisplayPermissions(perms)
+    existingPermissions = mapLegacyPermissions(legacy, availableResources.value)
     if (import.meta.env.DEV) console.log('[EditModal] Loaded from legacy permissions:', existingPermissions)
+  }
+
+  // Admin/owner fallback: always show all resources checked in UI
+  if ((roleName === 'admin' || roleName === 'owner') && availableResources.value.length > 0) {
+    existingPermissions = buildAllResourcePermissions(availableResources.value)
   }
 
   formData.value = {
     name: role.name,
     description: role.description || '',
     permissions: existingPermissions,
-    menuAccess: Array.isArray(perms.menuAccess) ? [...perms.menuAccess] : (ROLE_MENU_MAP[role.name?.toLowerCase()] || []),
+    menuAccess: resolveMenuAccessForRole(role),
     isActive: role.isActive
   }
   activeModule.value = 'all'

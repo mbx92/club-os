@@ -9,7 +9,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 
 const {
@@ -72,7 +72,7 @@ router.post('/event', receiveEvent);
 router.get('/devices',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'HikvisionDevice'),
+  authorize('read', 'HikvisionDevice'),
   listDevices
 );
 
@@ -85,7 +85,7 @@ router.get('/devices',
 router.post('/devices',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('create', 'HikvisionDevice'),
+  authorize('create', 'HikvisionDevice'),
   createDevice
 );
 
@@ -98,7 +98,7 @@ router.post('/devices',
 router.put('/devices/:id',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   updateDevice
 );
 
@@ -111,7 +111,7 @@ router.put('/devices/:id',
 router.delete('/devices/:id',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('delete', 'HikvisionDevice'),
+  authorize('delete', 'HikvisionDevice'),
   deleteDevice
 );
 
@@ -129,7 +129,7 @@ router.delete('/devices/:id',
 router.get('/devices/:id/sync-logs',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'HikvisionDevice'),
+  authorize('read', 'HikvisionDevice'),
   getSyncLogs
 );
 
@@ -143,7 +143,7 @@ router.get('/devices/:id/sync-logs',
 router.get('/devices/:id/status',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'HikvisionDevice'),
+  authorize('read', 'HikvisionDevice'),
   getDeviceStatus
 );
 
@@ -156,7 +156,7 @@ router.get('/devices/:id/status',
 router.get('/devices/:id/sync-status',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'HikvisionDevice'),
+  authorize('read', 'HikvisionDevice'),
   getSyncStatus
 );
 
@@ -169,7 +169,7 @@ router.get('/devices/:id/sync-status',
 router.post('/devices/:id/sync',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   manualSync
 );
 
@@ -182,7 +182,7 @@ router.post('/devices/:id/sync',
 router.get('/devices/:id/test',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'HikvisionDevice'),
+  authorize('read', 'HikvisionDevice'),
   testConnection
 );
 
@@ -195,7 +195,7 @@ router.get('/devices/:id/test',
 router.get('/devices/:id/logs',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'HikvisionDevice'),
+  authorize('read', 'HikvisionDevice'),
   getDeviceLogs
 );
 
@@ -213,7 +213,7 @@ router.get('/devices/:id/logs',
 router.get('/devices/:id/employees',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'HikvisionDevice'),
+  authorize('read', 'HikvisionDevice'),
   listDeviceEmployees
 );
 
@@ -226,7 +226,7 @@ router.get('/devices/:id/employees',
 router.post('/devices/:id/employees',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   addDeviceEmployee
 );
 
@@ -239,7 +239,7 @@ router.post('/devices/:id/employees',
 router.delete('/devices/:id/employees/:employeeNo',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('delete', 'HikvisionDevice'),
+  authorize('delete', 'HikvisionDevice'),
   removeDeviceEmployee
 );
 
@@ -252,7 +252,7 @@ router.delete('/devices/:id/employees/:employeeNo',
 router.post('/devices/:id/employees/:employeeNo/enroll-fingerprint',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   enrollFingerprint
 );
 
@@ -265,7 +265,7 @@ router.post('/devices/:id/employees/:employeeNo/enroll-fingerprint',
 router.delete('/devices/:id/employees/:employeeNo/fingerprint',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('delete', 'HikvisionDevice'),
+  authorize('delete', 'HikvisionDevice'),
   deleteFingerprint
 );
 
@@ -278,7 +278,7 @@ router.delete('/devices/:id/employees/:employeeNo/fingerprint',
 router.delete('/devices/:id/enrollment-lock',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   unlockEnrollment
 );
 
@@ -295,7 +295,7 @@ router.delete('/devices/:id/enrollment-lock',
 router.post('/devices/:id/configure-push',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   configurePush
 );
 
@@ -308,7 +308,7 @@ router.post('/devices/:id/configure-push',
 router.get('/devices/:id/push-status',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'HikvisionDevice'),
+  authorize('read', 'HikvisionDevice'),
   getPushStatus
 );
 
@@ -321,7 +321,7 @@ router.get('/devices/:id/push-status',
 router.delete('/devices/:id/push',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   disablePush
 );
 
@@ -334,7 +334,7 @@ router.delete('/devices/:id/push',
 router.post('/devices/:id/sync-time',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   syncDeviceTime
 );
 
@@ -351,7 +351,7 @@ router.post('/devices/:id/sync-time',
 router.get('/staff-mapping',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'HikvisionDevice'),
+  authorize('read', 'HikvisionDevice'),
   listStaffMapping
 );
 
@@ -364,7 +364,7 @@ router.get('/staff-mapping',
 router.put('/staff-mapping/:userId',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   assignStaffDeviceNo
 );
 
@@ -377,7 +377,7 @@ router.put('/staff-mapping/:userId',
 router.delete('/staff-mapping/:userId',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('delete', 'HikvisionDevice'),
+  authorize('delete', 'HikvisionDevice'),
   unassignStaffDeviceNo
 );
 
@@ -390,7 +390,7 @@ router.delete('/staff-mapping/:userId',
 router.post('/reprocess-logs',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   reprocessUnmatchedLogs
 );
 
@@ -408,7 +408,7 @@ router.post('/reprocess-logs',
 router.post('/devices/:id/push-pending-employees',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   pushPendingEmployees
 );
 
@@ -421,7 +421,7 @@ router.post('/devices/:id/push-pending-employees',
 router.post('/devices/:id/sync-employees',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   syncDeviceEmployees
 );
 
@@ -435,7 +435,7 @@ router.post('/devices/:id/sync-employees',
 router.get('/device-employees',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'HikvisionDevice'),
+  authorize('read', 'HikvisionDevice'),
   listAllDeviceEmployees
 );
 
@@ -448,7 +448,7 @@ router.get('/device-employees',
 router.put('/device-employees/:id',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   updateDeviceEmployee
 );
 
@@ -462,7 +462,7 @@ router.put('/device-employees/:id',
 router.patch('/device-employees/:id/status',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   setDeviceEmployeeStatus
 );
 
@@ -480,7 +480,7 @@ router.patch('/device-employees/:id/status',
 router.get('/device-employees/duplicates',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'HikvisionDevice'),
+  authorize('read', 'HikvisionDevice'),
   listDuplicateDeviceEmployees
 );
 
@@ -495,7 +495,7 @@ router.get('/device-employees/duplicates',
 router.post('/device-employees/merge',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'HikvisionDevice'),
+  authorize('update', 'HikvisionDevice'),
   mergeDeviceEmployees
 );
 

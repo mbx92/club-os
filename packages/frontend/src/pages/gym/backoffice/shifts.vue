@@ -81,10 +81,10 @@ meta:
                 </td>
                 <td class="text-right">
                   <div class="flex justify-end gap-2">
-                    <button class="btn btn-xs btn-ghost btn-square" @click="openEditModal(shift)" title="Edit">
+                    <button class="btn btn-xs btn-ghost btn-circle" @click="openEditModal(shift)" title="Edit">
                       <IconEdit class="w-4 h-4" />
                     </button>
-                    <button class="btn btn-xs btn-ghost btn-square text-error" @click="confirmDelete(shift)" title="Hapus">
+                    <button class="btn btn-xs btn-ghost btn-circle text-error" @click="confirmDelete(shift)" title="Hapus">
                       <IconTrash class="w-4 h-4" />
                     </button>
                   </div>

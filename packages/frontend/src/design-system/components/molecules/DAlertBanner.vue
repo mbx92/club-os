@@ -54,7 +54,7 @@ function dismiss() {
       </div>
       <button
         v-if="dismissible"
-        class="btn btn-ghost btn-xs btn-square shrink-0"
+        class="btn btn-ghost btn-xs btn-circle shrink-0"
         @click="dismiss"
         aria-label="Tutup"
       >

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireSuperAdmin } = require('../../../middlewares/superAdminMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const { 
@@ -16,14 +16,14 @@ const {
   getMenuConfig,
   getAllSubjectsList,
   previewRolePermissions,
-  generateCaslRules,
+  generateRules,
   deleteRole
 } = require('../../../controllers/core/system/permissionController');
 
 /**
  * @route GET /permissions/user
  * @name permissions.user
- * @desc Get current user permissions (CASL rules and role permissions)
+ * @desc Get current user permissions (RBAC rules and role permissions)
  * @access Private
  */
 router.get('/user', authenticate, auditLog('GET_USER_PERMISSIONS'), getUserPermissions);
@@ -58,7 +58,7 @@ router.get('/roles', authenticate, auditLog('GET_ALL_ROLES'), getAllRoles);
  * @desc Create a new role with permissions
  * @access Private (Admin/Superadmin only)
  */
-router.post('/roles', authenticate, authorizeCasl('create', 'Role'), auditLog('CREATE_ROLE'), createRole);
+router.post('/roles', authenticate, authorize('create', 'Role'), auditLog('CREATE_ROLE'), createRole);
 
 /**
  * @route PUT /permissions/roles/:id
@@ -66,7 +66,7 @@ router.post('/roles', authenticate, authorizeCasl('create', 'Role'), auditLog('C
  * @desc Update role details (name, description, isActive)
  * @access Private (Admin/Superadmin only)
  */
-router.put('/roles/:id', authenticate, authorizeCasl('update', 'Role'), auditLog('UPDATE_ROLE'), updateRole);
+router.put('/roles/:id', authenticate, authorize('update', 'Role'), auditLog('UPDATE_ROLE'), updateRole);
 
 /**
  * @route PATCH /permissions/roles/:id/permissions
@@ -74,7 +74,7 @@ router.put('/roles/:id', authenticate, authorizeCasl('update', 'Role'), auditLog
  * @desc Update role permissions
  * @access Private (Admin/Superadmin only)
  */
-router.patch('/roles/:id/permissions', authenticate, authorizeCasl('update', 'Role'), auditLog('UPDATE_ROLE_PERMISSIONS'), updateRolePermissions);
+router.patch('/roles/:id/permissions', authenticate, authorize('update', 'Role'), auditLog('UPDATE_ROLE_PERMISSIONS'), updateRolePermissions);
 
 /**
  * @route DELETE /permissions/roles/:id
@@ -82,7 +82,7 @@ router.patch('/roles/:id/permissions', authenticate, authorizeCasl('update', 'Ro
  * @desc Delete a role
  * @access Private (Admin/Superadmin only)
  */
-router.delete('/roles/:id', authenticate, authorizeCasl('delete', 'Role'), auditLog('DELETE_ROLE'), deleteRole);
+router.delete('/roles/:id', authenticate, authorize('delete', 'Role'), auditLog('DELETE_ROLE'), deleteRole);
 
 /**
  * @route POST /permissions/roles/:id/reset
@@ -98,15 +98,15 @@ router.post('/roles/:id/reset', authenticate, requireSuperAdmin, auditLog('RESET
  * @desc Get full menu config (for admin role editor UI)
  * @access Private (Admin/Superadmin)
  */
-router.get('/menu', authenticate, authorizeCasl('read', 'Role'), auditLog('GET_MENU_CONFIG'), getMenuConfig);
+router.get('/menu', authenticate, authorize('read', 'Role'), auditLog('GET_MENU_CONFIG'), getMenuConfig);
 
 /**
  * @route GET /permissions/subjects
  * @name permissions.subjects
- * @desc Get all available CASL subjects
+ * @desc Get all available RBAC subjects
  * @access Private (Admin/Superadmin)
  */
-router.get('/subjects', authenticate, authorizeCasl('read', 'Role'), auditLog('GET_SUBJECTS_LIST'), getAllSubjectsList);
+router.get('/subjects', authenticate, authorize('read', 'Role'), auditLog('GET_SUBJECTS_LIST'), getAllSubjectsList);
 
 /**
  * @route GET /permissions/roles/:id/preview
@@ -114,14 +114,14 @@ router.get('/subjects', authenticate, authorizeCasl('read', 'Role'), auditLog('G
  * @desc Preview computed permissions for a role
  * @access Private (Admin/Superadmin)
  */
-router.get('/roles/:id/preview', authenticate, authorizeCasl('read', 'Role'), auditLog('PREVIEW_ROLE_PERMISSIONS'), previewRolePermissions);
+router.get('/roles/:id/preview', authenticate, authorize('read', 'Role'), auditLog('PREVIEW_ROLE_PERMISSIONS'), previewRolePermissions);
 
 /**
- * @route POST /permissions/roles/:roleId/generate-casl
- * @name permissions.generateCaslRules
- * @desc Generate CASL rules from simplified form
+ * @route POST /permissions/roles/:roleId/generate-rules
+ * @name permissions.generateRules
+ * @desc Generate RBAC rules from simplified form
  * @access Private (Admin/Superadmin)
  */
-router.post('/roles/:roleId/generate-casl', authenticate, authorizeCasl('update', 'Role'), auditLog('GENERATE_CASL_RULES'), generateCaslRules);
+router.post('/roles/:roleId/generate-rules', authenticate, authorize('update', 'Role'), auditLog('GENERATE_RULES'), generateRules);
 
 module.exports = router;

@@ -4,7 +4,7 @@
  */
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../middlewares/featureGateMiddleware');
 const {
   getRestaurantSales,
@@ -23,7 +23,7 @@ const router = express.Router();
 router.get('/sales',
   authenticate,
   requireModule('restaurant'),
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   getRestaurantSales
 );
 
@@ -36,7 +36,7 @@ router.get('/sales',
 router.get('/table-utilization',
   authenticate,
   requireModule('restaurant'),
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   getTableUtilization
 );
 
@@ -49,7 +49,7 @@ router.get('/table-utilization',
 router.get('/top-items',
   authenticate,
   requireModule('restaurant'),
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   getTopRestaurantItems
 );
 

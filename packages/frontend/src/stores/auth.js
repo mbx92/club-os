@@ -174,8 +174,8 @@ export const useAuthStore = defineStore('auth', () => {
             hasPermissions: !!permissions.value,
             permissionsKeys: permissions.value ? Object.keys(permissions.value) : [],
             permissionsStructure: permissions.value ? {
-              hasCaslRules: !!(permissions.value.caslRules && permissions.value.caslRules.length),
-              caslRulesCount: permissions.value.caslRules?.length || 0,
+              hasRules: !!(permissions.value.rules && permissions.value.rules.length),
+              rulesCount: permissions.value.rules?.length || 0,
               hasRolePermissions: !!(permissions.value.rolePermissions && Object.keys(permissions.value.rolePermissions).length),
               rolePermissionsKeys: permissions.value.rolePermissions ? Object.keys(permissions.value.rolePermissions) : []
             } : null
@@ -252,11 +252,9 @@ export const useAuthStore = defineStore('auth', () => {
       if (perms) {
         permissions.value = perms
         if (isDev) debug.log('[authStore] Permissions set:', {
-          hasCaslRules: !!(perms.caslRules && perms.caslRules.length),
-          caslRulesCount: perms.caslRules?.length || 0,
-          hasRolePermissions: !!(perms.rolePermissions && Object.keys(perms.rolePermissions).length),
-          rolePermissionsKeys: perms.rolePermissions ? Object.keys(perms.rolePermissions).slice(0, 5) : [],
-          firstRule: perms.caslRules?.[0]
+          hasRules: !!(perms.rules && perms.rules.length),
+          rulesCount: perms.rules?.length || 0,
+          firstRule: perms.rules?.[0]
         })
         return permissions.value
       }
@@ -264,7 +262,7 @@ export const useAuthStore = defineStore('auth', () => {
       debug.warn('[authStore] No permissions found in response, using empty permissions')
       // Set minimal empty permissions structure so menu can show with lenient mode
       permissions.value = {
-        caslRules: [],
+        rules: [],
         rolePermissions: {}
       }
       return null

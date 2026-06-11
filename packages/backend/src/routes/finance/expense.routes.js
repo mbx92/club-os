@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const auditLog = require('../../middlewares/auditMiddleware');
 const {
   createExpense,
@@ -22,7 +22,7 @@ const router = express.Router();
  */
 router.post('/',
   authenticate,
-  authorizeCasl('create', 'Expense'),
+  authorize('create', 'Expense'),
   createExpense,
   auditLog('CREATE_EXPENSE')
 );
@@ -34,7 +34,7 @@ router.post('/',
  */
 router.get('/',
   authenticate,
-  authorizeCasl('read', 'Expense'),
+  authorize('read', 'Expense'),
   getAllExpenses
 );
 
@@ -45,7 +45,7 @@ router.get('/',
  */
 router.get('/:id',
   authenticate,
-  authorizeCasl('read', 'Expense'),
+  authorize('read', 'Expense'),
   getExpenseById
 );
 
@@ -56,7 +56,7 @@ router.get('/:id',
  */
 router.put('/:id',
   authenticate,
-  authorizeCasl('update', 'Expense'),
+  authorize('update', 'Expense'),
   updateExpense,
   auditLog('UPDATE_EXPENSE')
 );
@@ -68,7 +68,7 @@ router.put('/:id',
  */
 router.delete('/:id',
   authenticate,
-  authorizeCasl('delete', 'Expense'),
+  authorize('delete', 'Expense'),
   deleteExpense,
   auditLog('DELETE_EXPENSE')
 );
@@ -80,7 +80,7 @@ router.delete('/:id',
  */
 router.post('/:id/approve',
   authenticate,
-  authorizeCasl('update', 'Expense'),
+  authorize('update', 'Expense'),
   approveExpense,
   auditLog('APPROVE_EXPENSE')
 );
@@ -92,7 +92,7 @@ router.post('/:id/approve',
  */
 router.post('/:id/pay',
   authenticate,
-  authorizeCasl('update', 'Expense'),
+  authorize('update', 'Expense'),
   markExpenseAsPaid,
   auditLog('PAY_EXPENSE')
 );
@@ -104,7 +104,7 @@ router.post('/:id/pay',
  */
 router.post('/:id/reopen',
   authenticate,
-  authorizeCasl('update', 'Expense'),
+  authorize('update', 'Expense'),
   reopenExpense,
   auditLog('REOPEN_EXPENSE')
 );

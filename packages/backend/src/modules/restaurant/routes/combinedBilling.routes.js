@@ -13,7 +13,7 @@ const express = require('express');
 const router = express.Router();
 const combinedBillingController = require('../controllers/combinedBillingController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireFeature } = require('../../../middlewares/featureGateMiddleware');
 
 // All routes require authentication
@@ -44,8 +44,8 @@ router.use(authenticate);
  * }
  */
 router.post('/combined',
-  requireFeature('transactions', 'combinedBilling'),
-  authorizeCasl('create', 'Transaction'),
+  requireFeature('combinedBilling'),
+  authorize('create', 'Transaction'),
   combinedBillingController.createCombinedTransaction
 );
 
@@ -55,7 +55,7 @@ router.post('/combined',
  * @access Private - requires 'read' permission on 'Transaction'
  */
 router.get('/receipt/:id',
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   combinedBillingController.getTransactionReceipt
 );
 

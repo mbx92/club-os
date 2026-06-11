@@ -1,7 +1,9 @@
+const { getMenuAccessForRole } = require('./menuKeys');
+
 /**
  * Default Role Permissions
  * 
- * Sumber default CASL rules per role.
+ * Sumber default RBAC rules per role.
  * Rules ini digunakan sebagai:
  * 1. Fallback jika Role.permissions di DB kosong
  * 2. Template awal saat seeder mengisi DB
@@ -18,7 +20,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
 
   // ─── ADMIN ────────────────────────────────────────────────────────────────
   admin: {
-    caslRules: [
+    rules: [
       { action: 'manage', subject: 'all',               conditions: { tenantId: '$tenantId' } },
       { action: 'read',   subject: 'Tenant',            conditions: { id: '$tenantId' } },
       { action: 'update', subject: 'Tenant',            conditions: { id: '$tenantId' } },
@@ -32,7 +34,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
       { action: 'read',   subject: 'DatabaseBackup' },
       { action: 'delete', subject: 'DatabaseBackup' },
     ],
-    menuAccess: ['dashboard', 'gym', 'pos', 'restaurant', 'classes', 'finance', 'reports', 'advancedReports', 'users', 'roles', 'settings', 'logs'],
+    menuAccess: getMenuAccessForRole('admin'),
     uiFlags: {
       canManageUsers: true,
       canManageRoles: true,
@@ -44,7 +46,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
 
   // ─── OWNER ────────────────────────────────────────────────────────────────
   owner: {
-    caslRules: [
+    rules: [
       { action: 'manage', subject: 'all',               conditions: { tenantId: '$tenantId' } },
       { action: 'read',   subject: 'Tenant',            conditions: { id: '$tenantId' } },
       { action: 'update', subject: 'Tenant',            conditions: { id: '$tenantId' } },
@@ -55,7 +57,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
       { action: 'manage', subject: 'StaffAttendance',   conditions: { tenantId: '$tenantId' } },
       { action: 'manage', subject: 'EmployeeSchedule',  conditions: { tenantId: '$tenantId' } },
     ],
-    menuAccess: ['dashboard', 'gym', 'pos', 'restaurant', 'classes', 'finance', 'reports', 'advancedReports', 'users', 'roles', 'settings', 'logs'],
+    menuAccess: getMenuAccessForRole('owner'),
     uiFlags: {
       canManageUsers: true,
       canManageRoles: true,
@@ -67,7 +69,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
 
   // ─── MANAGER ──────────────────────────────────────────────────────────────
   manager: {
-    caslRules: [
+    rules: [
       { action: 'read',   subject: 'Tenant',           conditions: { id: '$tenantId' } },
       { action: 'read',   subject: 'User',             conditions: { tenantId: '$tenantId' } },
       { action: 'update', subject: 'User',             conditions: { tenantId: '$tenantId' } },
@@ -96,7 +98,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
       { action: 'manage', subject: 'ActiveService',     conditions: { tenantId: '$tenantId' } },
       { action: 'manage', subject: 'PettyCash',        conditions: { tenantId: '$tenantId' } },
     ],
-    menuAccess: ['dashboard', 'gym', 'pos', 'restaurant', 'classes', 'finance', 'reports'],
+    menuAccess: getMenuAccessForRole('manager'),
     uiFlags: {
       canManageUsers: false,
       canManageRoles: false,
@@ -108,7 +110,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
 
   // ─── CASHIER ──────────────────────────────────────────────────────────────
   cashier: {
-    caslRules: [
+    rules: [
       { action: 'read',   subject: 'Tenant',            conditions: { id: '$tenantId' } },
       { action: 'manage', subject: 'Product',           conditions: { tenantId: '$tenantId' } },
       { action: 'manage', subject: 'ProductCategory',   conditions: { tenantId: '$tenantId' } },
@@ -141,7 +143,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
       { action: 'read',   subject: 'StaffAttendance',   conditions: { tenantId: '$tenantId' } },
       { action: 'read',   subject: 'EmployeeSchedule',  conditions: { tenantId: '$tenantId' } },
     ],
-    menuAccess: ['dashboard', 'gym', 'pos', 'restaurant'],
+    menuAccess: getMenuAccessForRole('cashier'),
     uiFlags: {
       canManageUsers: false,
       canManageRoles: false,
@@ -153,7 +155,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
 
   // ─── STAFF ────────────────────────────────────────────────────────────────
   staff: {
-    caslRules: [
+    rules: [
       { action: 'read',   subject: 'Tenant',            conditions: { id: '$tenantId' } },
       { action: 'read',   subject: 'Product',           conditions: { tenantId: '$tenantId' } },
       { action: 'read',   subject: 'ProductCategory',   conditions: { tenantId: '$tenantId' } },
@@ -165,7 +167,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
       { action: 'create', subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
       { action: 'update', subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
     ],
-    menuAccess: ['dashboard', 'restaurant'],
+    menuAccess: getMenuAccessForRole('staff'),
     uiFlags: {
       canManageUsers: false,
       canManageRoles: false,
@@ -177,7 +179,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
 
   // ─── TRAINER ──────────────────────────────────────────────────────────────
   trainer: {
-    caslRules: [
+    rules: [
       { action: 'read',   subject: 'Tenant',            conditions: { id: '$tenantId' } },
       { action: 'read',   subject: 'Member',            conditions: { tenantId: '$tenantId' } },
       { action: 'read',   subject: 'CheckIn',           conditions: { tenantId: '$tenantId' } },
@@ -185,7 +187,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
       { action: 'read',   subject: 'ActiveService',     conditions: { tenantId: '$tenantId' } },
       { action: 'update', subject: 'ActiveService',     conditions: { tenantId: '$tenantId' } },
     ],
-    menuAccess: ['dashboard', 'gym'],
+    menuAccess: getMenuAccessForRole('trainer'),
     uiFlags: {
       canManageUsers: false,
       canManageRoles: false,
@@ -197,13 +199,13 @@ const DEFAULT_ROLE_PERMISSIONS = {
 
   // ─── KITCHEN ──────────────────────────────────────────────────────────────
   kitchen: {
-    caslRules: [
+    rules: [
       { action: 'read',   subject: 'Tenant',            conditions: { id: '$tenantId' } },
       { action: 'read',   subject: 'Product',           conditions: { tenantId: '$tenantId' } },
       { action: 'read',   subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
       { action: 'update', subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
     ],
-    menuAccess: ['restaurant'],
+    menuAccess: getMenuAccessForRole('kitchen'),
     uiFlags: {
       canManageUsers: false,
       canManageRoles: false,
@@ -215,7 +217,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
 
   // ─── WAITER ───────────────────────────────────────────────────────────────
   waiter: {
-    caslRules: [
+    rules: [
       { action: 'read',   subject: 'Tenant',            conditions: { id: '$tenantId' } },
       { action: 'read',   subject: 'Product',           conditions: { tenantId: '$tenantId' } },
       { action: 'read',   subject: 'ProductCategory',   conditions: { tenantId: '$tenantId' } },
@@ -225,7 +227,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
       { action: 'create', subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
       { action: 'update', subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
     ],
-    menuAccess: ['restaurant'],
+    menuAccess: getMenuAccessForRole('waiter'),
     uiFlags: {
       canManageUsers: false,
       canManageRoles: false,
@@ -237,12 +239,12 @@ const DEFAULT_ROLE_PERMISSIONS = {
 
   // ─── USER (self-service) ──────────────────────────────────────────────────
   user: {
-    caslRules: [      { action: 'read',   subject: 'Tenant',            conditions: { id: '$tenantId' } },      { action: 'read',   subject: 'User',              conditions: { id: '$userId' } },
+    rules: [      { action: 'read',   subject: 'Tenant',            conditions: { id: '$tenantId' } },      { action: 'read',   subject: 'User',              conditions: { id: '$userId' } },
       { action: 'update', subject: 'User',              conditions: { id: '$userId' } },
       { action: 'read',   subject: 'Member',            conditions: { userId: '$userId' } },
       { action: 'update', subject: 'Member',            conditions: { userId: '$userId' } },
     ],
-    menuAccess: ['profile'],
+    menuAccess: getMenuAccessForRole('user'),
     uiFlags: {
       canManageUsers: false,
       canManageRoles: false,

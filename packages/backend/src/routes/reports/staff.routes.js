@@ -4,7 +4,7 @@
  */
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const {
   getStaffAttendanceReport,
   getDailyStaffComposition,
@@ -21,7 +21,7 @@ const router = express.Router();
  */
 router.get('/attendance',
   authenticate,
-  authorizeCasl('read', 'StaffAttendance'),
+  authorize('read', 'StaffAttendance'),
   getStaffAttendanceReport
 );
 
@@ -33,7 +33,7 @@ router.get('/attendance',
  */
 router.get('/daily-composition',
   authenticate,
-  authorizeCasl('read', 'EmployeeSchedule'),
+  authorize('read', 'EmployeeSchedule'),
   getDailyStaffComposition
 );
 
@@ -45,7 +45,7 @@ router.get('/daily-composition',
  */
 router.get('/shift-summary',
   authenticate,
-  authorizeCasl('read', 'EmployeeSchedule'),
+  authorize('read', 'EmployeeSchedule'),
   getShiftSummary
 );
 

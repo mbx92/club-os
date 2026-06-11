@@ -90,7 +90,7 @@ function getCategoryColor(cat) {
 
         <button
           v-if="!soldOut"
-          class="btn btn-primary btn-sm btn-square shadow-sm"
+          class="btn btn-primary btn-sm btn-circle shadow-sm"
           :aria-label="`Tambah ${item.name} ke pesanan`"
           @click.stop="emit('add-to-cart', item)"
         >

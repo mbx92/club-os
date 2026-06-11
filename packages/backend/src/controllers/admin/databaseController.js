@@ -11,6 +11,7 @@ const { createSequelizeBackup } = require('../../../scripts/backupDatabaseSequel
 const { createError } = require('../../utils/errorCodes');
 const logger = require('../../utils/logger');
 const { resolveBackupOptionsForTenantId } = require('../../utils/backupGoogleDriveConfig');
+const productionImportService = require('../../services/productionImportService');
 
 const backupsDir = path.join(process.cwd(), 'backups');
 
@@ -337,10 +338,121 @@ async function getDatabaseInfo(req, res, next) {
   }
 }
 
+async function listImportSources(req, res, next) {
+  try {
+    const sources = productionImportService.listImportSources();
+    res.json({ success: true, data: { sources, total: sources.length } });
+  } catch (err) {
+    next(createError('INTERNAL_ERROR', err.message));
+  }
+}
+
+async function analyzeImportSource(req, res, next) {
+  try {
+    const { sourceId } = req.query;
+    if (!sourceId) throw createError('INVALID_INPUT', 'sourceId is required');
+    const analysis = productionImportService.analyzeImportSource(sourceId);
+    res.json({ success: true, data: analysis });
+  } catch (err) {
+    if (err.isOperational) return next(err);
+    next(createError('INVALID_INPUT', err.message));
+  }
+}
+
+async function getImportDatabaseStatus(req, res, next) {
+  try {
+    const status = await productionImportService.getCurrentDatabaseStatus();
+    res.json({ success: true, data: status });
+  } catch (err) {
+    next(createError('INTERNAL_ERROR', err.message));
+  }
+}
+
+async function dropLegacyTables(req, res, next) {
+  try {
+    if (req.body?.confirm !== 'DROP-LEGACY') {
+      throw createError('INVALID_INPUT', 'Confirmation text must be DROP-LEGACY');
+    }
+
+    if (process.env.NODE_ENV === 'production') {
+      throw createError('FORBIDDEN', 'Dropping legacy tables from UI is blocked on production');
+    }
+
+    const result = await productionImportService.dropLegacyTablesOnDatabase();
+
+    logger.warn('Legacy tables dropped via UI', {
+      userId: req.user.id,
+      userName: req.user.name,
+      dropped: result.dropped,
+      database: process.env.DB_NAME,
+    });
+
+    res.json({ success: true, message: result.message, data: result });
+  } catch (err) {
+    if (err.isOperational) return next(err);
+    next(createError('INTERNAL_ERROR', err.message));
+  }
+}
+
+async function runImportMigrations(req, res, next) {
+  try {
+    if (process.env.NODE_ENV === 'production') {
+      throw createError('FORBIDDEN', 'Running migrations from UI is blocked on production');
+    }
+
+    const result = await productionImportService.runPendingMigrations();
+
+    logger.info('Migrations run via production import UI', {
+      userId: req.user.id,
+      userName: req.user.name,
+    });
+
+    res.json({ success: true, message: result.message, data: result });
+  } catch (err) {
+    next(createError('INTERNAL_ERROR', err.message || 'Migration failed'));
+  }
+}
+
+async function restoreImportSource(req, res, next) {
+  try {
+    const { sourceId, confirm, dropDatabase = true } = req.body || {};
+
+    if (!sourceId) throw createError('INVALID_INPUT', 'sourceId is required');
+    if (confirm !== 'RESTORE') {
+      throw createError('INVALID_INPUT', 'Confirmation text must be RESTORE');
+    }
+
+    if (process.env.NODE_ENV === 'production') {
+      throw createError('FORBIDDEN', 'Restore from UI is blocked on production environment');
+    }
+
+    const result = await productionImportService.restoreFromSource(sourceId, { dropDatabase });
+
+    logger.warn('Database restored via production import UI', {
+      userId: req.user.id,
+      userName: req.user.name,
+      sourceId,
+      database: process.env.DB_NAME,
+      dropDatabase,
+    });
+
+    res.json({ success: true, message: result.message, data: result });
+  } catch (err) {
+    if (err.isOperational) return next(err);
+    next(createError('INTERNAL_ERROR', err.message || 'Restore failed'));
+  }
+}
+
 module.exports = {
   createDatabaseBackup,
   listBackups,
   downloadBackup,
   deleteBackup,
-  getDatabaseInfo
+  getDatabaseInfo,
+  listImportSources,
+  analyzeImportSource,
+  getImportDatabaseStatus,
+  dropLegacyTables,
+  runImportMigrations,
+  restoreImportSource,
 };

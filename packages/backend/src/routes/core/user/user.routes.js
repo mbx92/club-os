@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { enforceLimit } = require('../../../middlewares/featureGateMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const { getUsers, getUser, createUser, updateUser, deleteUser } = require('../../../controllers/core/user/userController');
@@ -15,7 +15,7 @@ const router = express.Router();
  * @access Private
  * @query role - Filter by role name (e.g. admin, cashier, member, trainer)
  */
-router.get('/', authenticate, authorizeCasl('read', 'User'), auditLog('LIST_USERS'), getUsers);
+router.get('/', authenticate, authorize('read', 'User'), auditLog('LIST_USERS'), getUsers);
 
 /**
  * @route GET /users/:id
@@ -23,7 +23,7 @@ router.get('/', authenticate, authorizeCasl('read', 'User'), auditLog('LIST_USER
  * @desc Get user by ID
  * @access Private
  */
-router.get('/:id', authenticate, authorizeCasl('read', 'User'), auditLog('GET_USER'), getUser);
+router.get('/:id', authenticate, authorize('read', 'User'), auditLog('GET_USER'), getUser);
 
 /**
  * @route POST /users
@@ -34,7 +34,7 @@ router.get('/:id', authenticate, authorizeCasl('read', 'User'), auditLog('GET_US
  */
 router.post('/', 
   authenticate, 
-  authorizeCasl('create', 'User'),
+  authorize('create', 'User'),
   enforceLimit('maxUsers', async (tenantId) => {
     return await User.count({ where: { tenantId } });
   }),
@@ -48,7 +48,7 @@ router.post('/',
  * @desc Update user
  * @access Private
  */
-router.put('/:id', authenticate, authorizeCasl('update', 'User'), auditLog('UPDATE_USER'), updateUser);
+router.put('/:id', authenticate, authorize('update', 'User'), auditLog('UPDATE_USER'), updateUser);
 
 /**
  * @route DELETE /users/:id
@@ -56,6 +56,6 @@ router.put('/:id', authenticate, authorizeCasl('update', 'User'), auditLog('UPDA
  * @desc Delete user
  * @access Private
  */
-router.delete('/:id', authenticate, authorizeCasl('delete', 'User'), auditLog('DELETE_USER'), deleteUser);
+router.delete('/:id', authenticate, authorize('delete', 'User'), auditLog('DELETE_USER'), deleteUser);
 
 module.exports = router;

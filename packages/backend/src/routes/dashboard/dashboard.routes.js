@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const auditLog = require('../../middlewares/auditMiddleware');
 const { getMainDashboard } = require('../../controllers/dashboard/mainDashboardController');
 const { getGlobalReport } = require('../../controllers/dashboard/globalReportController');
@@ -16,7 +16,7 @@ const router = express.Router();
  */
 router.get('/main',
   authenticate,
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   auditLog('MAIN_DASHBOARD'),
   getMainDashboard
 );
@@ -33,7 +33,7 @@ router.get('/main',
  */
 router.get('/global-report',
   authenticate,
-  authorizeCasl('read', 'Transaction'),
+  authorize('read', 'Transaction'),
   auditLog('GLOBAL_REPORT'),
   getGlobalReport
 );

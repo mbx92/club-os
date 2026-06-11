@@ -4,7 +4,7 @@
  */
 const express = require('express');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../middlewares/caslMiddleware');
+const { authorize } = require('../../middlewares/permissionMiddleware');
 const {
   getGymOverview,
   getCheckInTrends,
@@ -20,7 +20,7 @@ const router = express.Router();
  */
 router.get('/overview',
   authenticate,
-  authorizeCasl('read', 'Member'),
+  authorize('read', 'Member'),
   getGymOverview
 );
 
@@ -32,7 +32,7 @@ router.get('/overview',
  */
 router.get('/checkin-trends',
   authenticate,
-  authorizeCasl('read', 'CheckIn'),
+  authorize('read', 'CheckIn'),
   getCheckInTrends
 );
 
@@ -43,7 +43,7 @@ router.get('/checkin-trends',
  */
 router.get('/membership-stats',
   authenticate,
-  authorizeCasl('read', 'ActiveService'),
+  authorize('read', 'ActiveService'),
   getMembershipStats
 );
 

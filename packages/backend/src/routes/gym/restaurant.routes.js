@@ -42,7 +42,7 @@ router.get('/tables', async (req, res) => {
  * @access  Private (requires 'restaurant' module + 'customTableLayout' feature)
  */
 router.get('/tables/layout',
-  requireFeature('restaurant', 'customTableLayout'),
+  requireFeature('customTableLayout'),
   async (req, res) => {
     res.json({
       success: true,
@@ -87,7 +87,7 @@ router.get('/menu', async (req, res) => {
  * @access  Private (requires 'restaurant' module + 'kitchenDisplay' feature)
  */
 router.post('/kitchen/display',
-  requireFeature('restaurant', 'kitchenDisplay'),
+  requireFeature('kitchenDisplay'),
   async (req, res) => {
     res.json({
       success: true,

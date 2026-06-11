@@ -13,7 +13,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorizeCasl } = require('../../../middlewares/caslMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 
 const {
@@ -33,7 +33,7 @@ const {
 router.get('/',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'EmployeeSchedule'),
+  authorize('read', 'EmployeeSchedule'),
   listShifts
 );
 
@@ -46,7 +46,7 @@ router.get('/',
 router.get('/:id',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('read', 'EmployeeSchedule'),
+  authorize('read', 'EmployeeSchedule'),
   getShift
 );
 
@@ -59,7 +59,7 @@ router.get('/:id',
 router.post('/',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('create', 'EmployeeSchedule'),
+  authorize('create', 'EmployeeSchedule'),
   createShift
 );
 
@@ -72,7 +72,7 @@ router.post('/',
 router.put('/:id',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('update', 'EmployeeSchedule'),
+  authorize('update', 'EmployeeSchedule'),
   updateShift
 );
 
@@ -85,7 +85,7 @@ router.put('/:id',
 router.delete('/:id',
   authenticate,
   requireModule('gym'),
-  authorizeCasl('delete', 'EmployeeSchedule'),
+  authorize('delete', 'EmployeeSchedule'),
   deleteShift
 );
 
