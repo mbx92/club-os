@@ -16,7 +16,8 @@ router.use(requireSuperAdminOrAdmin);
 /**
  * @route   POST /api/v1/admin/database/backup
  * @desc    Create database backup
- * @body    tenantId? Optional tenant ID used as settings source for backup.googleDrive
+ * @body    tenantId? Optional tenant ID used as settings source for backup.googleDrive/minio
+ * @body    cloudProvider? Optional: google_drive | minio
  * @access  Super Admin or Admin
  */
 router.post('/backup', databaseController.createDatabaseBackup);

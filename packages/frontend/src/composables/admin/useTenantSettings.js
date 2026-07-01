@@ -198,7 +198,7 @@ export const useTenantSettings = () => {
 
   /**
    * Patch tenant JSON settings
-   * @param {Object} settingsData - Partial settings payload, e.g. { backup: { googleDrive: {...} } }
+   * @param {Object} settingsData - Partial settings payload, e.g. { backup: { googleDrive: {...}, minio: {...} } }
    * @param {String} successMessage - Success notification message
    */
   const patchTenantSettings = async (settingsData, successMessage = 'Tenant settings updated successfully') => {

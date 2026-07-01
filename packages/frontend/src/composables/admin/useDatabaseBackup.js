@@ -29,7 +29,7 @@ export function useDatabaseBackup() {
         return backups.value
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to load backups'
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to load backups'
       showError(errorMessage)
       console.error('[useDatabaseBackup] Fetch Error:', err)
       backups.value = []
@@ -41,14 +41,44 @@ export function useDatabaseBackup() {
   /**
    * Create new backup
    */
-  const createBackup = async () => {
+  const createBackup = async (options = {}) => {
     isCreatingBackup.value = true
     try {
-      const response = await api.post('/admin/database/backup')
+      const payload = {}
+
+      if (options.cloudProvider) {
+        payload.cloudProvider = options.cloudProvider
+      }
+
+      if (options.tenantId) {
+        payload.tenantId = options.tenantId
+      }
+
+      const response = await api.post('/admin/database/backup', payload)
 
       if (response.success) {
         console.log('[useDatabaseBackup] Backup created:', response.data)
-        showSuccess(`Backup created successfully: ${response.data.filename}`)
+        const uploadTargets = []
+
+        if (response.data.googleDrive?.uploaded) {
+          uploadTargets.push('Google Drive')
+        }
+
+        if (response.data.minio?.uploaded) {
+          uploadTargets.push('MinIO')
+        }
+
+        const uploadSummary = uploadTargets.length > 0
+          ? ` • Uploaded to ${uploadTargets.join(' & ')}`
+          : ''
+
+        const processLabel = options.cloudProvider === 'google_drive'
+          ? 'Backup Google Drive selesai'
+          : options.cloudProvider === 'minio'
+            ? 'Backup MinIO selesai'
+            : 'Backup created successfully'
+
+        showSuccess(`${processLabel}: ${response.data.filename}${uploadSummary}`)
         
         // Refresh backups list
         await fetchBackups()
@@ -56,7 +86,7 @@ export function useDatabaseBackup() {
         return response.data
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to create backup'
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to create backup'
       showError(errorMessage)
       console.error('[useDatabaseBackup] Create Error:', err)
       throw err
@@ -88,7 +118,7 @@ export function useDatabaseBackup() {
       showSuccess('Backup file downloaded successfully')
       console.log('[useDatabaseBackup] Downloaded:', filename)
     } catch (err) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to download backup'
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to download backup'
       showError(errorMessage)
       console.error('[useDatabaseBackup] Download Error:', err)
     }
@@ -111,7 +141,7 @@ export function useDatabaseBackup() {
         return true
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to delete backup'
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to delete backup'
       showError(errorMessage)
       console.error('[useDatabaseBackup] Delete Error:', err)
       return false
@@ -131,7 +161,7 @@ export function useDatabaseBackup() {
         return databaseInfo.value
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to load database info'
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to load database info'
       showError(errorMessage)
       console.error('[useDatabaseBackup] Info Error:', err)
       databaseInfo.value = null

@@ -53,6 +53,15 @@
                     <button
                       role="tab"
                       class="tab gap-1.5"
+                      :class="{ 'tab-active': activeTab === 'cloud' }"
+                      @click="activeTab = 'cloud'"
+                    >
+                      <IconCloudUpload class="w-4 h-4" />
+                      Cloud Storage
+                    </button>
+                    <button
+                      role="tab"
+                      class="tab gap-1.5"
                       :class="{ 'tab-active': activeTab === 'import' }"
                       @click="activeTab = 'import'"
                     >
@@ -87,260 +96,446 @@
               <div class="flex-1 overflow-y-auto p-6 space-y-6">
                 <ProductionImportPanel v-if="activeTab === 'import'" />
 
-                <template v-else>
-                <!-- Google Drive Backup Settings -->
-                <div class="card bg-base-200 shadow">
-                  <div class="card-body">
-                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
-                        <h3 class="card-title text-lg flex items-center gap-2">
-                          <IconCloudUpload class="w-5 h-5" />
-                          Google Drive Backup
-                        </h3>
-                        <p class="text-sm text-base-content/70 mt-1">
-                          Simpan konfigurasi folder Google Drive untuk backup tenant ini.
-                        </p>
-                      </div>
-
-                      <div class="flex flex-wrap gap-2">
-                        <span class="badge" :class="googleDriveSettings.enabled ? 'badge-success' : 'badge-ghost'">
-                          {{ googleDriveSettings.enabled ? 'Enabled' : 'Disabled' }}
-                        </span>
-                        <span
-                          class="badge"
-                          :class="googleDriveSettings.required && googleDriveSettings.enabled ? 'badge-warning' : 'badge-ghost'"
-                        >
-                          {{ googleDriveSettings.required && googleDriveSettings.enabled ? 'Required' : 'Optional' }}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                      <label class="flex items-start gap-3 p-4 bg-base-100 rounded-xl border border-base-300 cursor-pointer">
-                        <input
-                          v-model="googleDriveSettings.enabled"
-                          type="checkbox"
-                          class="checkbox checkbox-sm checkbox-primary mt-0.5"
-                        >
-                        <div>
-                          <div class="font-medium">Aktifkan Google Drive Backup</div>
-                          <div class="text-sm text-base-content/60">
-                            Backup akan memakai konfigurasi Google Drive tenant.
-                          </div>
-                        </div>
-                      </label>
-
-                      <label
-                        class="flex items-start gap-3 p-4 bg-base-100 rounded-xl border border-base-300"
-                        :class="googleDriveSettings.enabled ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'"
-                      >
-                        <input
-                          v-model="googleDriveSettings.required"
-                          type="checkbox"
-                          class="checkbox checkbox-sm checkbox-warning mt-0.5"
-                          :disabled="!googleDriveSettings.enabled"
-                        >
-                        <div>
-                          <div class="font-medium">Wajib Upload ke Google Drive</div>
-                          <div class="text-sm text-base-content/60">
-                            Tandai backup cloud sebagai kebutuhan wajib untuk tenant ini.
-                          </div>
-                        </div>
-                      </label>
-                    </div>
-
-                    <div class="mt-4">
-                      <label class="label">
-                        <span class="label-text font-medium flex items-center gap-2">
-                          <IconFolder class="w-4 h-4" />
-                          Google Drive Folder ID
-                        </span>
-                      </label>
-                      <input
-                        v-model="googleDriveSettings.folderId"
-                        type="text"
-                        class="input input-bordered w-full"
-                        placeholder="1ESvPnfhl6eG21uIyE42ywJY8FtM3xDuV"
-                      >
-                      <label class="label">
-                        <span class="label-text-alt text-base-content/60">
-                          Isi folder ID tujuan tempat file backup akan disimpan.
-                        </span>
-                      </label>
-                    </div>
-
-                    <div class="card-actions justify-end mt-2">
-                      <button
-                        class="btn btn-primary btn-sm gap-2"
-                        :disabled="isSavingGoogleDriveSettings"
-                        @click="handleSaveGoogleDriveSettings"
-                      >
-                        <span v-if="isSavingGoogleDriveSettings" class="loading loading-spinner loading-sm"></span>
-                        <IconDeviceFloppy v-else class="w-4 h-4" />
-                        Simpan Google Drive
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Database Info -->
-                <div v-if="databaseInfo" class="card bg-base-200 shadow">
-            <div class="card-body">
-              <h3 class="card-title text-lg flex items-center gap-2">
-                <IconInfoCircle class="w-5 h-5" />
-                Database Information
-              </h3>
-              
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
-                <div>
-                  <div class="text-xs text-base-content/60 mb-1">Database</div>
-                  <div class="font-semibold">{{ databaseInfo.database }}</div>
-                </div>
-                <div>
-                  <div class="text-xs text-base-content/60 mb-1">Type</div>
-                  <div class="font-semibold uppercase">{{ databaseInfo.dialect }}</div>
-                </div>
-                <div>
-                  <div class="text-xs text-base-content/60 mb-1">Size</div>
-                  <div class="font-semibold">{{ databaseInfo.size }}</div>
-                </div>
-                <div>
-                  <div class="text-xs text-base-content/60 mb-1">Tables</div>
-                  <div class="font-semibold">{{ databaseInfo.tableCount }}</div>
-                </div>
-              </div>
-              
-              <div class="mt-3 p-3 bg-base-300 rounded-lg">
-                <div class="text-xs text-base-content/60 mb-1">Environment</div>
-                <div class="flex items-center gap-2">
-                  <span class="badge" :class="databaseInfo.environment === 'production' ? 'badge-error' : 'badge-warning'">
-                    {{ databaseInfo.environment }}
-                  </span>
-                  <span class="text-sm">{{ databaseInfo.host }}:{{ databaseInfo.port }}</span>
-                </div>
-                </div>
-              </div>
-            </div>
-
-                <!-- Stats -->
-                <div v-if="backups.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div class="stat bg-base-200 rounded-lg shadow">
-                    <div class="stat-figure text-primary">
-                      <IconFiles class="w-8 h-8" />
-                    </div>
-                    <div class="stat-title text-xs">Total Backups</div>
-                    <div class="stat-value text-2xl">{{ backups.length }}</div>
-                  </div>
-                  
-                  <div class="stat bg-base-200 rounded-lg shadow">
-                    <div class="stat-figure text-secondary">
-                      <IconFileZip class="w-8 h-8" />
-                    </div>
-                    <div class="stat-title text-xs">Total Size</div>
-                    <div class="stat-value text-2xl">{{ totalSizeMB }} MB</div>
-                  </div>
-                  
-                  <div class="stat bg-base-200 rounded-lg shadow">
-                    <div class="stat-figure text-accent">
-                      <IconClock class="w-8 h-8" />
-                    </div>
-                    <div class="stat-title text-xs">Latest Backup</div>
-                    <div class="stat-value text-sm">{{ latestBackupTime }}</div>
-                  </div>
-                </div>
-
-                <!-- Backups List -->
-                <div class="card bg-base-200 shadow">
-                  <div class="card-body">
-                    <h3 class="card-title text-lg flex items-center gap-2">
-                      <IconList class="w-5 h-5" />
-                      Backup Files ({{ backups.length }})
-                    </h3>
-
-                    <!-- Loading State -->
-                    <div v-if="isLoading && backups.length === 0" class="flex justify-center py-12">
-                      <span class="loading loading-spinner loading-lg text-primary"></span>
-                    </div>
-
-                    <!-- Empty State -->
-                    <div v-else-if="backups.length === 0" class="text-center py-12">
-                      <IconFileOff class="w-16 h-16 mx-auto text-base-content/30 mb-4" />
-                      <p class="text-base-content/70">No backup files found</p>
-                      <p class="text-sm text-base-content/50 mt-2">Create your first backup to get started</p>
-                    </div>
-
-                    <!-- Backups Table -->
-                    <div v-else class="overflow-x-auto mt-4">
-                      <table class="table table-zebra w-full">
-                        <thead>
-                          <tr>
-                            <th>Filename</th>
-                            <th>Size</th>
-                            <th>Environment</th>
-                            <th>Created</th>
-                            <th class="text-right">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="backup in sortedBackups" :key="backup.filename">
-                            <td>
-                              <div class="flex items-center gap-2">
-                                <IconFile class="w-4 h-4 text-primary" />
-                                <span class="font-mono text-xs">{{ backup.filename }}</span>
+                <template v-else-if="activeTab === 'backup'">
+                  <div class="grid gap-6 xl:grid-cols-[1.18fr_0.82fr]">
+                    <div class="space-y-6">
+                      <section class="overflow-hidden rounded-[1.75rem] border border-base-300 bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.16),transparent_38%),linear-gradient(180deg,hsl(var(--b1)),hsl(var(--b2)))] shadow-sm">
+                        <div class="p-6">
+                          <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                            <div class="max-w-2xl">
+                              <div class="inline-flex items-center gap-2 rounded-full border border-success/20 bg-success/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-success">
+                                Backup Workspace
                               </div>
-                            </td>
-                            <td>
-                              <span class="badge badge-ghost">{{ backup.sizeMB }} MB</span>
-                            </td>
-                            <td>
-                              <span class="badge" :class="getEnvironmentBadge(backup.environment)">
-                                {{ backup.environment }}
+                              <h3 class="mt-4 text-2xl font-black tracking-tight text-base-content">
+                                Backup lokal tetap sederhana dan mudah dipantau.
+                              </h3>
+                              <p class="mt-3 max-w-xl text-sm leading-6 text-base-content/68">
+                                Buat backup baru, cek ukuran penyimpanan, lalu kelola file lokal yang siap diunduh kapan saja.
+                              </p>
+                            </div>
+
+                            <div class="grid min-w-[220px] gap-3 rounded-[1.4rem] border border-base-300/80 bg-base-100/90 p-4 shadow-sm">
+                              <div class="text-[11px] font-semibold uppercase tracking-[0.22em] text-base-content/45">
+                                Active Storage
+                              </div>
+                              <div class="text-lg font-bold leading-tight text-base-content">
+                                {{ cloudStorageLabel }}
+                              </div>
+                              <div class="flex flex-wrap gap-2">
+                                <span class="badge badge-outline">{{ enabledCloudProviderCount }} cloud aktif</span>
+                                <span class="badge badge-outline">{{ requiredCloudProviderCount }} wajib</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="mt-6 grid gap-3 md:grid-cols-3">
+                            <div class="rounded-2xl border border-base-300/80 bg-base-100/88 p-4 shadow-sm">
+                              <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/45">Total backup</div>
+                              <div class="mt-2 text-3xl font-black text-base-content">{{ backups.length }}</div>
+                              <p class="mt-2 text-sm text-base-content/60">Riwayat file yang masih tersimpan di server.</p>
+                            </div>
+                            <div class="rounded-2xl border border-base-300/80 bg-base-100/88 p-4 shadow-sm">
+                              <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/45">Total size</div>
+                              <div class="mt-2 text-3xl font-black text-base-content">{{ totalSizeMB }} MB</div>
+                              <p class="mt-2 text-sm text-base-content/60">Membantu cek pertumbuhan penyimpanan lokal.</p>
+                            </div>
+                            <div class="rounded-2xl border border-base-300/80 bg-base-100/88 p-4 shadow-sm">
+                              <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/45">Backup terbaru</div>
+                              <div class="mt-2 text-xl font-black text-base-content">{{ latestBackupTime }}</div>
+                              <p class="mt-2 text-sm text-base-content/60">{{ latestBackupLabel }}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+
+                      <div class="card border border-base-300 bg-base-100 shadow-sm">
+                        <div class="card-body gap-5 p-5 sm:p-6">
+                          <div v-if="databaseInfo">
+                            <h3 class="card-title text-lg flex items-center gap-2">
+                              <IconInfoCircle class="w-5 h-5" />
+                              Database Information
+                            </h3>
+                            <div class="mt-4 grid grid-cols-1 gap-3">
+                              <div class="min-w-0 rounded-2xl border border-base-300 bg-base-200/60 p-4">
+                                <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/45">Database</div>
+                                <div class="mt-2 break-words text-sm font-bold text-base-content">{{ databaseInfo.database }}</div>
+                              </div>
+                              <div class="min-w-0 rounded-2xl border border-base-300 bg-base-200/60 p-4">
+                                <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/45">Type</div>
+                                <div class="mt-2 text-sm font-bold uppercase text-base-content">{{ databaseInfo.dialect }}</div>
+                              </div>
+                              <div class="min-w-0 rounded-2xl border border-base-300 bg-base-200/60 p-4">
+                                <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/45">Size</div>
+                                <div class="mt-2 text-sm font-bold text-base-content">{{ databaseInfo.size }}</div>
+                              </div>
+                              <div class="min-w-0 rounded-2xl border border-base-300 bg-base-200/60 p-4">
+                                <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/45">Tables</div>
+                                <div class="mt-2 text-sm font-bold text-base-content">{{ databaseInfo.tableCount }}</div>
+                              </div>
+                            </div>
+
+                            <div class="mt-4 min-w-0 rounded-[1.4rem] border border-base-300 bg-base-200/70 p-4">
+                              <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/45">Environment</div>
+                              <div class="mt-2 flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                                <span class="badge" :class="databaseInfo.environment === 'production' ? 'badge-error' : 'badge-warning'">
+                                  {{ databaseInfo.environment }}
+                                </span>
+                                <span class="break-all text-sm text-base-content/68">{{ databaseInfo.host }}:{{ databaseInfo.port }}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="card border border-base-300 bg-base-100 shadow-sm">
+                        <div class="card-body gap-5 p-5 sm:p-6">
+                          <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                            <div>
+                              <h3 class="card-title text-lg flex items-center gap-2">
+                                <IconList class="w-5 h-5" />
+                                Backup Files
+                              </h3>
+                              <p class="mt-1 text-sm text-base-content/65">
+                                Daftar backup lokal terbaru yang siap diunduh atau dibersihkan.
+                              </p>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2 text-xs text-base-content/60">
+                              <span class="rounded-full border border-base-300 bg-base-200 px-3 py-1.5">
+                                {{ backups.length }} file
                               </span>
-                            </td>
-                            <td>
-                              <div class="text-sm">
-                                <div>{{ formatDate(backup.createdAt) }}</div>
-                                <div class="text-xs text-base-content/50">{{ formatTime(backup.createdAt) }}</div>
-                              </div>
-                            </td>
-                            <td>
-                              <div class="flex justify-end gap-2">
-                                <button
-                                  class="btn btn-ghost btn-xs gap-1"
-                                  @click="handleDownload(backup.filename)"
-                                  title="Download backup"
-                                >
-                                  <IconDownload class="w-4 h-4" />
-                                </button>
-                                <button
-                                  class="btn btn-ghost btn-xs text-error gap-1"
-                                  @click="handleDeleteClick(backup)"
-                                  title="Delete backup"
-                                >
-                                  <IconTrash class="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                              <span class="rounded-full border border-base-300 bg-base-200 px-3 py-1.5">
+                                Max 10 file tersimpan otomatis
+                              </span>
+                            </div>
+                          </div>
+
+                          <div v-if="isLoading && backups.length === 0" class="flex justify-center py-16">
+                            <span class="loading loading-spinner loading-lg text-primary"></span>
+                          </div>
+
+                          <div v-else-if="backups.length === 0" class="rounded-[1.5rem] border border-dashed border-base-300 bg-base-200/60 px-6 py-14 text-center">
+                            <IconFileOff class="mx-auto mb-4 h-14 w-14 text-base-content/28" />
+                            <p class="text-base font-semibold text-base-content/72">Belum ada backup lokal</p>
+                            <p class="mt-2 text-sm text-base-content/52">Buat backup pertama untuk mulai membangun riwayat cadangan data.</p>
+                          </div>
+
+                          <div v-else class="overflow-hidden rounded-[1.4rem] border border-base-300 bg-base-200/55">
+                            <div class="overflow-x-auto">
+                              <table class="table w-full">
+                                <thead>
+                                  <tr>
+                                    <th>File</th>
+                                    <th>Ukuran</th>
+                                    <th>Env</th>
+                                    <th>Dibuat</th>
+                                    <th class="text-right">Aksi</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr v-for="backup in sortedBackups" :key="backup.filename" class="hover">
+                                    <td>
+                                      <div class="flex items-start gap-3">
+                                        <div class="mt-0.5 rounded-xl bg-primary/10 p-2 text-primary">
+                                          <IconFile class="h-4 w-4" />
+                                        </div>
+                                        <div class="min-w-0">
+                                          <div class="truncate font-mono text-xs text-base-content">{{ backup.filename }}</div>
+                                          <div class="mt-1 text-xs text-base-content/50">Disimpan lokal dan siap diunduh kapan saja.</div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td>
+                                      <span class="badge badge-ghost font-medium">{{ backup.sizeMB }} MB</span>
+                                    </td>
+                                    <td>
+                                      <span class="badge" :class="getEnvironmentBadge(backup.environment)">
+                                        {{ backup.environment }}
+                                      </span>
+                                    </td>
+                                    <td>
+                                      <div class="text-sm">
+                                        <div class="font-medium text-base-content">{{ formatDate(backup.createdAt) }}</div>
+                                        <div class="text-xs text-base-content/50">{{ formatTime(backup.createdAt) }}</div>
+                                      </div>
+                                    </td>
+                                    <td>
+                                      <div class="flex justify-end">
+                                        <div class="inline-flex items-center gap-1 rounded-full border border-base-300 bg-base-100/90 p-1 shadow-sm">
+                                          <button
+                                            class="btn btn-ghost btn-sm btn-circle"
+                                            @click="handleDownload(backup.filename)"
+                                            title="Download backup"
+                                            aria-label="Download backup"
+                                          >
+                                            <IconDownload class="h-4 w-4" />
+                                          </button>
+                                          <button
+                                            class="btn btn-ghost btn-sm btn-circle text-error hover:bg-error/10"
+                                            @click="handleDeleteClick(backup)"
+                                            title="Delete backup"
+                                            aria-label="Delete backup"
+                                          >
+                                            <IconTrash class="h-4 w-4" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="space-y-6">
                     </div>
                   </div>
-                </div>
+                </template>
 
-                <!-- Warning Notice -->
-                <div class="alert alert-warning">
-                  <IconAlertTriangle class="w-5 h-5" />
-                  <div class="text-sm">
-                    <div class="font-semibold">Important Notes:</div>
-                    <ul class="list-disc list-inside mt-2 space-y-1">
-                      <li>Backups are stored locally on the server</li>
-                      <li>Only the last 10 backups are kept automatically</li>
-                      <li>Download important backups for off-site storage</li>
-                      <li>Production database restore requires explicit confirmation</li>
-                    </ul>
+                <template v-else>
+                  <div class="space-y-6">
+                    <div class="rounded-[1.4rem] border border-warning/30 bg-warning/10 p-4">
+                      <div class="flex items-start gap-3">
+                        <IconAlertTriangle class="mt-0.5 h-5 w-5 text-warning" />
+                        <div class="text-sm text-base-content/72">
+                          Access key dan secret key disimpan di tenant settings. Pastikan akses ke tab ini hanya untuk admin tepercaya.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="space-y-6">
+                      <div class="card border border-base-300 bg-base-100 shadow-sm">
+                        <div class="card-body gap-5 p-5 sm:p-6">
+                          <div>
+                            <h3 class="card-title text-lg flex items-center gap-2">
+                              <IconCloudUpload class="w-5 h-5" />
+                              Google Drive
+                            </h3>
+                            <p class="mt-1 text-sm text-base-content/65">
+                              Cocok bila tim operasional lebih nyaman memantau salinan backup dari Google Drive.
+                            </p>
+                          </div>
+
+                          <div class="flex flex-wrap gap-2">
+                            <span class="badge" :class="googleDriveSettings.enabled ? 'badge-success' : 'badge-ghost'">
+                              {{ googleDriveSettings.enabled ? 'Enabled' : 'Disabled' }}
+                            </span>
+                            <span class="badge" :class="googleDriveSettings.enabled && googleDriveSettings.required ? 'badge-warning' : 'badge-ghost'">
+                              {{ googleDriveSettings.enabled && googleDriveSettings.required ? 'Required' : 'Optional' }}
+                            </span>
+                          </div>
+
+                          <div class="grid gap-3">
+                            <label class="flex items-start gap-3 rounded-2xl border border-base-300 bg-base-200/55 px-4 py-3.5 cursor-pointer">
+                              <input
+                                v-model="googleDriveSettings.enabled"
+                                type="checkbox"
+                                class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                              >
+                              <div>
+                                <div class="font-medium">Aktifkan Google Drive</div>
+                                <div class="text-sm text-base-content/58">Upload backup ke folder Drive tenant setelah file lokal selesai dibuat.</div>
+                              </div>
+                            </label>
+
+                            <label
+                              class="flex items-start gap-3 rounded-2xl border border-base-300 bg-base-200/55 px-4 py-3.5"
+                              :class="googleDriveSettings.enabled ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'"
+                            >
+                              <input
+                                v-model="googleDriveSettings.required"
+                                type="checkbox"
+                                class="checkbox checkbox-sm checkbox-warning mt-0.5"
+                                :disabled="!googleDriveSettings.enabled"
+                              >
+                              <div>
+                                <div class="font-medium">Jadikan upload sebagai syarat wajib</div>
+                                <div class="text-sm text-base-content/58">Gunakan bila backup dianggap belum lengkap tanpa salinan ke Drive.</div>
+                              </div>
+                            </label>
+                          </div>
+
+                          <div>
+                            <label class="label px-1">
+                              <span class="label-text font-medium flex items-center gap-2">
+                                <IconFolder class="w-4 h-4" />
+                                Folder ID
+                              </span>
+                            </label>
+                            <input
+                              v-model="googleDriveSettings.folderId"
+                              type="text"
+                              class="input input-bordered h-12 w-full rounded-2xl"
+                              placeholder="1ESvPnfhl6eG21uIyE42ywJY8FtM3xDuV"
+                            >
+                          </div>
+
+                          <div class="flex flex-col gap-3 border-t border-base-300 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                            <p class="text-sm text-base-content/58">
+                              Tombol proses akan membuat file backup baru lalu mengirimkannya hanya ke Google Drive.
+                            </p>
+
+                            <div class="flex flex-wrap justify-end gap-2">
+                              <button
+                                class="btn btn-ghost btn-sm gap-2"
+                                :disabled="isSavingBackupSettings || isCreatingBackup || !googleDriveSettings.enabled"
+                                @click="handleProcessCloudBackup('google_drive')"
+                              >
+                                <span v-if="isProcessingGoogleDrive" class="loading loading-spinner loading-sm"></span>
+                                <IconCloudUpload v-else class="w-4 h-4" />
+                                Proses Backup
+                              </button>
+                              <button
+                                class="btn btn-primary btn-sm gap-2"
+                                :disabled="isSavingBackupSettings || isCreatingBackup"
+                                @click="handleSaveGoogleDriveSettings"
+                              >
+                                <span v-if="isSavingBackupSettings" class="loading loading-spinner loading-sm"></span>
+                                <IconDeviceFloppy v-else class="w-4 h-4" />
+                                Simpan Google Drive
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="card border border-base-300 bg-base-100 shadow-sm">
+                        <div class="card-body gap-5 p-5 sm:p-6">
+                          <div>
+                            <h3 class="card-title text-lg flex items-center gap-2">
+                              <IconCloudUpload class="w-5 h-5" />
+                              S3 / MinIO
+                            </h3>
+                            <p class="mt-1 text-sm text-base-content/65">
+                              Cocok untuk object storage pribadi, server internal, atau MinIO self-hosted.
+                            </p>
+                          </div>
+
+                          <div class="flex flex-wrap gap-2">
+                            <span class="badge" :class="minioSettings.enabled ? 'badge-success' : 'badge-ghost'">
+                              {{ minioSettings.enabled ? 'Enabled' : 'Disabled' }}
+                            </span>
+                            <span class="badge" :class="minioSettings.enabled && minioSettings.required ? 'badge-warning' : 'badge-ghost'">
+                              {{ minioSettings.enabled && minioSettings.required ? 'Required' : 'Optional' }}
+                            </span>
+                          </div>
+
+                          <div class="grid gap-3">
+                            <label class="flex items-start gap-3 rounded-2xl border border-base-300 bg-base-200/55 px-4 py-3.5 cursor-pointer">
+                              <input
+                                v-model="minioSettings.enabled"
+                                type="checkbox"
+                                class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                              >
+                              <div>
+                                <div class="font-medium">Aktifkan MinIO / S3</div>
+                                <div class="text-sm text-base-content/58">Upload file backup ke bucket tujuan menggunakan S3-compatible API.</div>
+                              </div>
+                            </label>
+
+                            <label
+                              class="flex items-start gap-3 rounded-2xl border border-base-300 bg-base-200/55 px-4 py-3.5"
+                              :class="minioSettings.enabled ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'"
+                            >
+                              <input
+                                v-model="minioSettings.required"
+                                type="checkbox"
+                                class="checkbox checkbox-sm checkbox-warning mt-0.5"
+                                :disabled="!minioSettings.enabled"
+                              >
+                              <div>
+                                <div class="font-medium">Jadikan upload sebagai syarat wajib</div>
+                                <div class="text-sm text-base-content/58">Gunakan bila backup harus sukses tersalin ke object storage.</div>
+                              </div>
+                            </label>
+                          </div>
+
+                          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                              <label class="label px-1"><span class="label-text font-medium">Endpoint</span></label>
+                              <input v-model="minioSettings.endpoint" type="text" class="input input-bordered h-12 w-full rounded-2xl" placeholder="http://127.0.0.1:9000">
+                            </div>
+                            <div>
+                              <label class="label px-1"><span class="label-text font-medium">Bucket</span></label>
+                              <input v-model="minioSettings.bucket" type="text" class="input input-bordered h-12 w-full rounded-2xl" placeholder="database-backups">
+                            </div>
+                            <div>
+                              <label class="label px-1"><span class="label-text font-medium">Access Key</span></label>
+                              <input v-model="minioSettings.accessKeyId" type="text" class="input input-bordered h-12 w-full rounded-2xl" placeholder="minioadmin">
+                            </div>
+                            <div>
+                              <label class="label px-1"><span class="label-text font-medium">Secret Key</span></label>
+                              <input v-model="minioSettings.secretAccessKey" type="password" class="input input-bordered h-12 w-full rounded-2xl" placeholder="Masukkan secret key">
+                            </div>
+                            <div>
+                              <label class="label px-1"><span class="label-text font-medium">Region</span></label>
+                              <input v-model="minioSettings.region" type="text" class="input input-bordered h-12 w-full rounded-2xl" placeholder="us-east-1">
+                            </div>
+                            <div>
+                              <label class="label px-1"><span class="label-text font-medium">Object Prefix</span></label>
+                              <input v-model="minioSettings.objectPrefix" type="text" class="input input-bordered h-12 w-full rounded-2xl" placeholder="club-os/backups">
+                            </div>
+                          </div>
+
+                          <div class="grid gap-3">
+                            <label class="flex items-start gap-3 rounded-2xl border border-base-300 bg-base-200/55 px-4 py-3.5 cursor-pointer">
+                              <input
+                                v-model="minioSettings.forcePathStyle"
+                                type="checkbox"
+                                class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                              >
+                              <div>
+                                <div class="font-medium">Force path style</div>
+                                <div class="text-sm text-base-content/58">Biasanya dibutuhkan untuk MinIO dan endpoint lokal tanpa virtual-hosted bucket.</div>
+                              </div>
+                            </label>
+
+                            <label class="flex items-start gap-3 rounded-2xl border border-base-300 bg-base-200/55 px-4 py-3.5 cursor-pointer">
+                              <input
+                                v-model="minioSettings.useSsl"
+                                type="checkbox"
+                                class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                              >
+                              <div>
+                                <div class="font-medium">Gunakan HTTPS default</div>
+                                <div class="text-sm text-base-content/58">Dipakai bila endpoint ditulis tanpa awalan `http://` atau `https://`.</div>
+                              </div>
+                            </label>
+                          </div>
+
+                          <div class="flex flex-col gap-3 border-t border-base-300 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                            <p class="text-sm text-base-content/58">
+                              Tombol proses akan membuat file backup baru lalu mengirimkannya hanya ke MinIO / S3.
+                            </p>
+
+                            <div class="flex flex-wrap justify-end gap-2">
+                              <button
+                                class="btn btn-ghost btn-sm gap-2"
+                                :disabled="isSavingBackupSettings || isCreatingBackup || !minioSettings.enabled"
+                                @click="handleProcessCloudBackup('minio')"
+                              >
+                                <span v-if="isProcessingMinio" class="loading loading-spinner loading-sm"></span>
+                                <IconCloudUpload v-else class="w-4 h-4" />
+                                Proses Backup
+                              </button>
+                              <button
+                                class="btn btn-primary btn-sm gap-2"
+                                :disabled="isSavingBackupSettings || isCreatingBackup"
+                                @click="handleSaveMinioSettings"
+                              >
+                                <span v-if="isSavingBackupSettings" class="loading loading-spinner loading-sm"></span>
+                                <IconDeviceFloppy v-else class="w-4 h-4" />
+                                Simpan MinIO
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
                 </template>
               </div>
             </div>
@@ -433,19 +628,33 @@ const {
   currentTenantId,
   fetchTenantSettings,
   patchTenantSettings,
-  saving: isSavingGoogleDriveSettings
+  saving: isSavingBackupSettings
 } = useTenantSettings()
 
 // Refs
 const activeTab = ref('backup')
 const deleteModal = ref(null)
 const backupToDelete = ref(null)
+const activeCloudProcess = ref('')
 const createDefaultGoogleDriveSettings = () => ({
   enabled: false,
   required: false,
   folderId: ''
 })
+const createDefaultMinioSettings = () => ({
+  enabled: false,
+  required: false,
+  endpoint: '',
+  region: 'us-east-1',
+  bucket: '',
+  accessKeyId: '',
+  secretAccessKey: '',
+  objectPrefix: '',
+  forcePathStyle: true,
+  useSsl: false
+})
 const googleDriveSettings = ref(createDefaultGoogleDriveSettings())
+const minioSettings = ref(createDefaultMinioSettings())
 
 // Computed
 const sortedBackups = computed(() => {
@@ -467,6 +676,49 @@ const latestBackupTime = computed(() => {
   return formatRelativeTime(latest.createdAt)
 })
 
+const latestBackupLabel = computed(() => {
+  if (backups.value.length === 0) return 'Belum ada file backup yang tersimpan.'
+  const latest = sortedBackups.value[0]
+  return `${formatDate(latest.createdAt)} • ${formatTime(latest.createdAt)}`
+})
+
+const enabledCloudProviderCount = computed(() => {
+  return [googleDriveSettings.value.enabled, minioSettings.value.enabled].filter(Boolean).length
+})
+
+const requiredCloudProviderCount = computed(() => {
+  return [
+    googleDriveSettings.value.enabled && googleDriveSettings.value.required,
+    minioSettings.value.enabled && minioSettings.value.required
+  ].filter(Boolean).length
+})
+
+const cloudStorageLabel = computed(() => {
+  const providers = []
+
+  if (googleDriveSettings.value.enabled) {
+    providers.push('Google Drive')
+  }
+
+  if (minioSettings.value.enabled) {
+    providers.push('MinIO')
+  }
+
+  if (providers.length === 0) {
+    return 'Local server only'
+  }
+
+  return `Local + ${providers.join(' + ')}`
+})
+
+const isProcessingGoogleDrive = computed(() => {
+  return isCreatingBackup.value && activeCloudProcess.value === 'google_drive'
+})
+
+const isProcessingMinio = computed(() => {
+  return isCreatingBackup.value && activeCloudProcess.value === 'minio'
+})
+
 // Methods
 const handleClose = () => {
   emit('update:modelValue', false)
@@ -479,22 +731,38 @@ const normalizeGoogleDriveSettings = (googleDrive = {}) => ({
   folderId: googleDrive.folderId || ''
 })
 
-const applyGoogleDriveSettings = (settingsSource = null) => {
+const normalizeMinioSettings = (minio = {}) => ({
+  enabled: Boolean(minio.enabled),
+  required: Boolean(minio.required),
+  endpoint: minio.endpoint || '',
+  region: minio.region || 'us-east-1',
+  bucket: minio.bucket || '',
+  accessKeyId: minio.accessKeyId || '',
+  secretAccessKey: minio.secretAccessKey || '',
+  objectPrefix: minio.objectPrefix || '',
+  forcePathStyle: minio.forcePathStyle !== false,
+  useSsl: Boolean(minio.useSsl)
+})
+
+const applyBackupSettings = (settingsSource = null) => {
   googleDriveSettings.value = normalizeGoogleDriveSettings(
     settingsSource?.backup?.googleDrive || {}
   )
+  minioSettings.value = normalizeMinioSettings(
+    settingsSource?.backup?.minio || {}
+  )
 }
 
-const loadGoogleDriveSettings = async () => {
-  applyGoogleDriveSettings(authStore.user?.tenant?.settings)
+const loadBackupSettings = async () => {
+  applyBackupSettings(authStore.user?.tenant?.settings)
 
   if (!currentTenantId.value) return
 
   try {
     const tenantData = await fetchTenantSettings()
-    applyGoogleDriveSettings(tenantData?.settings)
+    applyBackupSettings(tenantData?.settings)
   } catch (error) {
-    console.error('Failed to load Google Drive backup settings:', error)
+    console.error('Failed to load backup settings:', error)
   }
 }
 
@@ -502,36 +770,100 @@ const handleRefresh = async () => {
   await Promise.all([
     fetchBackups(),
     fetchDatabaseInfo(),
-    loadGoogleDriveSettings()
+    loadBackupSettings()
   ])
 }
 
-const handleSaveGoogleDriveSettings = async () => {
+const buildBackupSettingsPayload = () => ({
+  backup: {
+    googleDrive: {
+      enabled: googleDriveSettings.value.enabled,
+      required: googleDriveSettings.value.enabled ? googleDriveSettings.value.required : false,
+      folderId: googleDriveSettings.value.folderId.trim()
+    },
+    minio: {
+      enabled: minioSettings.value.enabled,
+      required: minioSettings.value.enabled ? minioSettings.value.required : false,
+      endpoint: minioSettings.value.endpoint.trim(),
+      region: minioSettings.value.region.trim() || 'us-east-1',
+      bucket: minioSettings.value.bucket.trim(),
+      accessKeyId: minioSettings.value.accessKeyId.trim(),
+      secretAccessKey: minioSettings.value.secretAccessKey.trim(),
+      objectPrefix: minioSettings.value.objectPrefix.trim(),
+      forcePathStyle: minioSettings.value.forcePathStyle,
+      useSsl: minioSettings.value.useSsl
+    }
+  }
+})
+
+const validateGoogleDriveSettings = () => {
   const folderId = googleDriveSettings.value.folderId.trim()
 
   if (googleDriveSettings.value.enabled && !folderId) {
     showWarning('Folder ID wajib diisi saat Google Drive backup aktif')
-    return
+    return false
   }
 
-  const payload = {
-    backup: {
-      googleDrive: {
-        enabled: googleDriveSettings.value.enabled,
-        required: googleDriveSettings.value.enabled ? googleDriveSettings.value.required : false,
-        folderId
-      }
+  googleDriveSettings.value.folderId = folderId
+  return true
+}
+
+const validateMinioSettings = () => {
+  const endpoint = minioSettings.value.endpoint.trim()
+  const bucket = minioSettings.value.bucket.trim()
+  const accessKeyId = minioSettings.value.accessKeyId.trim()
+  const secretAccessKey = minioSettings.value.secretAccessKey.trim()
+
+  if (minioSettings.value.enabled) {
+    if (!endpoint) {
+      showWarning('Endpoint wajib diisi saat MinIO backup aktif')
+      return false
+    }
+
+    if (!bucket) {
+      showWarning('Bucket wajib diisi saat MinIO backup aktif')
+      return false
+    }
+
+    if (!accessKeyId || !secretAccessKey) {
+      showWarning('Access key dan secret key wajib diisi saat MinIO backup aktif')
+      return false
     }
   }
 
-  const result = await patchTenantSettings(
-    payload,
-    'Google Drive backup settings updated successfully'
-  )
+  minioSettings.value.endpoint = endpoint
+  minioSettings.value.bucket = bucket
+  minioSettings.value.accessKeyId = accessKeyId
+  minioSettings.value.secretAccessKey = secretAccessKey
+  minioSettings.value.region = minioSettings.value.region.trim() || 'us-east-1'
+  minioSettings.value.objectPrefix = minioSettings.value.objectPrefix.trim()
+
+  return true
+}
+
+const saveBackupSettings = async (successMessage) => {
+  const payload = buildBackupSettingsPayload()
+  const result = await patchTenantSettings(payload, successMessage)
 
   if (result.success) {
-    applyGoogleDriveSettings(payload)
+    applyBackupSettings(payload)
   }
+
+  return result
+}
+
+const handleSaveGoogleDriveSettings = async () => {
+  if (!validateGoogleDriveSettings()) {
+    return
+  }
+  await saveBackupSettings('Google Drive backup settings updated successfully')
+}
+
+const handleSaveMinioSettings = async () => {
+  if (!validateMinioSettings()) {
+    return
+  }
+  await saveBackupSettings('MinIO backup settings updated successfully')
 }
 
 const handleCreateBackup = async () => {
@@ -539,6 +871,50 @@ const handleCreateBackup = async () => {
     await createBackup()
   } catch (error) {
     console.error('Failed to create backup:', error)
+  }
+}
+
+const handleProcessCloudBackup = async (provider) => {
+  if (provider === 'google_drive') {
+    if (!googleDriveSettings.value.enabled) {
+      showWarning('Aktifkan Google Drive dulu sebelum memproses backup')
+      return
+    }
+
+    if (!validateGoogleDriveSettings()) {
+      return
+    }
+  }
+
+  if (provider === 'minio') {
+    if (!minioSettings.value.enabled) {
+      showWarning('Aktifkan MinIO dulu sebelum memproses backup')
+      return
+    }
+
+    if (!validateMinioSettings()) {
+      return
+    }
+  }
+
+  const saveResult = await saveBackupSettings(
+    provider === 'google_drive'
+      ? 'Google Drive settings saved'
+      : 'MinIO settings saved'
+  )
+
+  if (!saveResult.success) {
+    return
+  }
+
+  activeCloudProcess.value = provider
+
+  try {
+    await createBackup({ cloudProvider: provider })
+  } catch (error) {
+    console.error(`Failed to process ${provider} backup:`, error)
+  } finally {
+    activeCloudProcess.value = ''
   }
 }
 

@@ -30,10 +30,41 @@ function extractGoogleDriveSettingsFromTenant(tenant) {
   return config;
 }
 
+function extractMinioSettingsFromTenant(tenant) {
+  const minio = tenant?.settings?.backup?.minio;
+  if (!minio || typeof minio !== 'object') {
+    return null;
+  }
+
+  const config = {
+    source: 'tenant_settings',
+  };
+
+  [
+    'enabled',
+    'required',
+    'endpoint',
+    'region',
+    'bucket',
+    'accessKeyId',
+    'secretAccessKey',
+    'objectPrefix',
+    'forcePathStyle',
+    'useSsl',
+  ].forEach(key => {
+    if (Object.prototype.hasOwnProperty.call(minio, key)) {
+      config[key] = minio[key];
+    }
+  });
+
+  return config;
+}
+
 async function resolveBackupOptionsForTenantId(targetTenantId) {
   if (!targetTenantId) {
     return {
       googleDriveConfig: null,
+      minioConfig: null,
       targetTenantId: null,
       targetTenantName: null,
       resolutionSource: 'env_only',
@@ -50,6 +81,7 @@ async function resolveBackupOptionsForTenantId(targetTenantId) {
 
   return {
     googleDriveConfig: extractGoogleDriveSettingsFromTenant(tenant),
+    minioConfig: extractMinioSettingsFromTenant(tenant),
     targetTenantId: tenant.id,
     targetTenantName: tenant.name,
     resolutionSource: 'tenant_settings',
@@ -72,11 +104,14 @@ async function resolveAutoBackupOptions() {
     order: [['createdAt', 'ASC']],
   });
 
-  const tenantWithGoogleDriveSettings = tenants.find(tenant => extractGoogleDriveSettingsFromTenant(tenant));
+  const tenantWithBackupSettings = tenants.find(tenant => {
+    return extractGoogleDriveSettingsFromTenant(tenant) || extractMinioSettingsFromTenant(tenant);
+  });
 
-  if (!tenantWithGoogleDriveSettings) {
+  if (!tenantWithBackupSettings) {
     return {
       googleDriveConfig: null,
+      minioConfig: null,
       targetTenantId: null,
       targetTenantName: null,
       resolutionSource: 'env_only',
@@ -84,15 +119,17 @@ async function resolveAutoBackupOptions() {
   }
 
   return {
-    googleDriveConfig: extractGoogleDriveSettingsFromTenant(tenantWithGoogleDriveSettings),
-    targetTenantId: tenantWithGoogleDriveSettings.id,
-    targetTenantName: tenantWithGoogleDriveSettings.name,
+    googleDriveConfig: extractGoogleDriveSettingsFromTenant(tenantWithBackupSettings),
+    minioConfig: extractMinioSettingsFromTenant(tenantWithBackupSettings),
+    targetTenantId: tenantWithBackupSettings.id,
+    targetTenantName: tenantWithBackupSettings.name,
     resolutionSource: 'discovered_tenant_settings',
   };
 }
 
 module.exports = {
   extractGoogleDriveSettingsFromTenant,
+  extractMinioSettingsFromTenant,
   resolveBackupOptionsForTenantId,
   resolveAutoBackupOptions,
 };

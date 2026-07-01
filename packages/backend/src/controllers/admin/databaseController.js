@@ -14,10 +14,137 @@ const { resolveBackupOptionsForTenantId } = require('../../utils/backupGoogleDri
 const productionImportService = require('../../services/productionImportService');
 
 const backupsDir = path.join(process.cwd(), 'backups');
+const SUPPORTED_CLOUD_PROVIDERS = ['google_drive', 'minio'];
+
+function createDisabledCloudConfig() {
+  return {
+    enabled: false,
+    required: false,
+    source: 'request_scope',
+  };
+}
+
+function createSelectedCloudConfig(config = {}) {
+  return {
+    ...config,
+    enabled: true,
+    required: true,
+    source: config.source || 'request_scope',
+  };
+}
+
+function normalizeCloudProvider(value) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+
+  if (normalized === 'all') {
+    return null;
+  }
+
+  if (normalized === 'google_drive' || normalized === 'google-drive' || normalized === 'googledrive') {
+    return 'google_drive';
+  }
+
+  if (normalized === 'minio' || normalized === 's3') {
+    return 'minio';
+  }
+
+  return '__invalid__';
+}
+
+function applyCloudProviderScope(backupOptions, cloudProvider) {
+  if (!cloudProvider) {
+    return {
+      ...backupOptions,
+      requestedCloudProvider: null,
+    };
+  }
+
+  if (cloudProvider === 'google_drive') {
+    return {
+      ...backupOptions,
+      requestedCloudProvider: cloudProvider,
+      googleDriveConfig: createSelectedCloudConfig(backupOptions.googleDriveConfig),
+      minioConfig: createDisabledCloudConfig(),
+    };
+  }
+
+  if (cloudProvider === 'minio') {
+    return {
+      ...backupOptions,
+      requestedCloudProvider: cloudProvider,
+      googleDriveConfig: createDisabledCloudConfig(),
+      minioConfig: createSelectedCloudConfig(backupOptions.minioConfig),
+    };
+  }
+
+  return backupOptions;
+}
 
 async function resolveBackupOptions(req) {
   const targetTenantId = req.body?.tenantId || req.user.tenantId || null;
-  return resolveBackupOptionsForTenantId(targetTenantId);
+  const cloudProvider = normalizeCloudProvider(req.body?.cloudProvider);
+
+  if (cloudProvider === '__invalid__') {
+    throw createError(
+      'VALIDATION_ERROR',
+      `cloudProvider harus salah satu dari: ${SUPPORTED_CLOUD_PROVIDERS.join(', ')}`
+    );
+  }
+
+  const backupOptions = await resolveBackupOptionsForTenantId(targetTenantId);
+  return applyCloudProviderScope(backupOptions, cloudProvider);
+}
+
+function buildBackupFailure(err, backupOptions = {}) {
+  const baseData = {
+    targetTenantId: backupOptions.targetTenantId || null,
+    targetTenantName: backupOptions.targetTenantName || null,
+    resolutionSource: backupOptions.resolutionSource || null,
+    requestedCloudProvider: backupOptions.requestedCloudProvider || null,
+  };
+
+  if (err?.code === 'GOOGLE_DRIVE_BACKUP_FAILED') {
+    return {
+      message: err.message,
+      data: {
+        ...baseData,
+        ...(err.data || {}),
+      },
+    };
+  }
+
+  if (err?.code === 'MINIO_BACKUP_FAILED') {
+    return {
+      message: err.message,
+      data: {
+        ...baseData,
+        ...(err.data || {}),
+      },
+    };
+  }
+
+  if (err?.code === 'NATIVE_BACKUP_FAILED') {
+    return {
+      message: `Backup database gagal saat menjalankan tool native: ${err.message}`,
+      data: {
+        ...baseData,
+        stage: 'native_backup',
+        reason: err.message,
+      },
+    };
+  }
+
+  return {
+    message: err?.message || 'Database backup gagal',
+    data: {
+      ...baseData,
+      originalCode: err?.code || null,
+    },
+  };
 }
 
 /**
@@ -25,8 +152,10 @@ async function resolveBackupOptions(req) {
  * POST /api/v1/admin/database/backup
  */
 async function createDatabaseBackup(req, res, next) {
+  let backupOptions = null;
+
   try {
-    const backupOptions = await resolveBackupOptions(req);
+    backupOptions = await resolveBackupOptions(req);
 
     logger.info('Database backup initiated', {
       userId: req.user.id,
@@ -76,19 +205,31 @@ async function createDatabaseBackup(req, res, next) {
         format: result.format || 'sql',
         note: result.note || null,
         downloadUrl: `/api/v1/admin/database/download/${result.filename}`,
+        storedLocally: true,
         googleDrive: result.googleDrive || null,
+        minio: result.minio || null,
         settingsSourceTenantId: backupOptions.targetTenantId,
         settingsSourceTenantName: backupOptions.targetTenantName || null,
+        requestedCloudProvider: backupOptions.requestedCloudProvider || null,
       }
     });
   } catch (err) {
     logger.error('Database backup failed', {
       userId: req.user.id,
       error: err.message,
-      stack: err.stack
+      stack: err.stack,
+      details: err.data || null,
     });
-    
-    next(createError('BACKUP_FAILED', err.message));
+
+    if (err.isOperational) {
+      return next(err);
+    }
+
+    const backupFailure = buildBackupFailure(err, backupOptions);
+
+    const wrappedError = createError('BACKUP_FAILED', backupFailure.message, backupFailure.data);
+    wrappedError.stack = err.stack;
+    return next(wrappedError);
   }
 }
 

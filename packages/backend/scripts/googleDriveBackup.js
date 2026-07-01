@@ -225,6 +225,48 @@ function getMimeType(filePath) {
   return 'application/octet-stream';
 }
 
+function getAxiosErrorDetails(error) {
+  const status = error?.response?.status || null;
+  const responseData = error?.response?.data;
+  const errorCode = responseData?.error || error?.code || null;
+  const errorDescription =
+    responseData?.error_description ||
+    responseData?.message ||
+    responseData?.error?.message ||
+    null;
+
+  return {
+    status,
+    errorCode,
+    errorDescription,
+    responseData,
+  };
+}
+
+function createGoogleDriveBackupError(error, config, stage) {
+  const details = getAxiosErrorDetails(error);
+  const readableStage = stage === 'authenticate' ? 'autentikasi Google Drive' : 'upload ke Google Drive';
+  const reasonParts = [details.errorCode, details.errorDescription].filter(Boolean);
+  const reasonText = reasonParts.length > 0
+    ? reasonParts.join(' - ')
+    : error.message;
+
+  const wrappedError = new Error(`Google Drive backup gagal saat ${readableStage}: ${reasonText}`);
+  wrappedError.code = 'GOOGLE_DRIVE_BACKUP_FAILED';
+  wrappedError.data = {
+    provider: 'google_drive',
+    stage,
+    status: details.status,
+    folderId: config.folderId || null,
+    authType: config.authType || null,
+    source: config.source || 'env',
+    reason: reasonText,
+    response: details.responseData || null,
+  };
+
+  return wrappedError;
+}
+
 function uploadMultipartToDrive({ accessToken, filePath, folderId, metadata }) {
   return new Promise((resolve, reject) => {
     const fileStats = fs.statSync(filePath);
@@ -394,8 +436,16 @@ async function maybeUploadBackupToGoogleDrive(backupResult, overrides = null) {
   }
 
   try {
-    const accessToken = await getGoogleAccessToken(config);
-    const uploadedFile = await uploadMultipartToDrive({
+    let accessToken;
+    try {
+      accessToken = await getGoogleAccessToken(config);
+    } catch (error) {
+      throw createGoogleDriveBackupError(error, config, 'authenticate');
+    }
+
+    let uploadedFile;
+    try {
+      uploadedFile = await uploadMultipartToDrive({
       accessToken,
       filePath: backupResult.filePath,
       folderId: config.folderId,
@@ -409,6 +459,9 @@ async function maybeUploadBackupToGoogleDrive(backupResult, overrides = null) {
         ].join(' | '),
       },
     });
+    } catch (error) {
+      throw createGoogleDriveBackupError(error, config, 'upload');
+    }
 
     return {
       enabled: true,

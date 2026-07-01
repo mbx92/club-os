@@ -212,7 +212,7 @@ function scheduleAutoBackup() {
       let result;
       const backupOptions = await resolveAutoBackupOptions();
 
-      logger.logSystem('Auto backup resolved Google Drive configuration', {
+      logger.logSystem('Auto backup resolved cloud backup configuration', {
         action: 'AUTO_BACKUP_CONFIG_RESOLVED',
         userId: null, tenantId: backupOptions.targetTenantId || null, ip: 'system',
         userAgent: 'scheduled-task', method: 'SYSTEM',
@@ -225,6 +225,11 @@ function scheduleAutoBackup() {
           googleDriveRequired: backupOptions.googleDriveConfig?.required,
           googleDriveFolderId: backupOptions.googleDriveConfig?.folderId || null,
           googleDriveSource: backupOptions.googleDriveConfig?.source || 'env',
+          minioEnabled: backupOptions.minioConfig?.enabled,
+          minioRequired: backupOptions.minioConfig?.required,
+          minioBucket: backupOptions.minioConfig?.bucket || null,
+          minioEndpoint: backupOptions.minioConfig?.endpoint || null,
+          minioSource: backupOptions.minioConfig?.source || 'env',
         }
       });
 
@@ -259,6 +264,7 @@ function scheduleAutoBackup() {
         sizeMB: result.sizeMB,
         format: result.format,
         googleDrive: result.googleDrive,
+        minio: result.minio,
         targetTenantId: backupOptions.targetTenantId,
         targetTenantName: backupOptions.targetTenantName,
         resolutionSource: backupOptions.resolutionSource,
@@ -278,6 +284,11 @@ function scheduleAutoBackup() {
           googleDriveSource: result.googleDrive?.source || 'env',
           googleDriveFileId: result.googleDrive?.fileId || null,
           googleDriveError: result.googleDrive?.error || null,
+          minioUploaded: result.minio?.uploaded || false,
+          minioSource: result.minio?.source || 'env',
+          minioBucket: result.minio?.bucket || null,
+          minioObjectKey: result.minio?.objectKey || null,
+          minioError: result.minio?.error || null,
           targetTenantId: backupOptions.targetTenantId || null,
           targetTenantName: backupOptions.targetTenantName || null,
           resolutionSource: backupOptions.resolutionSource,

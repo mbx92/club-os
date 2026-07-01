@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 const { maybeUploadBackupToGoogleDrive } = require('./googleDriveBackup');
+const { maybeUploadBackupToS3 } = require('./s3Backup');
 
 // Load environment variables
 const env = process.argv[2] || process.env.NODE_ENV || 'development';
@@ -38,10 +39,21 @@ function generateBackupFilename(env) {
   return `backup_${env}_${dbName}_${timestamp}.json`;
 }
 
+function deleteLocalBackupFile(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    return false;
+  }
+
+  fs.unlinkSync(filePath);
+  return true;
+}
+
 /**
  * Create backup using Sequelize
  */
 async function createSequelizeBackup(options = {}) {
+  let result = null;
+
   try {
     console.log(`🔄 Starting Sequelize backup for ${env} environment...`);
     console.log(`📦 Database: ${process.env.DB_NAME}`);
@@ -95,7 +107,7 @@ async function createSequelizeBackup(options = {}) {
     console.log(`📊 Size: ${fileSizeMB} MB`);
     console.log(`📂 Location: ${filePath}`);
     
-    const result = {
+    result = {
       filename,
       filePath,
       size: stats.size,
@@ -108,15 +120,33 @@ async function createSequelizeBackup(options = {}) {
     };
 
     result.googleDrive = await maybeUploadBackupToGoogleDrive(result, options.googleDriveConfig);
+    result.minio = await maybeUploadBackupToS3(result, options.minioConfig);
+    result.storedLocally = options.retainLocalBackup !== false;
+
+    if (!result.storedLocally) {
+      deleteLocalBackupFile(result.filePath);
+      result.localFileDeleted = true;
+      result.filePath = null;
+    }
 
     // Clean up old backups
-    cleanOldBackups();
+    if (result.storedLocally) {
+      cleanOldBackups();
+    }
     
     // Note: Don't close sequelize connection when called from API
     // The connection is managed by the main application
     
     return result;
   } catch (error) {
+    if (options.retainLocalBackup === false && result?.filePath) {
+      try {
+        deleteLocalBackupFile(result.filePath);
+      } catch (cleanupError) {
+        console.warn('⚠️ Warning: Could not remove temporary backup file:', cleanupError.message);
+      }
+    }
+
     console.error('💥 Error during backup:', error.message);
     throw error;
   }

@@ -84,6 +84,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1077.0",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "colors": "^1.4.0",

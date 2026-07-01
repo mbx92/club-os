@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 const { maybeUploadBackupToGoogleDrive } = require('./googleDriveBackup');
+const { maybeUploadBackupToS3 } = require('./s3Backup');
 
 // Load environment variables
 const env = process.argv[2] || process.env.NODE_ENV || 'development';
@@ -46,6 +47,15 @@ if (!fs.existsSync(backupsDir)) {
 function generateBackupFilename(env) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
   return `backup_${env}_${dbConfig.database}_${timestamp}.sql`;
+}
+
+function deleteLocalBackupFile(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    return false;
+  }
+
+  fs.unlinkSync(filePath);
+  return true;
 }
 
 /**
@@ -159,6 +169,8 @@ function backupPostgreSQL(filename) {
  * Main backup function
  */
 async function createBackup(options = {}) {
+  let result = null;
+
   try {
     // Validate database config
     if (!dbConfig.user || !dbConfig.password || !dbConfig.database) {
@@ -167,7 +179,6 @@ async function createBackup(options = {}) {
     
     const filename = generateBackupFilename(env);
     
-    let result;
     if (dbConfig.dialect === 'mysql') {
       result = await backupMySQL(filename);
     } else if (dbConfig.dialect === 'postgres') {
@@ -178,12 +189,30 @@ async function createBackup(options = {}) {
     
     result.format = 'sql';
     result.googleDrive = await maybeUploadBackupToGoogleDrive(result, options.googleDriveConfig);
+    result.minio = await maybeUploadBackupToS3(result, options.minioConfig);
+    result.storedLocally = options.retainLocalBackup !== false;
+
+    if (!result.storedLocally) {
+      deleteLocalBackupFile(result.filePath);
+      result.localFileDeleted = true;
+      result.filePath = null;
+    }
 
     // Clean up old backups (keep last 10)
-    cleanOldBackups();
+    if (result.storedLocally) {
+      cleanOldBackups();
+    }
     
     return result;
   } catch (error) {
+    if (options.retainLocalBackup === false && result?.filePath) {
+      try {
+        deleteLocalBackupFile(result.filePath);
+      } catch (cleanupError) {
+        console.warn('⚠️ Warning: Could not remove temporary backup file:', cleanupError.message);
+      }
+    }
+
     console.error('💥 Error during backup:', error.message);
     // Don't exit process if called from API, just throw error
     throw error;

@@ -14,7 +14,7 @@ meta:
         <div class="space-y-5">
           <div class="inline-flex items-center gap-3 rounded-full border border-white/12 px-4 py-2 text-xs uppercase tracking-[0.24em] text-white/72 xl:text-sm">
             <span class="h-2 w-2 rounded-full bg-primary"></span>
-            Dynasty Club
+            Club OS
           </div>
 
           <div class="space-y-4">
@@ -26,14 +26,14 @@ meta:
               />
               <div>
                 <p class="text-sm uppercase tracking-[0.34em] text-white/55">Dynasty Fitness</p>
-                <h1 class="mt-2 text-3xl font-black leading-none text-white xl:text-[3.1rem]">
-                  Operasional klub yang lebih rapi.
+                <h1 class="mt-2 text-xl font-black leading-none text-white xl:text-[3.1rem]">
+                  Operational System
                 </h1>
               </div>
             </div>
 
             <p class="max-w-xl text-sm leading-6 text-white/68 xl:text-base xl:leading-7">
-              Member, billing, kelas, POS, dan operasional harian dalam workspace yang lebih tenang, jelas, dan mudah dipakai sepanjang shift.
+              Member, billing, kelas, POS, dan operasional harian dalam workspace.
             </p>
           </div>
         </div>
