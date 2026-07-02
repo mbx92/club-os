@@ -18,7 +18,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-2h}
       REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-change-me}
       REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN:-7d}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8081,http://127.0.0.1:8081}
       WAIT_FOR_DB: ${WAIT_FOR_DB:-true}
       DB_WAIT_TIMEOUT: ${DB_WAIT_TIMEOUT:-120}
       DB_WAIT_INTERVAL: ${DB_WAIT_INTERVAL:-3}
@@ -26,8 +26,8 @@ services:
       SEED_ON_START: ${SEED_ON_START:-false}
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    expose:
-      - "3000"
+    ports:
+      - "${BACKEND_PORT:-3001}:3000"
     volumes:
       - backend_uploads:/app/packages/backend/uploads
       - backend_logs:/app/packages/backend/logs
@@ -44,8 +44,8 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    expose:
-      - "80"
+    ports:
+      - "${FRONTEND_PORT:-8081}:80"
 
 volumes:
   backend_uploads:
