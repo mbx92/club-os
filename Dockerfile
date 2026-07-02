@@ -6,7 +6,7 @@ COPY package.json package-lock.json ./
 COPY packages/backend/package.json packages/backend/package-lock.json ./packages/backend/
 COPY packages/frontend/package.json packages/frontend/package-lock.json ./packages/frontend/
 
-RUN npm ci
+RUN npm ci --include=dev
 
 COPY . .
 
