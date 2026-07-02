@@ -24,7 +24,8 @@ function isInTrial(tenant) {
 
 // ─── Admin bypass helper ──────────────────────────────────────────────────────
 
-const isAdmin = (user) => user?.isSuperAdmin || user?.role?.name === 'admin' || user?.role?.name === 'owner';
+const { isTenantAdmin } = require('../utils/rbacUtils');
+const isAdmin = (user) => isTenantAdmin(user);
 
 // ─── Registry lookup: resolve flat name → category ───────────────────────────
 

@@ -23,60 +23,60 @@ router.use(requireModule('restaurant'));
  * @query tree=true - return hierarchical tree
  * @query parentId - filter by parent
  * @query includeCount=true - include product count
- * @access Private - requires 'read' permission on 'ProductCategory'
+ * @access Private - requires 'read' permission on 'RestaurantCategory'
  */
 router.get('/',
-  authorize('read', 'ProductCategory'),
+  authorize('read', 'RestaurantCategory'),
   productCategoryController.getAllCategories
 );
 
 /**
  * @route GET /api/v1/restaurant/categories/tree
  * @desc Get category tree structure
- * @access Private - requires 'read' permission on 'ProductCategory'
+ * @access Private - requires 'read' permission on 'RestaurantCategory'
  */
 router.get('/tree',
-  authorize('read', 'ProductCategory'),
+  authorize('read', 'RestaurantCategory'),
   productCategoryController.getCategoryTree
 );
 
 /**
  * @route POST /api/v1/restaurant/categories/reorder
  * @desc Reorder categories (update displayOrder)
- * @access Private - requires 'update' permission on 'ProductCategory'
+ * @access Private - requires 'update' permission on 'RestaurantCategory'
  */
 router.post('/reorder',
-  authorize('update', 'ProductCategory'),
+  authorize('update', 'RestaurantCategory'),
   productCategoryController.reorderCategories
 );
 
 /**
  * @route GET /api/v1/restaurant/categories/:id
  * @desc Get category by ID with full path
- * @access Private - requires 'read' permission on 'ProductCategory'
+ * @access Private - requires 'read' permission on 'RestaurantCategory'
  */
 router.get('/:id',
-  authorize('read', 'ProductCategory'),
+  authorize('read', 'RestaurantCategory'),
   productCategoryController.getCategoryById
 );
 
 /**
  * @route POST /api/v1/restaurant/categories
  * @desc Create new category
- * @access Private - requires 'create' permission on 'ProductCategory'
+ * @access Private - requires 'create' permission on 'RestaurantCategory'
  */
 router.post('/',
-  authorize('create', 'ProductCategory'),
+  authorize('create', 'RestaurantCategory'),
   productCategoryController.createCategory
 );
 
 /**
  * @route PUT /api/v1/restaurant/categories/:id
  * @desc Update category
- * @access Private - requires 'update' permission on 'ProductCategory'
+ * @access Private - requires 'update' permission on 'RestaurantCategory'
  */
 router.put('/:id',
-  authorize('update', 'ProductCategory'),
+  authorize('update', 'RestaurantCategory'),
   productCategoryController.updateCategory
 );
 
@@ -84,10 +84,10 @@ router.put('/:id',
  * @route DELETE /api/v1/restaurant/categories/:id
  * @desc Delete category
  * @query moveProductsTo - category ID to move products to
- * @access Private - requires 'delete' permission on 'ProductCategory'
+ * @access Private - requires 'delete' permission on 'RestaurantCategory'
  */
 router.delete('/:id',
-  authorize('delete', 'ProductCategory'),
+  authorize('delete', 'RestaurantCategory'),
   productCategoryController.deleteCategory
 );
 

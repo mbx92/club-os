@@ -52,6 +52,6 @@ router.delete('/:id', authenticate, authorize('delete', 'Tenant'), auditLog('DEL
  * @desc Update tenant settings (theme, preferences, etc)
  * @access Private
  */
-router.patch('/settings', authenticate, auditLog('UPDATE_TENANT_SETTINGS'), updateTenantSettings);
+router.patch('/settings', authenticate, authorize('update', 'Tenant'), auditLog('UPDATE_TENANT_SETTINGS'), updateTenantSettings);
 
 module.exports = router;

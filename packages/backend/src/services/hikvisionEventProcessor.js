@@ -23,37 +23,21 @@ const {
   sequelize,
 } = require('../models');
 const HikvisionService = require('./hikvisionService');
+const {
+  getPreviousDateOnly,
+  getScheduleMetricsForEvent,
+  isPlausibleCheckout,
+  toLocalDateOnly,
+} = require('../utils/attendanceSchedule');
 const logger = require('../utils/logger');
-
-/**
- * Get date string 'YYYY-MM-DD' in target timezone (avoids UTC date mismatch).
- * Uses same pattern as cashRegisterController: toLocaleDateString with 'en-CA' locale.
- */
-function getLocalDateOnly(date, tz) {
-  return date.toLocaleDateString('en-CA', { timeZone: tz || process.env.TZ || 'Asia/Jakarta' });
-}
-
-/**
- * Subtract 1 day from a YYYY-MM-DD string (local date arithmetic).
- */
-function getPreviousLocalDate(dateStr) {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const prev = new Date(y, m - 1, d - 1);
-  return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}-${String(prev.getDate()).padStart(2, '0')}`;
-}
 
 /**
  * Compare checkIn time against shiftStart in the correct local timezone.
  * Returns { status, lateMinutes }.
  */
-function computeShiftStatus(eventDate, shiftStart, tz) {
-  const timezone = tz || process.env.TZ || 'Asia/Jakarta';
-  const localTime = eventDate.toLocaleTimeString('en-GB', { timeZone: timezone, hour12: false });
-  const [eh, em] = localTime.split(':').map(Number);
-  const [sh, sm] = shiftStart.split(':').map(Number);
-  const checkInMinutes = eh * 60 + em;
-  const shiftMinutes = sh * 60 + sm;
-  const lateMinutes = Math.max(0, checkInMinutes - shiftMinutes);
+function computeShiftStatus(eventDate, schedule, tz) {
+  const metrics = getScheduleMetricsForEvent(eventDate, schedule, tz);
+  const lateMinutes = metrics ? Math.max(0, Math.round(metrics.minsAfterStart)) : 0;
   return { status: lateMinutes === 0 ? 'on_time' : 'late', lateMinutes };
 }
 
@@ -67,48 +51,55 @@ const ACCESS_DOOR_GUARDS = Object.freeze({
   maxCheckoutDistanceFromShiftEndMinutes: 2 * 60,
 });
 
-function getLocalMinutes(date, tz) {
-  const localTime = date.toLocaleTimeString('en-GB', { timeZone: tz, hour12: false });
-  const [h, m] = localTime.split(':').map(Number);
-  return h * 60 + m;
+function toDateKey(value) {
+  return String(value).split('T')[0];
 }
 
-function getScheduleMetrics(eventDate, schedule, tz) {
-  if (!schedule || schedule.isOff || !schedule.shiftStart || !schedule.shiftEnd) {
-    return null;
+function getAttendanceState(attendance) {
+  if (!attendance) return 'none';
+  if (attendance.checkInTime && attendance.checkOutTime) return 'complete';
+  if (attendance.checkInTime) return 'open';
+  if (attendance.checkOutTime) return 'checkout_only';
+  return 'empty';
+}
+
+function resolveAttendanceSchedule(attendance, schedulesByDate, timezone) {
+  const attendanceDate = toDateKey(attendance.date);
+  const candidates = schedulesByDate.get(attendanceDate) || [];
+
+  if (attendance.scheduleId) {
+    return candidates.find((schedule) => schedule.id === attendance.scheduleId) || null;
   }
 
-  const eventMins = getLocalMinutes(eventDate, tz);
-  const [ssh, ssm] = schedule.shiftStart.split(':').map(Number);
-  const [seh, sem] = schedule.shiftEnd.split(':').map(Number);
-  const shiftStartMins = ssh * 60 + ssm;
-  const shiftEndMins = seh * 60 + sem;
-  const shiftDuration = shiftEndMins > shiftStartMins
-    ? shiftEndMins - shiftStartMins
-    : (1440 - shiftStartMins) + shiftEndMins; // overnight shift
-  const halfShift = shiftDuration / 2;
-  const minsAfterStart = eventMins >= shiftStartMins
-    ? eventMins - shiftStartMins
-    : (1440 - shiftStartMins) + eventMins; // after midnight
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return candidates[0];
 
-  return {
-    eventMins,
-    shiftStartMins,
-    shiftEndMins,
-    shiftDuration,
-    halfShift,
-    minsAfterStart,
-    distToStart: Math.abs(eventMins - shiftStartMins),
-    distToEnd: Math.abs(eventMins - shiftEndMins),
-  };
+  const referenceTime = attendance.checkInTime || attendance.checkOutTime;
+  if (!referenceTime) return candidates[0];
+
+  return candidates
+    .map((schedule) => ({
+      schedule,
+      metrics: getScheduleMetricsForEvent(new Date(referenceTime), schedule, timezone),
+    }))
+    .sort((a, b) => {
+      const left = a.metrics ? a.metrics.distToStart : Number.MAX_SAFE_INTEGER;
+      const right = b.metrics ? b.metrics.distToStart : Number.MAX_SAFE_INTEGER;
+      return left - right;
+    })[0]?.schedule || null;
 }
 
-function isPlausibleCheckout(metrics) {
-  if (!metrics) return false;
+function pickPreferredAttendance(current, candidate) {
+  if (!current) return candidate;
+  if (candidate.scheduleId && !current.scheduleId) return candidate;
+  if (current.scheduleId && !candidate.scheduleId) return current;
 
-  return metrics.distToEnd < metrics.distToStart
-    && metrics.minsAfterStart > metrics.halfShift
-    && metrics.distToEnd <= ACCESS_DOOR_GUARDS.maxCheckoutDistanceFromShiftEndMinutes;
+  const currentState = getAttendanceState(current);
+  const candidateState = getAttendanceState(candidate);
+  if (candidateState === 'open' && currentState !== 'open') return candidate;
+  if (currentState === 'open' && candidateState !== 'open') return current;
+
+  return current;
 }
 
 class HikvisionEventProcessor {
@@ -345,253 +336,231 @@ class HikvisionEventProcessor {
   static async upsertStaffAttendance(device, employee, normalized, logId, transaction, timezone) {
     const eventDate = new Date(normalized.eventTime);
     const tz = timezone || process.env.TZ || 'Asia/Jakarta';
-    const dateOnly = getLocalDateOnly(eventDate, tz); // YYYY-MM-DD in tenant timezone
+    const dateOnly = toLocalDateOnly(eventDate, tz);
+    const previousDate = getPreviousDateOnly(dateOnly);
+    const candidateDates = [previousDate, dateOnly];
 
-    // --- 1. Same-day: update checkOut ---
-    const existing = await StaffAttendance.findOne({
+    const schedules = await EmployeeSchedule.findAll({
       where: {
         tenantId: device.tenantId,
         deviceEmployeeId: employee.id,
-        date: dateOnly,
+        date: { [Op.in]: candidateDates },
+        isOff: false,
       },
+      order: [['date', 'ASC'], ['shiftStart', 'ASC']],
       transaction,
     });
 
-    const schedule = await EmployeeSchedule.findOne({
-      where: {
-        tenantId: device.tenantId,
-        deviceEmployeeId: employee.id,
-        date: dateOnly,
-      },
+    const schedulesByDate = new Map();
+    for (const schedule of schedules) {
+      const key = toDateKey(schedule.date);
+      const list = schedulesByDate.get(key) || [];
+      list.push(schedule);
+      schedulesByDate.set(key, list);
+    }
+
+    const attendanceWhere = {
+      tenantId: device.tenantId,
+      deviceEmployeeId: employee.id,
+      date: { [Op.in]: candidateDates },
+    };
+
+    const existingAttendances = await StaffAttendance.findAll({
+      where: attendanceWhere,
+      order: [['date', 'ASC'], ['checkInTime', 'ASC'], ['createdAt', 'ASC']],
       transaction,
     });
 
-    if (existing) {
-      const latestRecordedTime = existing.checkOutTime || existing.checkInTime;
-      if (latestRecordedTime && eventDate <= new Date(latestRecordedTime)) {
-        logger.info('StaffAttendance same-day event ignored (stale/out-of-order)', {
-          deviceEmployeeId: employee.id,
-          employeeNo: employee.employeeNo,
-          date: dateOnly,
-          eventTime: eventDate,
-          latestRecordedTime,
-        });
-        return;
+    const attendanceByScheduleId = new Map();
+    const unresolvedAttendances = [];
+
+    for (const attendance of existingAttendances) {
+      const resolvedSchedule = resolveAttendanceSchedule(attendance, schedulesByDate, tz);
+      if (!resolvedSchedule) {
+        unresolvedAttendances.push(attendance);
+        continue;
       }
 
-      // Once a day already has both checkIn and checkOut, extra taps from an
-      // access-door device should not mutate the attendance again.
-      if (existing.checkInTime && existing.checkOutTime) {
-        logger.info('StaffAttendance same-day event ignored (attendance already complete)', {
-          deviceEmployeeId: employee.id,
-          employeeNo: employee.employeeNo,
-          date: dateOnly,
-          eventTime: eventDate,
-        });
-        return;
-      }
+      attendanceByScheduleId.set(
+        resolvedSchedule.id,
+        pickPreferredAttendance(attendanceByScheduleId.get(resolvedSchedule.id), attendance)
+      );
+    }
 
-      const metrics = getScheduleMetrics(eventDate, schedule, tz);
+    const contexts = schedules.map((schedule) => ({
+      schedule,
+      attendance: attendanceByScheduleId.get(schedule.id) || null,
+      metrics: getScheduleMetricsForEvent(eventDate, schedule, tz),
+    }));
 
-      // If a checkout-only record already exists, avoid turning later door taps
-      // into a new, even later checkout. Historical repair is handled by the
-      // dedicated attendance fix endpoint.
-      if (!existing.checkInTime && existing.checkOutTime) {
-        logger.info('StaffAttendance same-day event ignored (checkout-only record already exists)', {
-          deviceEmployeeId: employee.id,
-          employeeNo: employee.employeeNo,
-          date: dateOnly,
-          eventTime: eventDate,
-        });
-        return;
-      }
+    const openAttendanceCandidate = contexts
+      .filter(({ attendance, metrics }) => {
+        if (!attendance || !attendance.checkInTime || attendance.checkOutTime || !metrics) {
+          return false;
+        }
 
-      const workedMinutes = existing.checkInTime
-        ? (eventDate - new Date(existing.checkInTime)) / (1000 * 60)
-        : 0;
-      const minimumWorkedMinutes = metrics
-        ? Math.max(
+        if (eventDate <= new Date(attendance.checkInTime)) {
+          return false;
+        }
+
+        const workedMinutes = (eventDate - new Date(attendance.checkInTime)) / (1000 * 60);
+        const minimumWorkedMinutes = Math.max(
           ACCESS_DOOR_GUARDS.minWorkedMinutesBeforeCheckoutFloor,
           Math.min(ACCESS_DOOR_GUARDS.minWorkedMinutesBeforeCheckout, metrics.halfShift)
-        )
-        : ACCESS_DOOR_GUARDS.minWorkedMinutesBeforeCheckout;
+        );
 
-      if (
-        workedMinutes < minimumWorkedMinutes
-        || (metrics && !isPlausibleCheckout(metrics))
-      ) {
-        logger.info('StaffAttendance same-day event ignored (repeat tap not a plausible checkout)', {
-          deviceEmployeeId: employee.id,
-          employeeNo: employee.employeeNo,
-          date: dateOnly,
-          eventTime: eventDate,
-          workedMinutes: Math.round(workedMinutes),
-          minimumWorkedMinutes: Math.round(minimumWorkedMinutes),
-          shiftStart: schedule?.shiftStart || null,
-          shiftEnd: schedule?.shiftEnd || null,
-          distToStart: metrics?.distToStart ?? null,
-          distToEnd: metrics?.distToEnd ?? null,
-        });
-        return;
-      }
+        return workedMinutes >= minimumWorkedMinutes
+          && isPlausibleCheckout(metrics, ACCESS_DOOR_GUARDS.maxCheckoutDistanceFromShiftEndMinutes);
+      })
+      .sort((a, b) => a.metrics.distToEnd - b.metrics.distToEnd)[0];
 
-      await existing.update({ checkOutTime: eventDate, deviceId: device.id }, { transaction });
+    if (openAttendanceCandidate) {
+      await openAttendanceCandidate.attendance.update({
+        checkOutTime: eventDate,
+        deviceId: device.id,
+        scheduleId: openAttendanceCandidate.schedule.id,
+      }, { transaction });
+
       logger.info('StaffAttendance checkOut updated', {
         deviceEmployeeId: employee.id,
         employeeNo: employee.employeeNo,
-        date: dateOnly,
+        date: openAttendanceCandidate.schedule.date,
+        scheduleId: openAttendanceCandidate.schedule.id,
         checkOutTime: eventDate,
       });
       return;
     }
 
-    // --- 2. Cross-day checkout check ---
-    // If yesterday has an unclosed attendance and the tap is within 1h of shift end
-    // treat this as checkout for yesterday, not a new check-in today.
-    const CHECKOUT_GRACE_MINUTES = 60;
-    const yesterdayDate = getPreviousLocalDate(dateOnly);
+    const checkoutOnlyCandidate = contexts
+      .filter(({ attendance, metrics }) => {
+        if (!attendance || attendance.checkInTime || !attendance.checkOutTime || !metrics) {
+          return false;
+        }
 
-    const prevAttendance = await StaffAttendance.findOne({
-      where: {
-        tenantId: device.tenantId,
+        return eventDate < new Date(attendance.checkOutTime)
+          && !isPlausibleCheckout(metrics, ACCESS_DOOR_GUARDS.maxCheckoutDistanceFromShiftEndMinutes);
+      })
+      .sort((a, b) => a.metrics.distToStart - b.metrics.distToStart)[0];
+
+    if (checkoutOnlyCandidate) {
+      const computed = computeShiftStatus(eventDate, checkoutOnlyCandidate.schedule, tz);
+      await checkoutOnlyCandidate.attendance.update({
+        checkInTime: eventDate,
+        deviceId: device.id,
+        scheduleId: checkoutOnlyCandidate.schedule.id,
+        status: computed.status,
+      }, { transaction });
+
+      logger.info('StaffAttendance checkIn backfilled on checkout-only record', {
         deviceEmployeeId: employee.id,
-        date: yesterdayDate,
-        checkOutTime: null,
-      },
-      transaction,
-    });
+        employeeNo: employee.employeeNo,
+        date: checkoutOnlyCandidate.schedule.date,
+        scheduleId: checkoutOnlyCandidate.schedule.id,
+        checkInTime: eventDate,
+      });
+      return;
+    }
 
-    if (prevAttendance) {
-      // Load both schedules to compare proximity
-      const [prevSchedule, todaySchedule] = await Promise.all([
-        EmployeeSchedule.findOne({
-          where: { tenantId: device.tenantId, deviceEmployeeId: employee.id, date: yesterdayDate },
-          transaction,
-        }),
-        EmployeeSchedule.findOne({
-          where: { tenantId: device.tenantId, deviceEmployeeId: employee.id, date: dateOnly, isOff: false },
-          transaction,
-        }),
-      ]);
+    const newScheduleCandidate = contexts
+      .filter(({ attendance, metrics }) => !attendance && metrics)
+      .map((context) => ({
+        ...context,
+        isCheckoutCandidate: isPlausibleCheckout(
+          context.metrics,
+          ACCESS_DOOR_GUARDS.maxCheckoutDistanceFromShiftEndMinutes
+        ),
+        score: Math.min(context.metrics.distToStart, context.metrics.distToEnd),
+      }))
+      .sort((a, b) => {
+        if (a.score !== b.score) return a.score - b.score;
+        return a.metrics.distToStart - b.metrics.distToStart;
+      })[0];
 
-      const localTime = eventDate.toLocaleTimeString('en-GB', { timeZone: tz, hour12: false });
-      const [eh, em] = localTime.split(':').map(Number);
-      const eventLocalMins = eh * 60 + em;
+    if (newScheduleCandidate) {
+      const computed = computeShiftStatus(eventDate, newScheduleCandidate.schedule, tz);
 
-      // Distance (minutes) from tap to yesterday's shiftEnd
-      // overnight shift: shiftEnd falls on TODAY's local date → direct delta
-      // normal shift:    shiftEnd was YESTERDAY → minutes elapsed since then = eventLocalMins + (1440 - shiftEndMins)
-      let distToYesterdayEnd = Infinity;
-      if (prevSchedule && !prevSchedule.isOff && prevSchedule.shiftEnd && prevSchedule.shiftStart) {
-        const [seh, sem] = prevSchedule.shiftEnd.split(':').map(Number);
-        const [ssh, ssm] = prevSchedule.shiftStart.split(':').map(Number);
-        const shiftEndMins = seh * 60 + sem;
-        const isOvernightShift = shiftEndMins < (ssh * 60 + ssm);
-        distToYesterdayEnd = isOvernightShift
-          ? Math.abs(eventLocalMins - shiftEndMins)           // shiftEnd on today's local date
-          : eventLocalMins + (1440 - shiftEndMins);           // shiftEnd was yesterday
-      }
+      await StaffAttendance.create(
+        {
+          tenantId: device.tenantId,
+          deviceEmployeeId: employee.id,
+          userId: employee.userId || null,
+          deviceId: device.id,
+          scheduleId: newScheduleCandidate.schedule.id,
+          logId,
+          checkInTime: newScheduleCandidate.isCheckoutCandidate ? null : eventDate,
+          checkOutTime: newScheduleCandidate.isCheckoutCandidate ? eventDate : null,
+          date: newScheduleCandidate.schedule.date,
+          status: newScheduleCandidate.isCheckoutCandidate ? 'present' : computed.status,
+        },
+        { transaction }
+      );
 
-      // Distance (minutes) from tap to today's shiftStart
-      let distToTodayStart = Infinity;
-      if (todaySchedule && todaySchedule.shiftStart) {
-        const [ssh, ssm] = todaySchedule.shiftStart.split(':').map(Number);
-        distToTodayStart = Math.abs(eventLocalMins - (ssh * 60 + ssm));
-      }
-
-      let isCrossCheckOut = false;
-      if (distToYesterdayEnd !== Infinity || distToTodayStart !== Infinity) {
-        // At least one schedule reference exists → decide by proximity
-        // Checkout only if tap is closer to yesterday's end AND within grace window
-        isCrossCheckOut = distToYesterdayEnd <= distToTodayStart
-          && distToYesterdayEnd <= CHECKOUT_GRACE_MINUTES;
-      } else {
-        // No schedule data at all → fallback: within 14 hours of checkIn
-        const hoursSinceCheckIn = (eventDate - new Date(prevAttendance.checkInTime)) / (1000 * 60 * 60);
-        isCrossCheckOut = hoursSinceCheckIn <= 14;
-      }
-
-      if (isCrossCheckOut) {
-        await prevAttendance.update({ checkOutTime: eventDate }, { transaction });
-        logger.info('StaffAttendance cross-day checkOut', {
+      logger.info(
+        newScheduleCandidate.isCheckoutCandidate
+          ? 'StaffAttendance smart checkOut created (schedule-based)'
+          : 'StaffAttendance checkIn created (schedule-based)',
+        {
           deviceEmployeeId: employee.id,
           employeeNo: employee.employeeNo,
-          closedDate: yesterdayDate,
+          date: newScheduleCandidate.schedule.date,
+          scheduleId: newScheduleCandidate.schedule.id,
+          eventTime: eventDate,
+          shiftStart: newScheduleCandidate.schedule.shiftStart,
+          shiftEnd: newScheduleCandidate.schedule.shiftEnd,
+        }
+      );
+      return;
+    }
+
+    const fallbackOpenAttendance = unresolvedAttendances
+      .filter((attendance) => attendance.checkInTime && !attendance.checkOutTime)
+      .sort((a, b) => new Date(b.checkInTime) - new Date(a.checkInTime))[0];
+
+    if (fallbackOpenAttendance && eventDate > new Date(fallbackOpenAttendance.checkInTime)) {
+      const hoursSinceCheckIn = (eventDate - new Date(fallbackOpenAttendance.checkInTime)) / (1000 * 60 * 60);
+      if (hoursSinceCheckIn <= 14) {
+        await fallbackOpenAttendance.update({
           checkOutTime: eventDate,
-          distToYesterdayEnd,
-          distToTodayStart,
-        });
-        return; // Do NOT create new check-in for today
+          deviceId: device.id,
+        }, { transaction });
+        return;
       }
     }
 
-    // --- 3. Smart check-in / check-out detection ---
-    // When there's no existing attendance for today, determine whether the tap
-    // is a check-IN or check-OUT based on proximity to schedule times:
-    //   closer to shiftStart → checkIn
-    //   closer to shiftEnd   → checkOut (employee missed checkIn earlier)
-    let status = 'present';
-    let isCheckOut = false; // default: treat as checkIn
+    const fallbackExisting = existingAttendances
+      .filter((attendance) => toDateKey(attendance.date) === dateOnly)
+      .sort((a, b) => new Date(b.checkOutTime || b.checkInTime || b.createdAt) - new Date(a.checkOutTime || a.checkInTime || a.createdAt))[0];
 
-    const metrics = getScheduleMetrics(eventDate, schedule, tz);
-    if (metrics) {
-      if (isPlausibleCheckout(metrics)) {
-        isCheckOut = true;
+    if (fallbackExisting) {
+      const latestRecordedTime = fallbackExisting.checkOutTime || fallbackExisting.checkInTime;
+      if (latestRecordedTime && eventDate <= new Date(latestRecordedTime)) {
+        return;
       }
-      if (!isCheckOut) {
-        const computed = computeShiftStatus(eventDate, schedule.shiftStart, tz);
-        status = computed.status;
+
+      if (fallbackExisting.checkInTime && !fallbackExisting.checkOutTime) {
+        await fallbackExisting.update({
+          checkOutTime: eventDate,
+          deviceId: device.id,
+        }, { transaction });
+        return;
       }
+
+      return;
     }
 
-    if (isCheckOut) {
-      // Store as checkOut (checkIn stays null — employee missed checkIn)
-      await StaffAttendance.create(
-        {
-          tenantId: device.tenantId,
-          deviceEmployeeId: employee.id,
-          userId: employee.userId || null,
-          deviceId: device.id,
-          logId,
-          checkInTime: null,
-          checkOutTime: eventDate,
-          date: dateOnly,
-          status: 'present',
-        },
-        { transaction }
-      );
-
-      logger.info('StaffAttendance smart checkOut created (no prior checkIn)', {
+    await StaffAttendance.create(
+      {
+        tenantId: device.tenantId,
         deviceEmployeeId: employee.id,
-        employeeNo: employee.employeeNo,
-        date: dateOnly,
-        checkOutTime: eventDate,
-        shiftEnd: schedule.shiftEnd,
-      });
-    } else {
-      await StaffAttendance.create(
-        {
-          tenantId: device.tenantId,
-          deviceEmployeeId: employee.id,
-          userId: employee.userId || null,
-          deviceId: device.id,
-          logId,
-          checkInTime: eventDate,
-          date: dateOnly,
-          status,
-        },
-        { transaction }
-      );
-
-      logger.info('StaffAttendance checkIn created', {
-        deviceEmployeeId: employee.id,
-        employeeNo: employee.employeeNo,
-        date: dateOnly,
+        userId: employee.userId || null,
+        deviceId: device.id,
+        logId,
         checkInTime: eventDate,
-        status,
-        scheduledShiftStart: schedule?.shiftStart || null,
-      });
-    }
+        date: dateOnly,
+        status: 'present',
+      },
+      { transaction }
+    );
   }
 
   /**
@@ -602,7 +571,7 @@ class HikvisionEventProcessor {
     const tz = timezone || process.env.TZ || 'Asia/Jakarta';
 
     // Check if member already checked in today (and hasn't checked out yet)
-    const today = getLocalDateOnly(eventDate, tz);
+    const today = toLocalDateOnly(eventDate, tz);
     const existingCheckIn = await CheckIn.findOne({
       where: {
         tenantId: device.tenantId,

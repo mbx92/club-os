@@ -7,7 +7,7 @@ const express = require('express');
 const router = express.Router();
 const databaseController = require('../../controllers/admin/databaseController');
 const { authenticate } = require('../../middlewares/authMiddleware');
-const { requireSuperAdminOrAdmin } = require('../../middlewares/roleMiddleware');
+const { requireSuperAdminOrAdmin } = require('../../middlewares/superAdminMiddleware');
 
 // Apply authentication and role check to all routes
 router.use(authenticate);

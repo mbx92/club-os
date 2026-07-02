@@ -11,6 +11,7 @@
 const { Op } = require('sequelize');
 const { EmployeeSchedule, EmployeeScheduleTemplate, SchedulePeriod, Shift, User, DeviceEmployee, sequelize } = require('../../../models');
 const { createError } = require('../../../utils/errorCodes');
+const { upsertEmployeeScheduleBySlot } = require('../../../utils/employeeScheduleUpsert');
 const logger = require('../../../utils/logger');
 
 /**
@@ -217,7 +218,7 @@ async function createSchedule(req, res, next) {
           shiftEnd = shiftEnd || shift.shiftEnd;
         }
 
-        const [record] = await EmployeeSchedule.upsert(
+        const [record] = await upsertEmployeeScheduleBySlot(
           {
             tenantId: effectiveTenantId,
             periodId: periodId || null,
@@ -230,10 +231,7 @@ async function createSchedule(req, res, next) {
             isOff: item.isOff || false,
             notes: item.notes || null,
           },
-          {
-            conflictFields: ['tenantId', 'periodId', 'deviceEmployeeId', 'date'],
-            transaction: t,
-          }
+          { transaction: t }
         );
         created.push(record);
       }
@@ -468,7 +466,7 @@ async function generateFromTemplates(req, res, next) {
             continue;
           }
 
-          await EmployeeSchedule.upsert(
+          await upsertEmployeeScheduleBySlot(
             {
               tenantId: effectiveTenantId,
               periodId: periodId || null,
@@ -481,10 +479,7 @@ async function generateFromTemplates(req, res, next) {
               isOff: tpl.isOff,
               notes: tpl.notes || null,
             },
-            {
-              conflictFields: ['tenantId', 'periodId', 'deviceEmployeeId', 'date'],
-              transaction: t,
-            }
+            { transaction: t }
           );
           generated++;
         }
@@ -616,7 +611,7 @@ async function assignShifts(req, res, next) {
               shiftEnd = shift.shiftEnd;
             }
 
-            await EmployeeSchedule.upsert(
+            await upsertEmployeeScheduleBySlot(
               {
                 tenantId: effectiveTenantId,
                 periodId: periodId || null,
@@ -629,7 +624,7 @@ async function assignShifts(req, res, next) {
                 isOff,
                 notes: null,
               },
-              { conflictFields: ['tenantId', 'periodId', 'deviceEmployeeId', 'date'], transaction: t }
+              { transaction: t }
             );
             if (isOff) offDaysCount++;
             else generated++;
@@ -645,7 +640,7 @@ async function assignShifts(req, res, next) {
             const dow = new Date(dateStr).getDay();
             const isOff = offDays.includes(dow);
 
-            await EmployeeSchedule.upsert(
+            await upsertEmployeeScheduleBySlot(
               {
                 tenantId: effectiveTenantId,
                 periodId: periodId || null,
@@ -658,7 +653,7 @@ async function assignShifts(req, res, next) {
                 isOff,
                 notes: null,
               },
-              { conflictFields: ['tenantId', 'periodId', 'deviceEmployeeId', 'date'], transaction: t }
+              { transaction: t }
             );
             if (isOff) offDaysCount++;
             else generated++;

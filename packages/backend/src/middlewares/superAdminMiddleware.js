@@ -1,15 +1,37 @@
-const { authenticate } = require('./authMiddleware');
+const { isTenantAdmin } = require('../utils/rbacUtils');
 
 function requireSuperAdmin(req, res, next) {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
-  
+
   if (!req.user.isSuperAdmin) {
     return res.status(403).json({ message: 'Forbidden: Superadmin access required' });
   }
-  
+
   next();
+}
+
+/**
+ * Require super admin OR tenant admin (admin/owner).
+ * Used for routes like database backup that both super admins and tenant admins can access.
+ */
+function requireSuperAdminOrAdmin(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized: Authentication required',
+    });
+  }
+
+  if (req.user.isSuperAdmin || isTenantAdmin(req.user)) {
+    return next();
+  }
+
+  return res.status(403).json({
+    success: false,
+    message: 'Forbidden: Super Admin, Admin, or Owner access required',
+  });
 }
 
 // Middleware to allow superadmin to access all tenants or regular users to access only their tenant
@@ -17,7 +39,7 @@ function tenantAccessControl(req, res, next) {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
-  
+
   // If user is superadmin, allow access to all tenants
   if (req.user.isSuperAdmin) {
     // If tenantId is provided in query params, use it
@@ -37,4 +59,4 @@ function tenantAccessControl(req, res, next) {
   }
 }
 
-module.exports = { requireSuperAdmin, tenantAccessControl };
+module.exports = { requireSuperAdmin, requireSuperAdminOrAdmin, tenantAccessControl };

@@ -52,8 +52,8 @@ const ROUTE_TO_SUBJECT_MAP = {
   // PERMISSIONS & ROLES
   // ═══════════════════════════════════════════════════════════════════════════
   
-  '/permissions/menu': { subject: 'Permission', actions: ['read'] },
-  '/permissions/subjects': { subject: 'Permission', actions: ['read'] },
+  '/permissions/menu': { subject: 'Role', actions: ['read'] },
+  '/permissions/subjects': { subject: 'Role', actions: ['read'] },
   '/permissions/routes/regenerate': { subject: 'Permission', actions: ['create'] },
   '/permissions/roles': {
     GET: { subject: 'Role', actions: ['read'] },
@@ -67,7 +67,7 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/permissions/roles/:id/permissions': { subject: 'Role', actions: ['update'] },
   '/permissions/roles/:id/preview': { subject: 'Role', actions: ['read'] },
   '/permissions/roles/:id/reset': { subject: 'Role', actions: ['update'] },
-  '/permissions/roles/:roleId/generate-rules': { subject: 'Role', actions: ['create'] },
+  '/permissions/roles/:roleId/generate-rules': { subject: 'Role', actions: ['update'] },
   
   // ═══════════════════════════════════════════════════════════════════════════
   // GYM MODULE
@@ -102,8 +102,8 @@ const ROUTE_TO_SUBJECT_MAP = {
   },
   '/gym/trainers/:id/toggle-active': { subject: 'Trainer', actions: ['update'] },
   '/gym/trainers/:id/commissions': { subject: 'TrainerCommission', actions: ['read'] },
-  '/gym/trainers/:id/commissions/:commissionId/pay': { subject: 'TrainerCommission', actions: ['create'] },
-  '/gym/trainers/commissions/backfill': { subject: 'TrainerCommission', actions: ['create'] },
+  '/gym/trainers/:id/commissions/:commissionId/pay': { subject: 'TrainerCommission', actions: ['update'] },
+  '/gym/trainers/commissions/backfill': { subject: 'TrainerCommission', actions: ['manage'] },
   
   // PT Sessions
   '/gym/pt-sessions': {
@@ -191,6 +191,13 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/service/management/alerts': { subject: 'ActiveService', actions: ['read'] },
   '/service/management/member/:memberId': { subject: 'ActiveService', actions: ['read'] },
   '/service/management/:serviceId/assign-trainer': { subject: 'ActiveService', actions: ['update'] },
+  '/service/active/walkin': { subject: 'ActiveService', actions: ['read'] },
+  '/service/active/detail/:id': { subject: 'ActiveService', actions: ['read'] },
+  '/service/active/purchase': { subject: 'ActiveService', actions: ['create'] },
+  '/service/active/bulk-purchase': { subject: 'ActiveService', actions: ['create'] },
+  '/service/active/:id/use-session': { subject: 'ActiveService', actions: ['update'] },
+  '/service/active/:id/assign-trainer': { subject: 'ActiveService', actions: ['update'] },
+  '/service/active/:id/cancel': { subject: 'ActiveService', actions: ['delete'] },
   
   '/service/plans': {
     GET: { subject: 'ServicePlan', actions: ['read'] },
@@ -217,12 +224,19 @@ const ROUTE_TO_SUBJECT_MAP = {
     DELETE: { subject: 'MembershipPlan', actions: ['delete'] }
   },
   
-  '/billing/subscriptions/tenant/:tenantId': { subject: 'Membership', actions: ['read'] },
+  '/billing/subscriptions': { subject: 'Subscription', actions: ['create'] },
+  '/billing/subscriptions/tenant/:tenantId': { subject: 'Subscription', actions: ['read'] },
   '/billing/subscriptions/:id': {
-    PUT: { subject: 'Membership', actions: ['update'] },
-    DELETE: { subject: 'Membership', actions: ['delete'] }
+    PUT: { subject: 'Subscription', actions: ['update'] },
+    DELETE: { subject: 'Subscription', actions: ['delete'] }
   },
+  '/billing/subscriptions/:id/renew': { subject: 'Subscription', actions: ['update'] },
+  '/billing/subscriptions/:id/activate': { subject: 'Subscription', actions: ['update'] },
   
+  '/billing/invoices': {
+    GET: { subject: 'Invoice', actions: ['read'] },
+    POST: { subject: 'Invoice', actions: ['create'] }
+  },
   '/billing/invoices/:id': {
     GET: { subject: 'Invoice', actions: ['read'] }
   },
@@ -233,6 +247,7 @@ const ROUTE_TO_SUBJECT_MAP = {
     POST: { subject: 'Payment', actions: ['create'] }
   },
   '/billing/payments/:id': { subject: 'Payment', actions: ['read'] },
+  '/billing/payments/:id/refund': { subject: 'Payment', actions: ['update'] },
   
   // ═══════════════════════════════════════════════════════════════════════════
   // SUBSCRIPTION MANAGEMENT (SaaS)
@@ -242,7 +257,7 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/subscription/:id': { subject: 'Subscription', actions: ['update'] },
   '/subscription/:id/upgrade': { subject: 'Subscription', actions: ['update'] },
   '/subscription/:id/cancel': { subject: 'Subscription', actions: ['delete'] },
-  '/subscription/:id/renew': { subject: 'Subscription', actions: ['create'] },
+  '/subscription/:id/renew': { subject: 'Subscription', actions: ['update'] },
   '/subscription/plans': { subject: 'SubscriptionPlan', actions: ['read'] },
   
   // ═══════════════════════════════════════════════════════════════════════════
@@ -285,34 +300,34 @@ const ROUTE_TO_SUBJECT_MAP = {
   // ═══════════════════════════════════════════════════════════════════════════
   
   // Dashboard
-  '/modules/restaurant/dashboard/overview': { subject: 'Restaurant', actions: ['read'] },
-  '/modules/restaurant/dashboard/comprehensive': { subject: 'Restaurant', actions: ['read'] },
-  '/modules/restaurant/dashboard/sales-trend': { subject: 'Restaurant', actions: ['read'] },
-  '/modules/restaurant/dashboard/top-products': { subject: 'Restaurant', actions: ['read'] },
-  '/modules/restaurant/dashboard/recent-orders': { subject: 'Restaurant', actions: ['read'] },
-  
+  '/modules/restaurant/dashboard/overview': { subject: 'Transaction', actions: ['read'] },
+  '/modules/restaurant/dashboard/comprehensive': { subject: 'Transaction', actions: ['read'] },
+  '/modules/restaurant/dashboard/sales-trend': { subject: 'Transaction', actions: ['read'] },
+  '/modules/restaurant/dashboard/top-products': { subject: 'Transaction', actions: ['read'] },
+  '/modules/restaurant/dashboard/recent-orders': { subject: 'Transaction', actions: ['read'] },
+
   // Orders
   '/modules/restaurant/orders': {
-    GET: { subject: 'Order', actions: ['read'] },
-    POST: { subject: 'Order', actions: ['create'] }
+    GET: { subject: 'Transaction', actions: ['read'] },
+    POST: { subject: 'Transaction', actions: ['create'] }
   },
-  '/modules/restaurant/orders/kitchen': { subject: 'Order', actions: ['read'] },
-  '/modules/restaurant/orders/queue': { subject: 'Order', actions: ['read'] },
-  '/modules/restaurant/orders/queue/stream': { subject: 'Order', actions: ['read'] },
-  '/modules/restaurant/orders/queue/display': { subject: 'Order', actions: ['read'] },
-  '/modules/restaurant/orders/kitchen/stream': { subject: 'Order', actions: ['read'] },
+  '/modules/restaurant/orders/kitchen': { subject: 'Transaction', actions: ['read'] },
+  '/modules/restaurant/orders/queue': { subject: 'Transaction', actions: ['read'] },
+  '/modules/restaurant/orders/queue/stream': { subject: 'Transaction', actions: ['read'] },
+  '/modules/restaurant/orders/queue/display': { subject: 'Transaction', actions: ['read'] },
+  '/modules/restaurant/orders/kitchen/stream': { subject: 'Transaction', actions: ['read'] },
   '/modules/restaurant/orders/:id': {
-    GET: { subject: 'Order', actions: ['read'] },
-    PUT: { subject: 'Order', actions: ['update'] },
-    DELETE: { subject: 'Order', actions: ['delete'] }
+    GET: { subject: 'Transaction', actions: ['read'] },
+    PUT: { subject: 'Transaction', actions: ['update'] },
+    DELETE: { subject: 'Transaction', actions: ['delete'] }
   },
-  '/modules/restaurant/orders/:id/status': { subject: 'Order', actions: ['update'] },
-  '/modules/restaurant/orders/:id/items': { subject: 'Order', actions: ['update'] },
-  '/modules/restaurant/orders/:id/payment': { subject: 'Order', actions: ['create'] },
-  '/modules/restaurant/orders/:id/split': { subject: 'Order', actions: ['create'] },
-  '/modules/restaurant/orders/:id/merge': { subject: 'Order', actions: ['create'] },
-  '/modules/restaurant/orders/:id/void': { subject: 'Order', actions: ['delete'] },
-  '/modules/restaurant/orders/:id/print': { subject: 'Order', actions: ['read'] },
+  '/modules/restaurant/orders/:id/status': { subject: 'Transaction', actions: ['update'] },
+  '/modules/restaurant/orders/:id/items': { subject: 'Transaction', actions: ['update'] },
+  '/modules/restaurant/orders/:id/payment': { subject: 'Transaction', actions: ['create'] },
+  '/modules/restaurant/orders/:id/split': { subject: 'Transaction', actions: ['create'] },
+  '/modules/restaurant/orders/:id/merge': { subject: 'Transaction', actions: ['create'] },
+  '/modules/restaurant/orders/:id/void': { subject: 'Transaction', actions: ['delete'] },
+  '/modules/restaurant/orders/:id/print': { subject: 'Transaction', actions: ['read'] },
   
   // Products
   '/modules/restaurant/products': {
@@ -395,14 +410,14 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/modules/restaurant/stock-movements/transfer': { subject: 'RestaurantStock', actions: ['create'] },
   
   // Reports
-  '/modules/restaurant/reports/sales': { subject: 'RestaurantReport', actions: ['read'] },
-  '/modules/restaurant/reports/products': { subject: 'RestaurantReport', actions: ['read'] },
-  '/modules/restaurant/reports/tables': { subject: 'RestaurantReport', actions: ['read'] },
-  '/modules/restaurant/reports/daily-summary': { subject: 'RestaurantReport', actions: ['read'] },
+  '/modules/restaurant/reports/sales': { subject: 'Transaction', actions: ['read'] },
+  '/modules/restaurant/reports/products': { subject: 'Transaction', actions: ['read'] },
+  '/modules/restaurant/reports/tables': { subject: 'Transaction', actions: ['read'] },
+  '/modules/restaurant/reports/daily-summary': { subject: 'Transaction', actions: ['read'] },
   
   // Combined Billing
-  '/modules/restaurant/combined-billing/preview': { subject: 'Order', actions: ['read'] },
-  '/modules/restaurant/combined-billing/process': { subject: 'Order', actions: ['create'] },
+  '/modules/restaurant/combined-billing/preview': { subject: 'Transaction', actions: ['read'] },
+  '/modules/restaurant/combined-billing/process': { subject: 'Transaction', actions: ['create'] },
   
   // ═══════════════════════════════════════════════════════════════════════════
   // FINANCE MODULE
@@ -534,33 +549,49 @@ const ROUTE_TO_SUBJECT_MAP = {
   // SYSTEM SETTINGS
   // ═══════════════════════════════════════════════════════════════════════════
   
-  '/system/printers/scan': { subject: 'PrinterSettings', actions: ['read'] },
-  '/system/printers/scan/quick': { subject: 'PrinterSettings', actions: ['read'] },
+  '/system/printers': {
+    GET: { subject: 'PrinterSettings', actions: ['read'] },
+    POST: { subject: 'PrinterSettings', actions: ['create'] }
+  },
+  '/system/printers/statistics': { subject: 'PrinterSettings', actions: ['read'] },
+  '/system/printers/scan': { subject: 'PrinterSettings', actions: ['create'] },
+  '/system/printers/scan/quick': { subject: 'PrinterSettings', actions: ['create'] },
   '/system/printers/:id': {
     GET: { subject: 'PrinterSettings', actions: ['read'] },
     PUT: { subject: 'PrinterSettings', actions: ['update'] },
     DELETE: { subject: 'PrinterSettings', actions: ['delete'] }
   },
-  '/system/printers/health-check/bulk': { subject: 'PrinterSettings', actions: ['create'] },
-  '/system/printers/cash-drawer/open': { subject: 'PrinterSettings', actions: ['create'] },
+  '/system/printers/:id/test': { subject: 'PrinterSettings', actions: ['update'] },
+  '/system/printers/health-check/bulk': { subject: 'PrinterSettings', actions: ['update'] },
+  '/system/printers/cash-drawer/open': { subject: 'PrinterSettings', actions: ['update'] },
+  '/system/printers/:id/stream/connection': { subject: 'PrinterSettings', actions: ['read'] },
   '/system/printers/:id/stream/health': { subject: 'PrinterSettings', actions: ['read'] },
+  '/system/printers/:id/jobs': { subject: 'PrinterSettings', actions: ['read'] },
+  '/system/printers/:id/test-print': { subject: 'PrinterSettings', actions: ['update'] },
   
   '/system/receipt-templates': {
-    GET: { subject: 'ReceiptSettings', actions: ['read'] },
-    POST: { subject: 'ReceiptSettings', actions: ['create'] }
+    GET: { subject: 'ReceiptTemplate', actions: ['read'] },
+    POST: { subject: 'ReceiptTemplate', actions: ['create'] }
   },
   '/system/receipt-templates/:id': {
-    GET: { subject: 'ReceiptSettings', actions: ['read'] },
-    PATCH: { subject: 'ReceiptSettings', actions: ['update'] },
-    DELETE: { subject: 'ReceiptSettings', actions: ['delete'] }
+    GET: { subject: 'ReceiptTemplate', actions: ['read'] },
+    PATCH: { subject: 'ReceiptTemplate', actions: ['update'] },
+    DELETE: { subject: 'ReceiptTemplate', actions: ['delete'] }
   },
-  '/system/receipt-templates/test-print-draft': { subject: 'ReceiptSettings', actions: ['create'] },
+  '/system/receipt-templates/:id/duplicate': { subject: 'ReceiptTemplate', actions: ['create'] },
+  '/system/receipt-templates/preview-draft': { subject: 'ReceiptTemplate', actions: ['read'] },
+  '/system/receipt-templates/:id/preview': { subject: 'ReceiptTemplate', actions: ['read'] },
+  '/system/receipt-templates/:id/test-print': { subject: 'ReceiptTemplate', actions: ['read'] },
+  '/system/receipt-templates/test-print-draft': { subject: 'ReceiptTemplate', actions: ['read'] },
   
   '/system/receipt-settings': {
-    GET: { subject: 'ReceiptSettings', actions: ['read'] },
-    PUT: { subject: 'ReceiptSettings', actions: ['update'] }
+    GET: { subject: 'SystemSettings', actions: ['read'] },
+    POST: { subject: 'SystemSettings', actions: ['create'] },
+    PUT: { subject: 'SystemSettings', actions: ['update'] }
   },
-  '/system/receipt-settings/reset': { subject: 'ReceiptSettings', actions: ['create'] },
+  '/system/receipt-settings/test-print': { subject: 'SystemSettings', actions: ['read'] },
+  '/system/receipt-settings/test-print-actual': { subject: 'SystemSettings', actions: ['read'] },
+  '/system/receipt-settings/reset': { subject: 'SystemSettings', actions: ['update'] },
   
   // ═══════════════════════════════════════════════════════════════════════════
   // HIKVISION INTEGRATION

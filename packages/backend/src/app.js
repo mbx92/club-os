@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const fs = require('fs');
 const morgan = require('morgan');
 const path = require('path');
 
@@ -17,6 +18,8 @@ const {
 } = require('./utils/metrics');
 
 const app = express();
+const backendPublicPath = path.join(__dirname, '../public');
+const frontendIndexPath = path.join(backendPublicPath, 'index.html');
 
 // Trust proxy - required for correct IP detection behind reverse proxy/load balancer
 // Cloudflare → Traefik → App (2 proxies)
@@ -83,7 +86,7 @@ app.use(metricsMiddleware);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Serve static files from public directory
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static(backendPublicPath));
 
 app.use('/api/v1', routes);
 
@@ -109,6 +112,32 @@ app.get('/metrics', async (req, res) => {
 // health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+// Serve SPA routes from the built frontend bundle when available.
+app.use((req, res, next) => {
+  if (!['GET', 'HEAD'].includes(req.method)) {
+    return next();
+  }
+
+  if (!req.accepts('html')) {
+    return next();
+  }
+
+  if (
+    req.path.startsWith('/api/') ||
+    req.path.startsWith('/uploads/') ||
+    req.path === '/metrics' ||
+    req.path === '/health'
+  ) {
+    return next();
+  }
+
+  if (fs.existsSync(frontendIndexPath)) {
+    return res.sendFile(frontendIndexPath);
+  }
+
+  return next();
 });
 
 // Update top URLs metrics periodically (every 5 minutes)

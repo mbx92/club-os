@@ -22,40 +22,40 @@ router.use(requireModule('restaurant'));
 /**
  * @route GET /api/v1/restaurant/products
  * @desc Get all products with filters (search, category, location, low stock)
- * @access Private - requires 'read' permission on 'Product'
+ * @access Private - requires 'read' permission on 'RestaurantProduct'
  */
 router.get('/',
-  authorize('read', 'Product'),
+  authorize('read', 'RestaurantProduct'),
   productController.getAllProducts
 );
 
 /**
  * @route GET /api/v1/restaurant/products/low-stock
  * @desc Get products with low stock levels
- * @access Private - requires 'read' permission on 'Product'
+ * @access Private - requires 'read' permission on 'RestaurantProduct'
  */
 router.get('/low-stock',
-  authorize('read', 'Product'),
+  authorize('read', 'RestaurantProduct'),
   productController.getLowStockProducts
 );
 
 /**
  * @route GET /api/v1/restaurant/products/:id
  * @desc Get product by ID with stock movements
- * @access Private - requires 'read' permission on 'Product'
+ * @access Private - requires 'read' permission on 'RestaurantProduct'
  */
 router.get('/:id',
-  authorize('read', 'Product'),
+  authorize('read', 'RestaurantProduct'),
   productController.getProductById
 );
 
 /**
  * @route POST /api/v1/restaurant/products
  * @desc Create new product
- * @access Private - requires 'create' permission on 'Product'
+ * @access Private - requires 'create' permission on 'RestaurantProduct'
  */
 router.post('/',
-  authorize('create', 'Product'),
+  authorize('create', 'RestaurantProduct'),
   productUpload.single('image'),
   productController.createProduct
 );
@@ -63,10 +63,10 @@ router.post('/',
 /**
  * @route PUT /api/v1/restaurant/products/:id
  * @desc Update product details
- * @access Private - requires 'update' permission on 'Product'
+ * @access Private - requires 'update' permission on 'RestaurantProduct'
  */
 router.put('/:id',
-  authorize('update', 'Product'),
+  authorize('update', 'RestaurantProduct'),
   productUpload.single('image'),
   productController.updateProduct
 );
@@ -74,20 +74,20 @@ router.put('/:id',
 /**
  * @route DELETE /api/v1/restaurant/products/:id
  * @desc Delete product (soft delete)
- * @access Private - requires 'delete' permission on 'Product'
+ * @access Private - requires 'delete' permission on 'RestaurantProduct'
  */
 router.delete('/:id',
-  authorize('delete', 'Product'),
+  authorize('delete', 'RestaurantProduct'),
   productController.deleteProduct
 );
 
 /**
  * @route POST /api/v1/restaurant/products/:id/adjust-stock
  * @desc Adjust product stock quantity
- * @access Private - requires 'update' permission on 'Product'
+ * @access Private - requires 'update' permission on 'RestaurantProduct'
  */
 router.post('/:id/adjust-stock',
-  authorize('update', 'Product'),
+  authorize('update', 'RestaurantProduct'),
   productController.adjustStock
 );
 

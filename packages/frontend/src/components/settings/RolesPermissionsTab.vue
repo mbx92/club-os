@@ -816,7 +816,8 @@ import {
   resolveMenuAccessForRole,
   resolvePermissionsFromRules,
   mapLegacyPermissions,
-  buildAllResourcePermissions
+  buildAllResourcePermissions,
+  normalizeMenuAccess
 } from '@/navigation/menuKeyUtils'
 import {
   IconShield,
@@ -885,33 +886,38 @@ const permissionView = ref('summary') // 'summary', 'resources', 'rules-tab', 'm
 // Check if user is superadmin
 const isSuperAdmin = ref(authStore.user?.isSuperAdmin || false)
 
-// Permission Modules for grouping
-const permissionModules = [
+// Available module tabs — dynamically computed to only show tabs with content
+const TAB_DEFS = [
   { id: 'all', label: 'All', icon: IconShield },
   { id: 'dashboard', label: 'Dashboard', icon: IconDashboard },
   { id: 'gym', label: 'Gym', icon: IconUsers },
-  { id: 'pos', label: 'POS', icon: IconCashRegister },
   { id: 'restaurant', label: 'Restaurant', icon: IconToolsKitchen2 },
   { id: 'finance', label: 'Finance', icon: IconFileInvoice },
-  { id: 'reports', label: 'Reports', icon: IconChartBar },
-  { id: 'system', label: 'System', icon: IconSettings }
+  { id: 'system', label: 'System', icon: IconSettings },
 ]
+const permissionModules = computed(() => {
+  return TAB_DEFS.filter(tab => {
+    if (tab.id === 'all') return true
+    return availableResources.value.some(r => getResourceModule(r.name) === tab.id)
+  })
+})
 
-// Role Templates
+// Role Templates — subjects must match backend config/routePermissions.js ROUTE_TO_SUBJECT_MAP
 const roleTemplates = [
   {
     name: 'Cashier',
     icon: IconCash,
     description: 'Front desk staff who handle transactions',
     permissions: {
-      Dashboard:         ['read'],
-      Member:            ['read', 'create', 'update'],
-      CheckIn:           ['read', 'create', 'update'],
-      Transaction:       ['read', 'create'],
-      Payment:           ['read', 'create'],
-      Invoice:           ['read', 'create'],
-      Voucher:           ['read', 'create', 'update'],
-      Order:             ['read', 'create', 'update'],
+      Dashboard:           ['read'],
+      Member:              ['read', 'create', 'update'],
+      CheckIn:             ['read', 'create', 'update'],
+      Transaction:         ['read', 'create'],
+      Payment:             ['read', 'create'],
+      Invoice:             ['read', 'create'],
+      Voucher:             ['read', 'create', 'update'],
+      CashRegisterSession: ['read', 'create', 'update'],
+      ActiveService:       ['read', 'create', 'update'],
     }
   },
   {
@@ -919,16 +925,22 @@ const roleTemplates = [
     icon: IconUserCog,
     description: 'Manager with supervisory access',
     permissions: {
-      Dashboard:         ['read'],
-      Member:            ['read', 'create', 'update', 'delete'],
-      Membership:        ['read', 'create', 'update', 'delete'],
-      MembershipPayment: ['read', 'create', 'update'],
-      CheckIn:           ['read', 'create', 'update', 'delete'],
-      Transaction:       ['read'],
-      FinanceReport:     ['read'],
-      GymReport:         ['read'],
-      Staff:             ['read', 'update'],
-      Trainer:           ['read', 'update'],
+      Dashboard:           ['read'],
+      Member:              ['read', 'create', 'update', 'delete'],
+      MembershipPlan:      ['read', 'create', 'update', 'delete'],
+      CheckIn:             ['read', 'create', 'update', 'delete'],
+      Transaction:         ['read'],
+      FinancialReport:     ['read'],
+      EmployeeSchedule:    ['read', 'update'],
+      StaffAttendance:     ['read', 'create', 'update'],
+      Trainer:             ['read', 'update'],
+      TrainerCommission:   ['read'],
+      ActiveService:       ['read', 'create', 'update', 'delete'],
+      ServicePlan:         ['read', 'create', 'update', 'delete'],
+      RestaurantProduct:   ['read', 'create', 'update', 'delete'],
+      RestaurantCategory:  ['read', 'create', 'update', 'delete'],
+      RestaurantTable:     ['read', 'create', 'update'],
+      RestaurantStock:     ['read', 'create', 'update'],
     }
   },
   {
@@ -936,12 +948,12 @@ const roleTemplates = [
     icon: IconUsers,
     description: 'Gym instructor with limited access',
     permissions: {
-      Dashboard:       ['read'],
-      Member:          ['read'],
-      CheckIn:         ['read', 'create'],
-      ClassSchedule:   ['read', 'update'],
-      ClassEnrollment: ['read'],
-      TrainingSession: ['read', 'create', 'update'],
+      Dashboard:         ['read'],
+      Member:            ['read'],
+      CheckIn:           ['read', 'create'],
+      PTSession:         ['read', 'create', 'update'],
+      ActiveService:     ['read', 'update'],
+      TrainerCommission: ['read'],
     }
   }
 ]
@@ -1047,80 +1059,77 @@ const selectedActionCount = computed(() => {
   }, 0)
 })
 
-// Computed: Active module name
-const activeModuleName = computed(() => {
-  const module = permissionModules.find(m => m.id === activeModule.value)
-  return module ? module.label : 'Module'
-})
-
 // Helper: Get resource module by subject name (PascalCase from backend)
   const getResourceModule = (resourceName) => {
+    // ⚠️  Only contains subjects from backend config/routePermissions.js ROUTE_TO_SUBJECT_MAP.
+    // Every subject returned by GET /permissions/subjects must have an entry here.
     const MODULE_MAP = {
       // Dashboard
       'Dashboard':           'dashboard',
 
       // Gym
-      'Member':              'gym',
-      'Membership':          'gym',
-      'MembershipPayment':   'gym',
+      'ActiveService':       'gym',
       'CheckIn':             'gym',
-      'Staff':               'gym',
-      'StaffAttendance':     'gym',
+      'EmployeeSchedule':    'gym',
+      'Member':              'gym',
+      'MembershipPlan':      'gym',
+      'PTSession':           'gym',
+      'ServicePlan':         'gym',
       'Shift':               'gym',
+      'StaffAttendance':     'gym',
       'Trainer':             'gym',
-      'Coach':               'gym',
-      'TrainingPackage':     'gym',
-      'TrainingSession':     'gym',
-      'ClassSchedule':       'gym',
-      'ClassEnrollment':     'gym',
-      'GymProduct':          'gym',
-      'GymReport':           'gym',
+      'TrainerCommission':   'gym',
 
       // Restaurant
-      'Restaurant':          'restaurant',
       'RestaurantCategory':  'restaurant',
-      'RestaurantProduct':   'restaurant',
       'RestaurantLocation':  'restaurant',
-      'RestaurantTable':     'restaurant',
-      'Order':               'restaurant',
+      'RestaurantProduct':   'restaurant',
       'RestaurantStock':     'restaurant',
-      'RestaurantReport':    'restaurant',
+      'RestaurantTable':     'restaurant',
 
       // Finance
-      'Transaction':         'finance',
-      'Expense':             'finance',
+      'CashFlow':            'finance',
       'CashRegisterSession': 'finance',
+      'Expense':             'finance',
+      'ExpenseCategory':     'finance',
+      'FinanceDashboard':    'finance',
+      'FinancialReport':     'finance',
+      'Income':              'finance',
+      'IncomeCategory':      'finance',
       'Invoice':             'finance',
       'Payment':             'finance',
-      'FinanceReport':       'finance',
+      'PettyCash':           'finance',
       'Subscription':        'finance',
       'SubscriptionPlan':    'finance',
+      'Supplier':            'finance',
+      'Transaction':         'finance',
 
-      // POS
-      'POSProduct':          'pos',
-      'POSCategory':         'pos',
-      'POSTransaction':      'pos',
-      'POSReport':           'pos',
-      'Voucher':             'pos',
-      'MidtransPayment':     'pos',
+      // Vouchers (cross-cutting)
+      'Voucher':             'finance',
 
       // System / Core
+      'Auth':                'system',
+      'DatabaseBackup':      'system',
+      'Health':              'system',
+      'HikvisionDevice':     'system',
+      'Log':                 'system',
+      'Permission':          'system',
+      'PrinterSettings':     'system',
+      'ReceiptTemplate':     'system',
+      'Role':                'system',
+      'Scheduler':           'system',
+      'Settings':            'system',
+      'SubscriptionFeature': 'system',
+      'SystemMetrics':       'system',
+      'SystemSettings':      'system',
       'Tenant':              'system',
       'User':                'system',
-      'Role':                'system',
-      'Permission':          'system',
-      'Auth':                'system',
-      'Metrics':             'system',
-      'Notification':        'system',
-      'AuditLog':            'system',
-      'SystemSetting':       'system',
-      'HikvisionDevice':     'system',
     }
 
-    // Direct lookup (exact PascalCase match)
+    // Direct lookup
     if (MODULE_MAP[resourceName]) return MODULE_MAP[resourceName]
 
-    // Fallback: prefix-based detection
+    // Fallback: prefix-based detection for future subjects
     const name = resourceName.toLowerCase()
     if (name.startsWith('restaurant')) return 'restaurant'
     if (name.startsWith('gym'))        return 'gym'
@@ -1131,14 +1140,6 @@ const activeModuleName = computed(() => {
 
     return 'system'
   }
-
-// Helper: Get module selected count
-const getModuleSelectedCount = (moduleId) => {
-  if (moduleId === 'all') return selectedResourceCount.value
-  return Object.keys(formData.value.permissions).filter(resource => {
-    return getResourceModule(resource) === moduleId
-  }).length
-}
 
 // Helper: Get selected actions for a resource
 const getSelectedActions = (resourceName) => {
@@ -1254,20 +1255,6 @@ const applyTemplate = (template) => {
   formData.value.permissions = { ...template.permissions }
   // Apply default menu access for this template role
   formData.value.menuAccess = ROLE_MENU_MAP[template.name.toLowerCase()] || []
-}
-
-// Select all resources in current module
-const selectAllInModule = () => {
-  filteredPermissionsByModule.value.forEach(resource => {
-    formData.value.permissions[resource.name] = [...resource.actions]
-  })
-}
-
-// Clear all resources in current module
-const clearAllInModule = () => {
-  filteredPermissionsByModule.value.forEach(resource => {
-    delete formData.value.permissions[resource.name]
-  })
 }
 
 // Open create modal
@@ -1443,14 +1430,26 @@ const handleSubmit = async () => {
     return
   }
 
+  const payload = {
+    ...formData.value,
+    // Save exactly what the admin selected — no auto-derivation from permissions.
+    // menuAccess is the single source of truth for sidebar visibility.
+    menuAccess: normalizeMenuAccess(formData.value.menuAccess)
+  }
+
   let result
+  const editedCurrentUserRole = editingRole.value?.id && editingRole.value.id === authStore.user?.role?.id
+
   if (editingRole.value) {
-    result = await updateRole(editingRole.value.id, formData.value)
+    result = await updateRole(editingRole.value.id, payload)
   } else {
-    result = await createRole(formData.value)
+    result = await createRole(payload)
   }
   
   if (result.success) {
+    if (editedCurrentUserRole) {
+      await authStore.fetchUserPermissions()
+    }
     await fetchRoles()
     closeRoleModal()
   }

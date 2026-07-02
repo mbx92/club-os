@@ -20,6 +20,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'deviceId',
         as: 'device',
       });
+      StaffAttendance.belongsTo(models.EmployeeSchedule, {
+        foreignKey: 'scheduleId',
+        as: 'schedule',
+      });
       StaffAttendance.belongsTo(models.DeviceAttendanceLog, {
         foreignKey: 'logId',
         as: 'log',
@@ -61,6 +65,13 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: true,
         references: { model: 'HikvisionDevices', key: 'id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL',
+      },
+      scheduleId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: { model: 'EmployeeSchedules', key: 'id' },
         onUpdate: 'CASCADE',
         onDelete: 'SET NULL',
       },

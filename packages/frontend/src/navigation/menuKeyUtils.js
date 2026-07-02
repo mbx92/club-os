@@ -27,8 +27,58 @@ export function getAllMenuKeyValues() {
 
 const VALID_MENU_KEYS = new Set(getAllMenuKeyValues())
 
+const SUBJECT_MENU_MAP = {
+  Dashboard: ['dashboard'],
+  CashRegisterSession: ['cash-register'],
+  Member: ['gym.members'],
+  Trainer: ['gym.instructors'],
+  CheckIn: ['gym.check-ins'],
+  Membership: ['gym.memberships'],
+  MembershipPlan: ['gym.memberships'],
+  PTSession: ['gym.pt'],
+  ServicePlan: ['gym.active-services'],
+  ActiveService: ['gym.active-services'],
+  Transaction: ['gym.pos', 'finances.transactions', 'restaurant.pos', 'restaurant.orders', 'restaurant.dashboard', 'restaurant.reports'],
+  GymReport: ['gym.reports', 'reports.service-reports', 'reports.product-reports', 'reports.staff-reports', 'reports.forecasting'],
+  TrainerCommission: ['gym.instructors', 'gym.reports'],
+  RestaurantCategory: ['restaurant.categories'],
+  RestaurantProduct: ['restaurant.products'],
+  RestaurantLocation: ['restaurant.locations'],
+  RestaurantTable: ['restaurant.tables', 'restaurant.floor-plan'],
+  RestaurantStock: ['restaurant.stock'],
+  StaffAttendance: ['back-office.attendance', 'back-office.attendance-report'],
+  EmployeeSchedule: ['back-office.schedule'],
+  Shift: ['back-office.schedule'],
+  HikvisionDevice: ['back-office.devices', 'back-office.employee'],
+  FinanceDashboard: ['finances.dashboard'],
+  Income: ['finances.incomes'],
+  IncomeCategory: ['finances.incomes'],
+  Expense: ['finances.expenses'],
+  ExpenseCategory: ['finances.expenses'],
+  Supplier: ['finances.expenses'],
+  PettyCash: ['finances.petty-cash'],
+  CashFlow: ['finances.cash-flow'],
+  FinancialReport: ['finances.reports', 'finances.shareholders'],
+  Voucher: ['vouchers'],
+  Subscription: ['subscription'],
+  SubscriptionPlan: ['subscription'],
+  Invoice: ['subscription'],
+  Payment: ['subscription'],
+  Tenant: ['settings'],
+  User: ['settings'],
+  Role: ['settings'],
+  Permission: ['settings'],
+  Log: ['settings'],
+  PrinterSettings: ['settings'],
+  ReceiptTemplate: ['settings'],
+  SystemSettings: ['settings'],
+  Settings: ['settings'],
+}
+
 /**
  * Normalize stored menuAccess from DB — remap legacy keys, drop stale entries.
+ * Does NOT expand parent keys — the admin UI handles parent-child toggle explicitly.
+ * Stored menuAccess should contain explicit sub-keys from the admin's checkbox selections.
  */
 export function normalizeMenuAccess(keys) {
   if (!Array.isArray(keys)) return []
@@ -51,20 +101,29 @@ export function normalizeMenuAccess(keys) {
     }
   }
 
-  return expandParentMenuKeys([...result])
+  return [...result]
 }
 
-/** When a parent key is present, include all its children from the canonical list */
-function expandParentMenuKeys(keys) {
-  const result = new Set(keys)
-  for (const key of keys) {
-    if (!key.includes('.')) {
-      for (const valid of VALID_MENU_KEYS) {
-        if (valid.startsWith(key + '.')) result.add(valid)
-      }
-    }
-  }
-  return [...result]
+export function deriveMenuAccessFromSubjects(subjects) {
+  if (!Array.isArray(subjects)) return []
+
+  const result = new Set()
+  subjects.forEach(subject => {
+    const menuKeys = SUBJECT_MENU_MAP[subject] || []
+    menuKeys.forEach(key => result.add(key))
+  })
+
+  return normalizeMenuAccess([...result])
+}
+
+export function deriveMenuAccessFromPermissions(permissions) {
+  if (!permissions || typeof permissions !== 'object') return []
+
+  const subjects = Object.entries(permissions)
+    .filter(([, actions]) => Array.isArray(actions) && actions.length > 0)
+    .map(([subject]) => subject)
+
+  return deriveMenuAccessFromSubjects(subjects)
 }
 
 /** Check if rules array contains manage-all */
@@ -89,12 +148,20 @@ export function resolveMenuAccessForRole(role) {
     return getAllMenuKeyValues()
   }
 
+  // Use stored menuAccess from DB as the source of truth (set by admin UI)
   if (Array.isArray(perms.menuAccess) && perms.menuAccess.length > 0) {
-    const normalized = normalizeMenuAccess(perms.menuAccess)
-    if (normalized.length > 0) return normalized
+    return normalizeMenuAccess(perms.menuAccess)
   }
 
-  return ROLE_MENU_MAP[roleName] || []
+  // Fallback to role template defaults
+  if (ROLE_MENU_MAP[roleName] && ROLE_MENU_MAP[roleName].length > 0) {
+    return normalizeMenuAccess([...ROLE_MENU_MAP[roleName]])
+  }
+
+  // Last resort: derive from subjects mentioned in the role's rules
+  return deriveMenuAccessFromSubjects(
+    rules.map(rule => rule?.subject).filter(subject => subject && subject !== 'all')
+  )
 }
 
 /** Legacy camelCase keys (pre-RBAC seeder) → PascalCase subjects */
@@ -103,7 +170,7 @@ const LEGACY_SUBJECT_MAP = {
   users: 'User',
   roles: 'Role',
   members: 'Member',
-  memberships: 'Membership',
+  memberships: 'MembershipPlan',
   servicePlans: 'ServicePlan',
   activeServices: 'ActiveService',
   payments: 'Payment',
@@ -133,13 +200,18 @@ export function resolvePermissionsFromRules(rules, availableResources, role = nu
 
   if (!Array.isArray(rules) || rules.length === 0) return {}
 
+  const CRUD = ['read', 'create', 'update', 'delete']
   const result = {}
   rules.forEach(rule => {
     if (rule.subject && rule.subject !== 'all') {
       const actions = rule.actions
         ? (Array.isArray(rule.actions) ? rule.actions : [rule.actions])
         : (rule.action ? [rule.action] : [])
-      if (actions.length > 0) result[rule.subject] = actions.filter(a => a !== 'manage')
+      // Expand `manage` to all CRUD actions for the checkbox UI instead of dropping it
+      const resolved = actions
+        .filter(a => a)
+        .flatMap(a => a === 'manage' ? CRUD : [a])
+      if (resolved.length > 0) result[rule.subject] = [...new Set(resolved)]
     }
   })
   return result

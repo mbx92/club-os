@@ -11,6 +11,15 @@ const { Op } = require('sequelize');
 const { StaffAttendance, DeviceAttendanceLog, EmployeeSchedule, User, DeviceEmployee, HikvisionDevice, Shift, sequelize } = require('../../../models');
 const HikvisionService = require('../../../services/hikvisionService');
 const HikvisionEventProcessor = require('../../../services/hikvisionEventProcessor');
+const { regenerateAttendanceFromLogs } = require('../../../services/attendanceRegenerationService');
+const {
+  getPreviousDateOnly,
+  getScheduleMetricsForEvent,
+  hasScheduleEnded,
+  isPlausibleCheckout,
+  parseTimeToMinutes,
+  toLocalDateOnly,
+} = require('../../../utils/attendanceSchedule');
 const { createError } = require('../../../utils/errorCodes');
 const logger = require('../../../utils/logger');
 
@@ -31,6 +40,428 @@ function formatWorkingHours(minutes) {
   const m = minutes % 60;
   if (h === 0) return `${m}mnt`;
   return `${h}jam ${m}mnt`;
+}
+
+function getScheduleRecordKey(schedule) {
+  return schedule?.id ? `schedule:${schedule.id}` : null;
+}
+
+function buildSchedulesByDateMap(schedules) {
+  const map = new Map();
+  for (const schedule of schedules) {
+    const dateKey = `${schedule.deviceEmployeeId}|${toDateStr(schedule.date)}`;
+    const list = map.get(dateKey) || [];
+    list.push(schedule);
+    map.set(dateKey, list);
+  }
+  return map;
+}
+
+function resolveAttendanceSchedule(record, schedulesByDate, timezone) {
+  const dateKey = `${record.deviceEmployeeId}|${toDateStr(record.date)}`;
+  const candidates = schedulesByDate.get(dateKey) || [];
+
+  if (record.scheduleId) {
+    return candidates.find((schedule) => schedule.id === record.scheduleId) || null;
+  }
+
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return candidates[0];
+
+  const referenceTime = record.checkInTime || record.checkOutTime;
+  if (!referenceTime) return candidates[0];
+
+  return candidates
+    .map((schedule) => ({
+      schedule,
+      metrics: getScheduleMetricsForEvent(new Date(referenceTime), schedule, timezone),
+    }))
+    .sort((a, b) => {
+      const left = a.metrics ? a.metrics.distToStart : Number.MAX_SAFE_INTEGER;
+      const right = b.metrics ? b.metrics.distToStart : Number.MAX_SAFE_INTEGER;
+      return left - right;
+    })[0]?.schedule || null;
+}
+
+function getAttendanceRecordKey(record, schedulesByDate, timezone) {
+  const schedule = resolveAttendanceSchedule(record, schedulesByDate, timezone);
+  return schedule ? getScheduleRecordKey(schedule) : `attendance:${record.id}`;
+}
+
+function isUuidLike(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '').trim());
+}
+
+function getDefaultRepairRange(timezone, lookbackDays = 3) {
+  const endDate = toLocalDateOnly(new Date(), timezone);
+  let startDate = endDate;
+  for (let i = 0; i < lookbackDays; i += 1) {
+    startDate = getPreviousDateOnly(startDate);
+  }
+  return { startDate, endDate };
+}
+
+function isOvernightSchedule(schedule) {
+  const shiftStart = parseTimeToMinutes(schedule?.shiftStart);
+  const shiftEnd = parseTimeToMinutes(schedule?.shiftEnd);
+  if (shiftStart === null || shiftEnd === null) return false;
+  return shiftEnd <= shiftStart;
+}
+
+function dateOnlyUtc(dateStr, { dayOffset = 0, endOfDay = false } = {}) {
+  const [y, m, d] = String(dateStr).split('-').map(Number);
+  return new Date(Date.UTC(
+    y,
+    m - 1,
+    d + dayOffset,
+    endOfDay ? 23 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 999 : 0,
+  ));
+}
+
+function formatLocalDateTime(date, timezone) {
+  if (!date) return null;
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: timezone || process.env.TZ || 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(new Date(date));
+}
+
+function isEventInCorrectedShiftWindow(eventDate, correctedSchedule, timezone) {
+  const metrics = getScheduleMetricsForEvent(new Date(eventDate), correctedSchedule, timezone);
+  if (!metrics) return false;
+
+  return metrics.minsAfterStart >= -240
+    && metrics.minsAfterStart <= metrics.shiftDuration + 240
+    && (
+      metrics.distToStart <= 240
+      || metrics.distToEnd <= 240
+      || isPlausibleCheckout(metrics, 240)
+    );
+}
+
+function buildAttendancePreviewRecord(record, correctedSchedule, timezone) {
+  const checkInMetrics = record.checkInTime
+    ? getScheduleMetricsForEvent(new Date(record.checkInTime), correctedSchedule, timezone)
+    : null;
+  const checkOutMetrics = record.checkOutTime
+    ? getScheduleMetricsForEvent(new Date(record.checkOutTime), correctedSchedule, timezone)
+    : null;
+
+  return {
+    id: record.id,
+    date: toDateStr(record.date),
+    scheduleId: record.scheduleId || null,
+    checkInLocal: formatLocalDateTime(record.checkInTime, timezone),
+    checkOutLocal: formatLocalDateTime(record.checkOutTime, timezone),
+    checkInNearShiftStart: Boolean(checkInMetrics && checkInMetrics.distToStart <= 240),
+    checkOutNearShiftEnd: Boolean(checkOutMetrics && isPlausibleCheckout(checkOutMetrics, 240)),
+  };
+}
+
+function isAttendanceAlignedToSchedule(record, schedule, timezone) {
+  if (!record || !schedule) return false;
+
+  const checkInMetrics = record.checkInTime
+    ? getScheduleMetricsForEvent(new Date(record.checkInTime), schedule, timezone)
+    : null;
+  const checkOutMetrics = record.checkOutTime
+    ? getScheduleMetricsForEvent(new Date(record.checkOutTime), schedule, timezone)
+    : null;
+
+  const checkInAligned = !record.checkInTime || (
+    checkInMetrics
+    && checkInMetrics.dayOffset === 0
+    && checkInMetrics.minsAfterStart >= -240
+    && checkInMetrics.distToStart <= 240
+  );
+
+  const checkOutAligned = !record.checkOutTime || (
+    checkOutMetrics
+    && checkOutMetrics.minsAfterStart >= 0
+    && checkOutMetrics.distToEnd <= 240
+  );
+
+  return checkInAligned && checkOutAligned;
+}
+
+function analyzeOvernightScheduleIssue(schedule, logs, attendances, siblingSchedules, timezone) {
+  if (!isOvernightSchedule(schedule)) return null;
+
+  const currentScheduleDate = toDateStr(schedule.date);
+  const suggestedScheduleDate = getPreviousDateOnly(currentScheduleDate);
+  const correctedSchedule = {
+    id: schedule.id,
+    tenantId: schedule.tenantId,
+    deviceEmployeeId: schedule.deviceEmployeeId,
+    date: suggestedScheduleDate,
+    shiftStart: schedule.shiftStart,
+    shiftEnd: schedule.shiftEnd,
+    isOff: schedule.isOff,
+  };
+
+  const sameSlotConflict = siblingSchedules.find((item) =>
+    item.id !== schedule.id
+    && item.deviceEmployeeId === schedule.deviceEmployeeId
+    && toDateStr(item.date) === suggestedScheduleDate
+    && item.shiftStart === schedule.shiftStart
+    && item.shiftEnd === schedule.shiftEnd
+    && Boolean(item.isOff) === Boolean(schedule.isOff)
+  ) || null;
+
+  if (sameSlotConflict) {
+    return null;
+  }
+
+  const analyzedLogs = logs
+    .map((log) => ({
+      log,
+      metrics: getScheduleMetricsForEvent(new Date(log.eventTime), correctedSchedule, timezone),
+    }))
+    .filter(({ metrics }) =>
+      metrics
+      && metrics.minsAfterStart >= -240
+      && metrics.minsAfterStart <= metrics.shiftDuration + 240
+    );
+
+  const startCandidates = analyzedLogs
+    .filter(({ metrics }) => metrics.dayOffset === 0 && metrics.distToStart <= 240)
+    .sort((a, b) => {
+      if (a.metrics.distToStart !== b.metrics.distToStart) return a.metrics.distToStart - b.metrics.distToStart;
+      return new Date(a.log.eventTime) - new Date(b.log.eventTime);
+    });
+
+  const endCandidates = analyzedLogs
+    .filter(({ metrics }) => isPlausibleCheckout(metrics, 240))
+    .sort((a, b) => {
+      if (a.metrics.distToEnd !== b.metrics.distToEnd) return a.metrics.distToEnd - b.metrics.distToEnd;
+      return new Date(a.log.eventTime) - new Date(b.log.eventTime);
+    });
+
+  const currentScheduleAttendances = attendances.filter((record) =>
+    record.scheduleId === schedule.id
+    || toDateStr(record.date) === currentScheduleDate
+  );
+
+  const hasAlignedCurrentAttendance = currentScheduleAttendances.some((record) =>
+    isAttendanceAlignedToSchedule(record, schedule, timezone)
+  );
+
+  if (hasAlignedCurrentAttendance) {
+    return null;
+  }
+
+  const relatedAttendances = currentScheduleAttendances
+    .filter((record) => {
+      if (record.scheduleId === schedule.id) return true;
+      if (!record.scheduleId && record.checkInTime && isEventInCorrectedShiftWindow(record.checkInTime, correctedSchedule, timezone)) return true;
+      if (!record.scheduleId && record.checkOutTime && isEventInCorrectedShiftWindow(record.checkOutTime, correctedSchedule, timezone)) return true;
+      return false;
+    })
+    .sort((a, b) => new Date(a.createdAt || a.checkInTime || a.checkOutTime) - new Date(b.createdAt || b.checkInTime || b.checkOutTime));
+
+  const hasSplitAttendance = relatedAttendances.length > 0;
+  const startCandidate = startCandidates[0] || null;
+  const endCandidate = endCandidates[0] || null;
+  const hasSignals = Boolean(startCandidate && endCandidate);
+
+  if (!hasSignals && !sameSlotConflict) {
+    return null;
+  }
+
+  const reasons = [];
+  if (startCandidate) reasons.push('tap mulai shift terdeteksi di malam tanggal sebelumnya');
+  if (endCandidate) reasons.push('tap checkout terdeteksi di pagi hari schedule sekarang');
+  if (hasSplitAttendance) reasons.push('attendance terkait terpecah atau belum terikat ke schedule malam');
+
+  return {
+    issueKey: `overnight:${schedule.id}`,
+    scheduleId: schedule.id,
+    employeeId: schedule.deviceEmployeeId,
+    employeeNo: schedule.deviceEmployee?.employeeNo || null,
+    employeeName: schedule.deviceEmployee?.name || null,
+    currentScheduleDate,
+    suggestedScheduleDate,
+    shiftStart: schedule.shiftStart,
+    shiftEnd: schedule.shiftEnd,
+    startLogId: startCandidate?.log?.id || null,
+    endLogId: endCandidate?.log?.id || null,
+    detectedStartTapLocal: startCandidate ? formatLocalDateTime(startCandidate.log.eventTime, timezone) : null,
+    detectedEndTapLocal: endCandidate ? formatLocalDateTime(endCandidate.log.eventTime, timezone) : null,
+    relatedAttendanceCount: relatedAttendances.length,
+    relatedAttendances: relatedAttendances.map((record) => buildAttendancePreviewRecord(record, correctedSchedule, timezone)),
+    canFix: Boolean(startCandidate && endCandidate),
+    reason: reasons.join('; '),
+  };
+}
+
+async function resolveAttendanceAuditEmployeeId({ employeeQuery, employeeId, tenantId, isSuperAdmin }) {
+  const lookup = String(employeeId || employeeQuery || '').trim();
+  if (!lookup) return null;
+
+  const where = {};
+  if (!isSuperAdmin) where.tenantId = tenantId;
+  if (isUuidLike(lookup)) where.id = lookup;
+  else where.employeeNo = lookup;
+
+  const employee = await DeviceEmployee.findOne({
+    where,
+    attributes: ['id'],
+  });
+
+  return employee?.id || '__no_employee_match__';
+}
+
+async function collectOvernightShiftIssues({
+  tenantId,
+  isSuperAdmin,
+  tenantTimezone,
+  startDate,
+  endDate,
+  employeeQuery,
+  employeeId,
+}) {
+  const resolvedEmployeeId = await resolveAttendanceAuditEmployeeId({
+    employeeQuery,
+    employeeId,
+    tenantId,
+    isSuperAdmin,
+  });
+
+  if (resolvedEmployeeId === '__no_employee_match__') {
+    return {
+      candidates: [],
+      summary: {
+        scannedSchedules: 0,
+        overnightSchedules: 0,
+        fixable: 0,
+        blocked: 0,
+      },
+    };
+  }
+
+  const scheduleWhere = {
+    isOff: false,
+    shiftStart: { [Op.ne]: null },
+    shiftEnd: { [Op.ne]: null },
+  };
+  if (!isSuperAdmin) scheduleWhere.tenantId = tenantId;
+  if (startDate || endDate) {
+    scheduleWhere.date = {};
+    if (startDate) scheduleWhere.date[Op.gte] = startDate;
+    if (endDate) scheduleWhere.date[Op.lte] = endDate;
+  }
+  if (resolvedEmployeeId) scheduleWhere.deviceEmployeeId = resolvedEmployeeId;
+
+  const baseSchedules = await EmployeeSchedule.findAll({
+    where: scheduleWhere,
+    include: [{ model: DeviceEmployee, as: 'deviceEmployee', attributes: ['id', 'employeeNo', 'name'] }],
+    order: [['date', 'ASC'], ['shiftStart', 'ASC']],
+  });
+
+  const overnightSchedules = baseSchedules.filter((schedule) => isOvernightSchedule(schedule));
+  if (overnightSchedules.length === 0) {
+    return {
+      candidates: [],
+      summary: {
+        scannedSchedules: baseSchedules.length,
+        overnightSchedules: 0,
+        fixable: 0,
+        blocked: 0,
+      },
+    };
+  }
+
+  const employeeIds = [...new Set(overnightSchedules.map((schedule) => schedule.deviceEmployeeId))];
+  const scheduleDates = overnightSchedules.map((schedule) => toDateStr(schedule.date)).sort();
+  const broadStartDate = getPreviousDateOnly(scheduleDates[0]);
+  const broadEndDate = scheduleDates[scheduleDates.length - 1];
+
+  const siblingSchedules = await EmployeeSchedule.findAll({
+    where: {
+      ...(isSuperAdmin ? {} : { tenantId }),
+      deviceEmployeeId: { [Op.in]: employeeIds },
+      date: {
+        [Op.gte]: broadStartDate,
+        [Op.lte]: broadEndDate,
+      },
+      isOff: false,
+    },
+    include: [{ model: DeviceEmployee, as: 'deviceEmployee', attributes: ['id', 'employeeNo', 'name'] }],
+  });
+
+  const attendances = await StaffAttendance.findAll({
+    where: {
+      ...(isSuperAdmin ? {} : { tenantId }),
+      deviceEmployeeId: { [Op.in]: employeeIds },
+      date: {
+        [Op.gte]: broadStartDate,
+        [Op.lte]: broadEndDate,
+      },
+    },
+    order: [['date', 'ASC'], ['createdAt', 'ASC']],
+  });
+
+  const logs = await DeviceAttendanceLog.findAll({
+    where: {
+      ...(isSuperAdmin ? {} : { tenantId }),
+      matchedDeviceEmployeeId: { [Op.in]: employeeIds },
+      eventTime: {
+        [Op.gte]: dateOnlyUtc(broadStartDate, { dayOffset: -1 }),
+        [Op.lte]: dateOnlyUtc(broadEndDate, { dayOffset: 1, endOfDay: true }),
+      },
+    },
+    order: [['eventTime', 'ASC']],
+  });
+
+  const schedulesByEmployee = new Map();
+  for (const item of siblingSchedules) {
+    const list = schedulesByEmployee.get(item.deviceEmployeeId) || [];
+    list.push(item);
+    schedulesByEmployee.set(item.deviceEmployeeId, list);
+  }
+
+  const attendancesByEmployee = new Map();
+  for (const item of attendances) {
+    const list = attendancesByEmployee.get(item.deviceEmployeeId) || [];
+    list.push(item);
+    attendancesByEmployee.set(item.deviceEmployeeId, list);
+  }
+
+  const logsByEmployee = new Map();
+  for (const item of logs) {
+    const list = logsByEmployee.get(item.matchedDeviceEmployeeId) || [];
+    list.push(item);
+    logsByEmployee.set(item.matchedDeviceEmployeeId, list);
+  }
+
+  const candidates = overnightSchedules
+    .map((schedule) => analyzeOvernightScheduleIssue(
+      schedule,
+      logsByEmployee.get(schedule.deviceEmployeeId) || [],
+      attendancesByEmployee.get(schedule.deviceEmployeeId) || [],
+      schedulesByEmployee.get(schedule.deviceEmployeeId) || [],
+      tenantTimezone
+    ))
+    .filter(Boolean);
+
+  return {
+    candidates,
+    summary: {
+      scannedSchedules: baseSchedules.length,
+      overnightSchedules: overnightSchedules.length,
+      fixable: candidates.filter((item) => item.canFix).length,
+      blocked: candidates.filter((item) => !item.canFix).length,
+    },
+  };
 }
 
 /**
@@ -106,7 +537,7 @@ function computeScheduleStatus(attendance, schedule, timezone) {
   const nowLocal = new Date().toLocaleTimeString('en-GB', { timeZone: tz, hour12: false });
   const [nh, nm] = nowLocal.split(':').map(Number);
   const nowMinutes = nh * 60 + nm;
-  const attendanceDateStr = toDateStr(attendance.date || attendance.checkInTime);
+  const attendanceDateStr = toDateStr(schedule?.date || attendance.date || attendance.checkInTime);
 
   const base = { lateMinutes: 0, checkoutStatus: null, earlyLeaveMinutes: 0, overtimeMinutes: 0 };
 
@@ -152,10 +583,8 @@ function computeScheduleStatus(attendance, schedule, timezone) {
 
   // ── Check-in vs shiftStart ────────────────────────────────────────────
   const checkIn = new Date(attendance.checkInTime);
-  const localTime = checkIn.toLocaleTimeString('en-GB', { timeZone: tz, hour12: false });
-  const [eh, em] = localTime.split(':').map(Number);
-  const [sh, sm] = schedule.shiftStart.split(':').map(Number);
-  const lateMinutes = Math.max(0, (eh * 60 + em) - (sh * 60 + sm));
+  const checkInMetrics = getScheduleMetricsForEvent(checkIn, schedule, tz);
+  const lateMinutes = checkInMetrics ? Math.max(0, Math.round(checkInMetrics.minsAfterStart)) : 0;
   const computedStatus = lateMinutes === 0 ? 'on_time' : 'late';
 
   // ── Check-out vs shiftEnd (with overtime detection) ───────────────────
@@ -164,15 +593,12 @@ function computeScheduleStatus(attendance, schedule, timezone) {
   let overtimeMinutes = 0;
 
   if (schedule.shiftEnd) {
-    const [seh, seM] = schedule.shiftEnd.split(':').map(Number);
-    const shiftEndMinutes = seh * 60 + seM;
-
     if (attendance.checkOutTime) {
       const checkOut = new Date(attendance.checkOutTime);
-      const coLocal = checkOut.toLocaleTimeString('en-GB', { timeZone: tz, hour12: false });
-      const [coh, com] = coLocal.split(':').map(Number);
-      const coMinutes = coh * 60 + com;
-      const diff = coMinutes - shiftEndMinutes;
+      const checkOutMetrics = getScheduleMetricsForEvent(checkOut, schedule, tz);
+      const diff = checkOutMetrics
+        ? checkOutMetrics.eventOffsetMinutes - checkOutMetrics.shiftEndMinutes
+        : 0;
 
       if (diff >= 0) {
         // Checked out at or after shiftEnd
@@ -188,7 +614,7 @@ function computeScheduleStatus(attendance, schedule, timezone) {
       // No checkout — flag only if shiftEnd has already passed
       if (attendanceDateStr < nowDateLocal) {
         checkoutStatus = 'no_checkout';
-      } else if (attendanceDateStr === nowDateLocal && nowMinutes > shiftEndMinutes) {
+      } else if (attendanceDateStr === nowDateLocal && hasScheduleEnded(schedule, new Date(), tz)) {
         checkoutStatus = 'no_checkout';
       }
       // else: shift hasn't ended yet → null (still working)
@@ -284,15 +710,15 @@ async function listAttendance(req, res, next) {
         })
       : [];
 
-    // schedule lookup: "deviceEmployeeId|YYYY-MM-DD" → schedule
     const scheduleMap = {};
+    const schedulesByDate = buildSchedulesByDateMap(allSchedules);
     for (const s of allSchedules) {
-      scheduleMap[`${s.deviceEmployeeId}|${toDateStr(s.date)}`] = s;
+      scheduleMap[getScheduleRecordKey(s)] = s;
     }
 
     // Supplement with schedules for attendance rows outside the range query
     if (dateEmployeePairs.length > 0) {
-      const extraPairs = dateEmployeePairs.filter(p => !scheduleMap[`${p.deviceEmployeeId}|${toDateStr(p.date)}`]);
+      const extraPairs = dateEmployeePairs.filter(p => !schedulesByDate.has(`${p.deviceEmployeeId}|${toDateStr(p.date)}`));
       if (extraPairs.length > 0) {
         const extraSchedules = await EmployeeSchedule.findAll({
           where: {
@@ -300,15 +726,20 @@ async function listAttendance(req, res, next) {
           },
         });
         for (const s of extraSchedules) {
-          scheduleMap[`${s.deviceEmployeeId}|${toDateStr(s.date)}`] = s;
+          const scheduleKey = getScheduleRecordKey(s);
+          scheduleMap[scheduleKey] = s;
+          const dateKey = `${s.deviceEmployeeId}|${toDateStr(s.date)}`;
+          const list = schedulesByDate.get(dateKey) || [];
+          list.push(s);
+          schedulesByDate.set(dateKey, list);
         }
       }
     }
 
-    // attendance lookup: "deviceEmployeeId|YYYY-MM-DD" → attendance (for absent detection)
+    // attendance lookup keyed by resolved schedule when possible.
     const attMap = {};
     for (const r of attendanceRows) {
-      attMap[`${r.deviceEmployeeId}|${toDateStr(r.date)}`] = r;
+      attMap[getAttendanceRecordKey(r, schedulesByDate, tenantTimezone)] = r;
     }
 
     // ── 2b. load device attendance logs for cross-reference ────────────
@@ -349,11 +780,11 @@ async function listAttendance(req, res, next) {
     const absentRecords = [];
     if (showAbsent) {
       for (const s of allSchedules) {
-        const key = `${s.deviceEmployeeId}|${toDateStr(s.date)}`;
+        const key = getScheduleRecordKey(s);
         if (attMap[key]) continue; // has attendance already — skip
 
         const dateStr = toDateStr(s.date);
-        const logData = logMap[key] || null;
+        const logData = logMap[`${s.deviceEmployeeId}|${dateStr}`] || null;
 
         // Determine virtual status using smart logic
         let virtStatus;
@@ -423,9 +854,9 @@ async function listAttendance(req, res, next) {
     // ── 4. enrich attendance rows ─────────────────────────────────────────
     const enrichedAtt = attendanceRows.map(r => {
       const plain = r.toJSON();
-      const key = `${r.deviceEmployeeId}|${toDateStr(r.date)}`;
-      const sch = scheduleMap[key] || null;
-      const logData = logMap[key] || null;
+      const scheduleKey = getAttendanceRecordKey(r, schedulesByDate, tenantTimezone);
+      const sch = scheduleMap[scheduleKey] || null;
+      const logData = logMap[`${r.deviceEmployeeId}|${toDateStr(r.date)}`] || null;
       const { computedStatus, statusDetail, lateMinutes, checkoutStatus, earlyLeaveMinutes, overtimeMinutes, overallStatus } = computeScheduleStatus(r, sch, tenantTimezone);
 
       plain.schedule = sch ? { shiftStart: sch.shiftStart, shiftEnd: sch.shiftEnd, isOff: sch.isOff } : null;
@@ -557,16 +988,15 @@ async function attendanceReport(req, res, next) {
       ],
     });
 
-    // schedule lookup: "deviceEmployeeId|YYYY-MM-DD" → schedule
     const scheduleMap = {};
+    const schedulesByDate = buildSchedulesByDateMap(schedules);
     for (const s of schedules) {
-      scheduleMap[`${s.deviceEmployeeId}|${toDateStr(s.date)}`] = s;
+      scheduleMap[getScheduleRecordKey(s)] = s;
     }
 
-    // attendance lookup: "deviceEmployeeId|YYYY-MM-DD" → record
     const attMap = {};
     for (const r of records) {
-      attMap[`${r.deviceEmployeeId}|${toDateStr(r.date)}`] = r;
+      attMap[getAttendanceRecordKey(r, schedulesByDate, tenantTimezone)] = r;
     }
 
     // ── 3. Collect all employees across both sets ─────────────────────────
@@ -591,16 +1021,39 @@ async function attendanceReport(req, res, next) {
     // ── 4. Build summary per employee ─────────────────────────────────────
     const summary = {};
 
-    // All unique date+employee combinations from both tables
-    const allKeys = new Set([
-      ...records.map(r => `${r.deviceEmployeeId}|${toDateStr(r.date)}`),
-      ...schedules.map(s => `${s.deviceEmployeeId}|${toDateStr(s.date)}`),
-    ]);
+    const combinedEntries = [];
+    const seenKeys = new Set();
 
-    for (const key of allKeys) {
-      const [empId] = key.split('|');
-      const schedule = scheduleMap[key] || null;
-      const record   = attMap[key] || null;
+    for (const schedule of schedules) {
+      const key = getScheduleRecordKey(schedule);
+      combinedEntries.push({
+        key,
+        employeeId: schedule.deviceEmployeeId,
+        date: toDateStr(schedule.date),
+        schedule,
+        record: attMap[key] || null,
+      });
+      seenKeys.add(key);
+    }
+
+    for (const record of records) {
+      const key = getAttendanceRecordKey(record, schedulesByDate, tenantTimezone);
+      if (seenKeys.has(key)) continue;
+      combinedEntries.push({
+        key,
+        employeeId: record.deviceEmployeeId,
+        date: toDateStr(record.date),
+        schedule: scheduleMap[key] || null,
+        record,
+      });
+      seenKeys.add(key);
+    }
+
+    for (const entry of combinedEntries) {
+      const empId = entry.employeeId;
+      const schedule = entry.schedule || null;
+      const record = entry.record || null;
+      const entryDate = entry.date;
 
       if (!summary[empId]) {
         const empInfo = employeeIndex[empId];
@@ -646,7 +1099,7 @@ async function attendanceReport(req, res, next) {
       if (schedule?.isOff) {
         // Off day — no attendance status expected
         emp.records.push({
-          date: key.split('|')[1],
+          date: entryDate,
           isOff: true,
           checkInTime: record?.checkInTime ?? null,
           checkOutTime: record?.checkOutTime ?? null,
@@ -662,7 +1115,7 @@ async function attendanceReport(req, res, next) {
         // Has schedule but no tap → absent
         emp.absent++;
         emp.records.push({
-          date: key.split('|')[1],
+          date: entryDate,
           isOff: false,
           checkInTime: null,
           checkOutTime: null,
@@ -703,7 +1156,7 @@ async function attendanceReport(req, res, next) {
         }
 
         emp.records.push({
-          date: toDateStr(record.date),
+          date: entryDate,
           isOff: false,
           checkInTime: record.checkInTime,
           checkOutTime: record.checkOutTime,
@@ -799,6 +1252,7 @@ async function updateAttendance(req, res, next) {
 async function createManualAttendance(req, res, next) {
   try {
     const { tenantId } = req.user;
+    const tenantTimezone = req.user?.tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
     const { employeeId, userId, date, checkInTime, checkOutTime, status, notes } = req.body;
 
     if ((!employeeId && !userId) || !date) {
@@ -824,9 +1278,35 @@ async function createManualAttendance(req, res, next) {
       deviceEmployeeId = employee.id;
     }
 
+    const schedules = await EmployeeSchedule.findAll({
+      where: {
+        tenantId,
+        deviceEmployeeId,
+        date,
+        isOff: false,
+      },
+      order: [['shiftStart', 'ASC']],
+    });
+
+    let matchedSchedule = null;
+    if (schedules.length === 1) {
+      [matchedSchedule] = schedules;
+    } else if (schedules.length > 1 && (checkInTime || checkOutTime)) {
+      matchedSchedule = resolveAttendanceSchedule({
+        id: 'manual-preview',
+        deviceEmployeeId,
+        date,
+        scheduleId: null,
+        checkInTime: checkInTime || null,
+        checkOutTime: checkOutTime || null,
+      }, buildSchedulesByDateMap(schedules), tenantTimezone);
+    }
+
     // Check for existing record
     const existing = await StaffAttendance.findOne({
-      where: { tenantId, deviceEmployeeId, date },
+      where: matchedSchedule
+        ? { tenantId, scheduleId: matchedSchedule.id }
+        : { tenantId, deviceEmployeeId, date },
     });
 
     if (existing) {
@@ -837,6 +1317,7 @@ async function createManualAttendance(req, res, next) {
       tenantId,
       deviceEmployeeId,
       userId: resolvedUserId,
+      scheduleId: matchedSchedule?.id || null,
       date,
       checkInTime: checkInTime || null,
       checkOutTime: checkOutTime || null,
@@ -861,6 +1342,7 @@ async function reprocessUnmatchedLogs(req, res, next) {
   try {
     const { tenantId, isSuperAdmin } = req.user;
     const { startDate, endDate } = req.query;
+    const tenantTimezone = req.user?.tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
 
     // 1. Find all DeviceEmployees for this tenant
     const empWhere = {};
@@ -923,49 +1405,20 @@ async function reprocessUnmatchedLogs(req, res, next) {
           continue;
         }
 
-        const eventDate = new Date(log.eventTime);
-        const dateOnly = eventDate.toISOString().split('T')[0];
-
-        // Check existing StaffAttendance for this employee+date
-        const existing = await StaffAttendance.findOne({
-          where: {
-            tenantId: log.tenantId,
-            deviceEmployeeId: emp.id,
-            date: dateOnly,
-          },
-          transaction: t,
-        });
-
-        if (existing) {
-          // Update checkOutTime if this event is later
-          if (!existing.checkOutTime || eventDate > new Date(existing.checkOutTime)) {
-            await existing.update(
-              { checkOutTime: eventDate, deviceId: log.deviceId },
-              { transaction: t }
-            );
-          }
-        } else {
-          // Create new attendance record
-          await StaffAttendance.create(
-            {
-              tenantId: log.tenantId,
-              deviceEmployeeId: emp.id,
-              userId: emp.userId || null,
-              deviceId: log.deviceId,
-              logId: log.id,
-              checkInTime: eventDate,
-              date: dateOnly,
-              status: 'present',
-            },
-            { transaction: t }
-          );
-        }
-
         // Update the log record
         await log.update({
           matchedDeviceEmployeeId: emp.id,
           matchedUserId: emp.userId || null,
         }, { transaction: t });
+
+        await HikvisionEventProcessor.upsertStaffAttendance(
+          { id: log.deviceId, tenantId: log.tenantId },
+          emp,
+          { eventTime: log.eventTime },
+          log.id,
+          t,
+          tenantTimezone
+        );
         matched++;
       }
     });
@@ -1305,6 +1758,291 @@ async function fixSmartCheckInOut(req, res, next) {
 }
 
 /**
+ * @route   POST /gym/staff-attendance/fix-overnight
+ * @desc    Audit and fix overnight schedules that were saved on checkout date
+ *          instead of shift start date. Supports preview via dryRun=true.
+ * @access  Private (admin)
+ * @query   dryRun=true|false (default: true)
+ *          startDate, endDate (filter by current stored schedule date)
+ *          employeeQuery / employeeId (optional)
+ */
+async function fixOvernightScheduleAlignment(req, res, next) {
+  try {
+    const { tenantId, isSuperAdmin } = req.user;
+    const {
+      dryRun = 'true',
+      startDate,
+      endDate,
+      employeeQuery,
+      employeeId,
+    } = req.query;
+
+    const isDryRun = dryRun !== 'false';
+    const tenantTimezone = req.user?.tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
+
+    const auditResult = await collectOvernightShiftIssues({
+      tenantId,
+      isSuperAdmin,
+      tenantTimezone,
+      startDate,
+      endDate,
+      employeeQuery,
+      employeeId,
+    });
+
+    if (isDryRun) {
+      return res.json({
+        success: true,
+        mode: 'dry_run',
+        total: auditResult.candidates.length,
+        summary: auditResult.summary,
+        fixes: auditResult.candidates,
+      });
+    }
+
+    const fixableCandidates = auditResult.candidates.filter((item) => item.canFix);
+    const applied = [];
+    const skipped = [];
+
+    await sequelize.transaction(async (transaction) => {
+      for (const candidate of fixableCandidates) {
+        const schedule = await EmployeeSchedule.findByPk(candidate.scheduleId, {
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (!schedule) {
+          skipped.push({
+            scheduleId: candidate.scheduleId,
+            employeeNo: candidate.employeeNo,
+            reason: 'schedule tidak ditemukan',
+          });
+          continue;
+        }
+
+        const deviceEmployee = await DeviceEmployee.findByPk(schedule.deviceEmployeeId, {
+          attributes: ['id', 'employeeNo', 'name', 'userId', 'deviceId', 'tenantId'],
+          transaction,
+        });
+
+        const currentScheduleDate = toDateStr(schedule.date);
+        const suggestedScheduleDate = getPreviousDateOnly(currentScheduleDate);
+
+        const sameSlotConflict = await EmployeeSchedule.findOne({
+          where: {
+            id: { [Op.ne]: schedule.id },
+            tenantId: schedule.tenantId,
+            deviceEmployeeId: schedule.deviceEmployeeId,
+            date: suggestedScheduleDate,
+            shiftStart: schedule.shiftStart,
+            shiftEnd: schedule.shiftEnd,
+            isOff: false,
+          },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (sameSlotConflict) {
+          skipped.push({
+            scheduleId: schedule.id,
+            employeeNo: deviceEmployee?.employeeNo || null,
+            reason: 'slot shift yang sama sudah ada di tanggal sebelumnya',
+          });
+          continue;
+        }
+
+        const freshLogs = await DeviceAttendanceLog.findAll({
+          where: {
+            tenantId: schedule.tenantId,
+            matchedDeviceEmployeeId: schedule.deviceEmployeeId,
+            eventTime: {
+              [Op.gte]: dateOnlyUtc(suggestedScheduleDate, { dayOffset: -1 }),
+              [Op.lte]: dateOnlyUtc(currentScheduleDate, { dayOffset: 1, endOfDay: true }),
+            },
+          },
+          order: [['eventTime', 'ASC']],
+          transaction,
+        });
+
+        const freshAttendances = await StaffAttendance.findAll({
+          where: {
+            tenantId: schedule.tenantId,
+            deviceEmployeeId: schedule.deviceEmployeeId,
+            date: {
+              [Op.gte]: suggestedScheduleDate,
+              [Op.lte]: currentScheduleDate,
+            },
+          },
+          order: [['date', 'ASC'], ['createdAt', 'ASC']],
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        const siblingSchedules = await EmployeeSchedule.findAll({
+          where: {
+            tenantId: schedule.tenantId,
+            deviceEmployeeId: schedule.deviceEmployeeId,
+            date: {
+              [Op.gte]: suggestedScheduleDate,
+              [Op.lte]: currentScheduleDate,
+            },
+            isOff: false,
+          },
+          include: [{ model: DeviceEmployee, as: 'deviceEmployee', attributes: ['id', 'employeeNo', 'name'] }],
+          transaction,
+        });
+
+        const analysis = analyzeOvernightScheduleIssue(
+          schedule,
+          freshLogs,
+          freshAttendances,
+          siblingSchedules,
+          tenantTimezone
+        );
+
+        if (!analysis?.canFix || !analysis.startLogId || !analysis.endLogId) {
+          skipped.push({
+            scheduleId: schedule.id,
+            employeeNo: deviceEmployee?.employeeNo || null,
+            reason: analysis?.reason || 'sinyal log tidak cukup untuk rebuild shift malam',
+          });
+          continue;
+        }
+
+        const startLog = freshLogs.find((log) => log.id === analysis.startLogId);
+        const endLog = freshLogs.find((log) => log.id === analysis.endLogId);
+
+        if (!startLog || !endLog) {
+          skipped.push({
+            scheduleId: schedule.id,
+            employeeNo: deviceEmployee?.employeeNo || null,
+            reason: 'raw log untuk rebuild tidak ditemukan',
+          });
+          continue;
+        }
+
+        await schedule.update({ date: suggestedScheduleDate }, { transaction });
+
+        const relatedAttendanceIds = analysis.relatedAttendances.map((item) => item.id);
+        if (relatedAttendanceIds.length > 0) {
+          await StaffAttendance.destroy({
+            where: { id: { [Op.in]: relatedAttendanceIds } },
+            transaction,
+          });
+        }
+
+        const replayLogs = [startLog, endLog]
+          .filter(Boolean)
+          .sort((a, b) => new Date(a.eventTime) - new Date(b.eventTime));
+
+        for (const log of replayLogs) {
+          await HikvisionEventProcessor.upsertStaffAttendance(
+            { id: log.deviceId, tenantId: log.tenantId },
+            deviceEmployee,
+            { eventTime: log.eventTime, verifyMode: log.verifyMode, cardNo: log.cardNo },
+            log.id,
+            transaction,
+            tenantTimezone
+          );
+        }
+
+        const rebuiltAttendance = await StaffAttendance.findOne({
+          where: {
+            tenantId: schedule.tenantId,
+            deviceEmployeeId: schedule.deviceEmployeeId,
+            scheduleId: schedule.id,
+            date: suggestedScheduleDate,
+          },
+          order: [['createdAt', 'DESC']],
+          transaction,
+        });
+
+        applied.push({
+          scheduleId: schedule.id,
+          employeeId: schedule.deviceEmployeeId,
+          employeeNo: deviceEmployee?.employeeNo || null,
+          employeeName: deviceEmployee?.name || null,
+          fromDate: currentScheduleDate,
+          toDate: suggestedScheduleDate,
+          shiftStart: schedule.shiftStart,
+          shiftEnd: schedule.shiftEnd,
+          rebuiltAttendanceId: rebuiltAttendance?.id || null,
+          checkInLocal: rebuiltAttendance?.checkInTime
+            ? formatLocalDateTime(rebuiltAttendance.checkInTime, tenantTimezone)
+            : null,
+          checkOutLocal: rebuiltAttendance?.checkOutTime
+            ? formatLocalDateTime(rebuiltAttendance.checkOutTime, tenantTimezone)
+            : null,
+        });
+      }
+    });
+
+    logger.info('[fixOvernightScheduleAlignment] APPLIED', {
+      tenantId,
+      totalDetected: auditResult.candidates.length,
+      totalFixable: fixableCandidates.length,
+      totalApplied: applied.length,
+      totalSkipped: skipped.length,
+    });
+
+    return res.json({
+      success: true,
+      mode: 'applied',
+      total: auditResult.candidates.length,
+      summary: {
+        ...auditResult.summary,
+        applied: applied.length,
+        skipped: skipped.length,
+      },
+      fixes: auditResult.candidates,
+      applied,
+      skipped,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+/**
+ * @route   POST /gym/staff-attendance/regenerate-from-logs
+ * @desc    Preview/apply attendance regeneration from raw matched logs
+ * @access  Private (admin)
+ * @query   dryRun=true|false, startDate, endDate, employeeQuery, forceAll=true|false
+ */
+async function regenerateAttendanceFromLogsController(req, res, next) {
+  try {
+    const { tenantId } = req.user;
+    const {
+      dryRun = 'true',
+      startDate,
+      endDate,
+      employeeQuery = '',
+      forceAll = 'false',
+    } = req.query;
+
+    const tenantTimezone = req.user?.tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
+    const defaults = getDefaultRepairRange(
+      tenantTimezone,
+      Number.parseInt(process.env.ATTENDANCE_REPAIR_LOOKBACK_DAYS || '3', 10)
+    );
+
+    const result = await regenerateAttendanceFromLogs({
+      tenantId,
+      startDate: startDate || defaults.startDate,
+      endDate: endDate || defaults.endDate,
+      employeeQuery,
+      forceAll: forceAll === 'true',
+      dryRun: dryRun !== 'false',
+      trigger: 'manual_ui',
+    });
+
+    return res.json(result);
+  } catch (err) {
+    return next(err);
+  }
+}
+
+/**
  * @route   GET /gym/staff-attendance/report/export
  * @desc    Export staff attendance report as Excel (.xlsx)
  *          Sheet 1: Ringkasan per karyawan
@@ -1353,10 +2091,11 @@ async function exportAttendanceReport(req, res, next) {
     });
 
     const scheduleMap = {};
-    for (const s of schedules) scheduleMap[`${s.deviceEmployeeId}|${toDateStr(s.date)}`] = s;
+    const schedulesByDate = buildSchedulesByDateMap(schedules);
+    for (const s of schedules) scheduleMap[getScheduleRecordKey(s)] = s;
 
     const attMap = {};
-    for (const r of records) attMap[`${r.deviceEmployeeId}|${toDateStr(r.date)}`] = r;
+    for (const r of records) attMap[getAttendanceRecordKey(r, schedulesByDate, tenantTimezone)] = r;
 
     const employeeIndex = {};
     for (const r of records) {
@@ -1367,15 +2106,39 @@ async function exportAttendanceReport(req, res, next) {
     }
 
     const summary = {};
-    const allKeys = new Set([
-      ...records.map(r => `${r.deviceEmployeeId}|${toDateStr(r.date)}`),
-      ...schedules.map(s => `${s.deviceEmployeeId}|${toDateStr(s.date)}`),
-    ]);
+    const combinedEntries = [];
+    const seenKeys = new Set();
 
-    for (const key of allKeys) {
-      const [empId] = key.split('|');
-      const schedule = scheduleMap[key] || null;
-      const record   = attMap[key] || null;
+    for (const schedule of schedules) {
+      const key = getScheduleRecordKey(schedule);
+      combinedEntries.push({
+        key,
+        employeeId: schedule.deviceEmployeeId,
+        date: toDateStr(schedule.date),
+        schedule,
+        record: attMap[key] || null,
+      });
+      seenKeys.add(key);
+    }
+
+    for (const record of records) {
+      const key = getAttendanceRecordKey(record, schedulesByDate, tenantTimezone);
+      if (seenKeys.has(key)) continue;
+      combinedEntries.push({
+        key,
+        employeeId: record.deviceEmployeeId,
+        date: toDateStr(record.date),
+        schedule: scheduleMap[key] || null,
+        record,
+      });
+      seenKeys.add(key);
+    }
+
+    for (const entry of combinedEntries) {
+      const empId = entry.employeeId;
+      const schedule = entry.schedule || null;
+      const record = entry.record || null;
+      const entryDate = entry.date;
       if (!summary[empId]) {
         const empInfo = employeeIndex[empId];
         summary[empId] = {
@@ -1415,12 +2178,12 @@ async function exportAttendanceReport(req, res, next) {
       }
       if (schedule?.isOff) {
         const offOverall = (record && record.checkInTime) ? 'off_day_work' : 'off_day';
-        emp.records.push({ date: key.split('|')[1], isOff: true, checkInTime: record?.checkInTime ?? null, checkOutTime: record?.checkOutTime ?? null, computedStatus: null, lateMinutes: 0, workingMinutes: null, workingHoursFormatted: null, overallStatus: offOverall, checkoutStatus: null, earlyLeaveMinutes: 0, overtimeMinutes: 0, schedule: { shiftStart: null, shiftEnd: null, isOff: true } });
+        emp.records.push({ date: entryDate, isOff: true, checkInTime: record?.checkInTime ?? null, checkOutTime: record?.checkOutTime ?? null, computedStatus: null, lateMinutes: 0, workingMinutes: null, workingHoursFormatted: null, overallStatus: offOverall, checkoutStatus: null, earlyLeaveMinutes: 0, overtimeMinutes: 0, schedule: { shiftStart: null, shiftEnd: null, isOff: true } });
         continue;
       }
       if (!record) {
         emp.absent++;
-        emp.records.push({ date: key.split('|')[1], isOff: false, checkInTime: null, checkOutTime: null, computedStatus: 'absent', lateMinutes: 0, checkoutStatus: null, earlyLeaveMinutes: 0, overtimeMinutes: 0, workingMinutes: null, workingHoursFormatted: null, overallStatus: 'absent', schedule: schedule ? { shiftStart: schedule.shiftStart, shiftEnd: schedule.shiftEnd, isOff: false } : null });
+        emp.records.push({ date: entryDate, isOff: false, checkInTime: null, checkOutTime: null, computedStatus: 'absent', lateMinutes: 0, checkoutStatus: null, earlyLeaveMinutes: 0, overtimeMinutes: 0, workingMinutes: null, workingHoursFormatted: null, overallStatus: 'absent', schedule: schedule ? { shiftStart: schedule.shiftStart, shiftEnd: schedule.shiftEnd, isOff: false } : null });
       } else {
         const { computedStatus, statusDetail, lateMinutes, checkoutStatus, earlyLeaveMinutes, overtimeMinutes, overallStatus } = computeScheduleStatus(record, schedule, tenantTimezone);
         if (computedStatus === 'on_time') emp.onTime++;
@@ -1443,7 +2206,7 @@ async function exportAttendanceReport(req, res, next) {
             emp.daysWithWorkingHours++;
           }
         }
-        emp.records.push({ date: toDateStr(record.date), isOff: false, checkInTime: record.checkInTime, checkOutTime: record.checkOutTime, status: record.status, computedStatus, statusDetail, lateMinutes, checkoutStatus, earlyLeaveMinutes, overtimeMinutes, workingMinutes, workingHoursFormatted, overallStatus, schedule: schedule ? { shiftStart: schedule.shiftStart, shiftEnd: schedule.shiftEnd, isOff: false } : null });
+        emp.records.push({ date: entryDate, isOff: false, checkInTime: record.checkInTime, checkOutTime: record.checkOutTime, status: record.status, computedStatus, statusDetail, lateMinutes, checkoutStatus, earlyLeaveMinutes, overtimeMinutes, workingMinutes, workingHoursFormatted, overallStatus, schedule: schedule ? { shiftStart: schedule.shiftStart, shiftEnd: schedule.shiftEnd, isOff: false } : null });
       }
     }
     for (const empSummary of Object.values(summary)) {
@@ -1935,4 +2698,6 @@ module.exports = {
   reprocessUnmatchedLogs,
   syncAllDevices,
   fixSmartCheckInOut,
+  fixOvernightScheduleAlignment,
+  regenerateAttendanceFromLogsController,
 };

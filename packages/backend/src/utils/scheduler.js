@@ -3,6 +3,7 @@ const logService = require('../services/logService');
 const logger = require('../utils/logger');
 const cleanupExpiredReports = require('../jobs/cleanupExpiredReports');
 const hikvisionSyncJob = require('../jobs/hikvisionSyncJob');
+const attendanceRegenerationJob = require('../jobs/attendanceRegenerationJob');
 const { createBackup } = require('../../scripts/backupDatabase');
 const { createSequelizeBackup } = require('../../scripts/backupDatabaseSequelize');
 const { resolveAutoBackupOptions } = require('./backupGoogleDriveConfig');
@@ -38,6 +39,15 @@ const schedulerStatus = {
       name: 'Auto Backup',
       schedule: '30 14,22 * * *',
       description: 'Auto backup database at 14:30 and 22:30 WITA',
+      lastRun: null,
+      nextRun: null,
+      status: 'pending',
+      isRunning: false
+    },
+    attendanceRepair: {
+      name: 'Attendance Repair',
+      schedule: process.env.ATTENDANCE_REPAIR_CRON || '0 * * * *',
+      description: 'Rebuild suspect attendances from matched logs every hour',
       lastRun: null,
       nextRun: null,
       status: 'pending',
@@ -351,10 +361,26 @@ function scheduleHikvisionSync() {
   });
 }
 
+function scheduleAttendanceRepair() {
+  attendanceRegenerationJob.scheduleAttendanceRegenerationJob();
+
+  logger.logSystem('Attendance repair scheduler initialized (hourly)', {
+    action: 'ATTENDANCE_REPAIR_SCHEDULER_INITIALIZED',
+    userId: null,
+    tenantId: null,
+    ip: 'system',
+    userAgent: 'scheduled-task',
+    method: 'SYSTEM',
+    path: '/system/scheduler',
+    skipDb: true,
+  });
+}
+
 function initializeScheduledJobs() {
   scheduleLogCleanup();
   scheduleReportCleanup();
   scheduleHikvisionSync();
+  scheduleAttendanceRepair();
   scheduleAutoBackup();
   
   schedulerStatus.initialized = true;
@@ -377,8 +403,21 @@ function initializeScheduledJobs() {
  * @returns {Object} Scheduler status with all jobs info
  */
 function getSchedulerStatus() {
+  const attendanceRepairStatus = attendanceRegenerationJob.getAttendanceRegenerationJobStatus();
+
   return {
     ...schedulerStatus,
+    jobs: {
+      ...schedulerStatus.jobs,
+      attendanceRepair: {
+        ...schedulerStatus.jobs.attendanceRepair,
+        isRunning: attendanceRepairStatus.isRunning,
+        lastRun: attendanceRepairStatus.lastRun,
+        status: attendanceRepairStatus.lastRun
+          ? (attendanceRepairStatus.lastRun.success ? 'success' : 'error')
+          : (attendanceRepairStatus.isScheduled ? 'scheduled' : schedulerStatus.jobs.attendanceRepair.status),
+      },
+    },
     uptime: schedulerStatus.initializedAt 
       ? Math.floor((Date.now() - new Date(schedulerStatus.initializedAt).getTime()) / 1000)
       : 0,
@@ -408,7 +447,9 @@ module.exports = {
   scheduleLogCleanup,
   scheduleReportCleanup,
   scheduleHikvisionSync,
+  scheduleAttendanceRepair,
   cleanupExpiredReports,
   hikvisionSyncJob,
+  attendanceRegenerationJob,
   getSchedulerStatus
 };

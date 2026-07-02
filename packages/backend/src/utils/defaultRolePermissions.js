@@ -56,6 +56,9 @@ const DEFAULT_ROLE_PERMISSIONS = {
       { action: 'manage', subject: 'HikvisionDevice',   conditions: { tenantId: '$tenantId' } },
       { action: 'manage', subject: 'StaffAttendance',   conditions: { tenantId: '$tenantId' } },
       { action: 'manage', subject: 'EmployeeSchedule',  conditions: { tenantId: '$tenantId' } },
+      { action: 'create', subject: 'DatabaseBackup' },
+      { action: 'read',   subject: 'DatabaseBackup' },
+      { action: 'delete', subject: 'DatabaseBackup' },
     ],
     menuAccess: getMenuAccessForRole('owner'),
     uiFlags: {
@@ -89,11 +92,11 @@ const DEFAULT_ROLE_PERMISSIONS = {
       { action: 'read',   subject: 'EmployeeSchedule', conditions: { tenantId: '$tenantId' } },
       { action: 'create', subject: 'EmployeeSchedule', conditions: { tenantId: '$tenantId' } },
       { action: 'update', subject: 'EmployeeSchedule', conditions: { tenantId: '$tenantId' } },
-      { action: 'manage', subject: 'Product',          conditions: { tenantId: '$tenantId' } },
-      { action: 'manage', subject: 'ProductCategory',  conditions: { tenantId: '$tenantId' } },
-      { action: 'manage', subject: 'RestaurantTable',  conditions: { tenantId: '$tenantId' } },
-      { action: 'manage', subject: 'Location',         conditions: { tenantId: '$tenantId' } },
-      { action: 'manage', subject: 'StockMovement',    conditions: { tenantId: '$tenantId' } },
+      { action: 'manage', subject: 'RestaurantProduct',      conditions: { tenantId: '$tenantId' } },
+      { action: 'manage', subject: 'RestaurantCategory',  conditions: { tenantId: '$tenantId' } },
+      { action: 'manage', subject: 'RestaurantTable',     conditions: { tenantId: '$tenantId' } },
+      { action: 'manage', subject: 'RestaurantLocation',  conditions: { tenantId: '$tenantId' } },
+      { action: 'manage', subject: 'RestaurantStock',     conditions: { tenantId: '$tenantId' } },
       { action: 'manage', subject: 'Transaction',      conditions: { tenantId: '$tenantId' } },
       { action: 'manage', subject: 'ActiveService',     conditions: { tenantId: '$tenantId' } },
       { action: 'manage', subject: 'PettyCash',        conditions: { tenantId: '$tenantId' } },
@@ -112,11 +115,11 @@ const DEFAULT_ROLE_PERMISSIONS = {
   cashier: {
     rules: [
       { action: 'read',   subject: 'Tenant',            conditions: { id: '$tenantId' } },
-      { action: 'manage', subject: 'Product',           conditions: { tenantId: '$tenantId' } },
-      { action: 'manage', subject: 'ProductCategory',   conditions: { tenantId: '$tenantId' } },
-      { action: 'manage', subject: 'RestaurantTable',   conditions: { tenantId: '$tenantId' } },
-      { action: 'manage', subject: 'Location',          conditions: { tenantId: '$tenantId' } },
-      { action: 'manage', subject: 'StockMovement',     conditions: { tenantId: '$tenantId' } },
+      { action: 'manage', subject: 'RestaurantProduct',      conditions: { tenantId: '$tenantId' } },
+      { action: 'manage', subject: 'RestaurantCategory',  conditions: { tenantId: '$tenantId' } },
+      { action: 'manage', subject: 'RestaurantTable',     conditions: { tenantId: '$tenantId' } },
+      { action: 'manage', subject: 'RestaurantLocation',  conditions: { tenantId: '$tenantId' } },
+      { action: 'manage', subject: 'RestaurantStock',     conditions: { tenantId: '$tenantId' } },
       { action: 'manage', subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
       { action: 'read',   subject: 'Member',            conditions: { tenantId: '$tenantId' } },
       { action: 'create', subject: 'Member',            conditions: { tenantId: '$tenantId' } },
@@ -156,16 +159,16 @@ const DEFAULT_ROLE_PERMISSIONS = {
   // ─── STAFF ────────────────────────────────────────────────────────────────
   staff: {
     rules: [
-      { action: 'read',   subject: 'Tenant',            conditions: { id: '$tenantId' } },
-      { action: 'read',   subject: 'Product',           conditions: { tenantId: '$tenantId' } },
-      { action: 'read',   subject: 'ProductCategory',   conditions: { tenantId: '$tenantId' } },
-      { action: 'read',   subject: 'RestaurantTable',   conditions: { tenantId: '$tenantId' } },
-      { action: 'update', subject: 'RestaurantTable',   conditions: { tenantId: '$tenantId' } },
-      { action: 'read',   subject: 'Location',          conditions: { tenantId: '$tenantId' } },
-      { action: 'read',   subject: 'StockMovement',     conditions: { tenantId: '$tenantId' } },
-      { action: 'read',   subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
-      { action: 'create', subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
-      { action: 'update', subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
+      { action: 'read',   subject: 'Tenant',               conditions: { id: '$tenantId' } },
+      { action: 'read',   subject: 'RestaurantProduct',    conditions: { tenantId: '$tenantId' } },
+      { action: 'read',   subject: 'RestaurantCategory',   conditions: { tenantId: '$tenantId' } },
+      { action: 'read',   subject: 'RestaurantTable',      conditions: { tenantId: '$tenantId' } },
+      { action: 'update', subject: 'RestaurantTable',      conditions: { tenantId: '$tenantId' } },
+      { action: 'read',   subject: 'RestaurantLocation',   conditions: { tenantId: '$tenantId' } },
+      { action: 'read',   subject: 'RestaurantStock',      conditions: { tenantId: '$tenantId' } },
+      { action: 'read',   subject: 'Transaction',          conditions: { tenantId: '$tenantId' } },
+      { action: 'create', subject: 'Transaction',          conditions: { tenantId: '$tenantId' } },
+      { action: 'update', subject: 'Transaction',          conditions: { tenantId: '$tenantId' } },
     ],
     menuAccess: getMenuAccessForRole('staff'),
     uiFlags: {
@@ -186,6 +189,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
       { action: 'create', subject: 'CheckIn',           conditions: { tenantId: '$tenantId' } },
       { action: 'read',   subject: 'ActiveService',     conditions: { tenantId: '$tenantId' } },
       { action: 'update', subject: 'ActiveService',     conditions: { tenantId: '$tenantId' } },
+      { action: 'read',   subject: 'TrainerCommission', conditions: { tenantId: '$tenantId' } },
     ],
     menuAccess: getMenuAccessForRole('trainer'),
     uiFlags: {
@@ -200,10 +204,10 @@ const DEFAULT_ROLE_PERMISSIONS = {
   // ─── KITCHEN ──────────────────────────────────────────────────────────────
   kitchen: {
     rules: [
-      { action: 'read',   subject: 'Tenant',            conditions: { id: '$tenantId' } },
-      { action: 'read',   subject: 'Product',           conditions: { tenantId: '$tenantId' } },
-      { action: 'read',   subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
-      { action: 'update', subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
+      { action: 'read',   subject: 'Tenant',               conditions: { id: '$tenantId' } },
+      { action: 'read',   subject: 'RestaurantProduct',    conditions: { tenantId: '$tenantId' } },
+      { action: 'read',   subject: 'Transaction',          conditions: { tenantId: '$tenantId' } },
+      { action: 'update', subject: 'Transaction',          conditions: { tenantId: '$tenantId' } },
     ],
     menuAccess: getMenuAccessForRole('kitchen'),
     uiFlags: {
@@ -218,14 +222,14 @@ const DEFAULT_ROLE_PERMISSIONS = {
   // ─── WAITER ───────────────────────────────────────────────────────────────
   waiter: {
     rules: [
-      { action: 'read',   subject: 'Tenant',            conditions: { id: '$tenantId' } },
-      { action: 'read',   subject: 'Product',           conditions: { tenantId: '$tenantId' } },
-      { action: 'read',   subject: 'ProductCategory',   conditions: { tenantId: '$tenantId' } },
-      { action: 'read',   subject: 'RestaurantTable',   conditions: { tenantId: '$tenantId' } },
-      { action: 'update', subject: 'RestaurantTable',   conditions: { tenantId: '$tenantId' } },
-      { action: 'read',   subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
-      { action: 'create', subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
-      { action: 'update', subject: 'Transaction',       conditions: { tenantId: '$tenantId' } },
+      { action: 'read',   subject: 'Tenant',               conditions: { id: '$tenantId' } },
+      { action: 'read',   subject: 'RestaurantProduct',    conditions: { tenantId: '$tenantId' } },
+      { action: 'read',   subject: 'RestaurantCategory',   conditions: { tenantId: '$tenantId' } },
+      { action: 'read',   subject: 'RestaurantTable',      conditions: { tenantId: '$tenantId' } },
+      { action: 'update', subject: 'RestaurantTable',      conditions: { tenantId: '$tenantId' } },
+      { action: 'read',   subject: 'Transaction',          conditions: { tenantId: '$tenantId' } },
+      { action: 'create', subject: 'Transaction',          conditions: { tenantId: '$tenantId' } },
+      { action: 'update', subject: 'Transaction',          conditions: { tenantId: '$tenantId' } },
     ],
     menuAccess: getMenuAccessForRole('waiter'),
     uiFlags: {

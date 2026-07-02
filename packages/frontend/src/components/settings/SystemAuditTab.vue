@@ -154,19 +154,36 @@
             </div>
           </div>
           
-          <button
-            class="btn btn-primary btn-sm gap-2"
-            @click="openAuditLogCanvas"
-          >
-            <IconFileAnalytics class="w-4 h-4" />
-            View Logs
-          </button>
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              class="btn btn-success btn-sm gap-2"
+              @click="openAttendanceRegenerationCanvas"
+            >
+              <IconRefresh class="w-4 h-4" />
+              Generate Attendance
+            </button>
+            <button
+              class="btn btn-warning btn-sm gap-2"
+              @click="openOvernightAuditCanvas"
+            >
+              <IconMoon class="w-4 h-4" />
+              Audit Shift Malam
+            </button>
+            <button
+              class="btn btn-primary btn-sm gap-2"
+              @click="openAuditLogCanvas"
+            >
+              <IconFileAnalytics class="w-4 h-4" />
+              View Logs
+            </button>
+          </div>
         </div>
         
         <div class="alert alert-info">
           <IconInfoCircle class="w-5 h-5" />
           <div>
             <p class="text-sm">Click "View Logs" to access comprehensive audit trail with filtering, statistics, and export capabilities</p>
+            <p class="text-xs mt-1 opacity-80">Menu kecil <strong>Audit Shift Malam</strong> dipakai untuk preview kandidat data overnight yang salah tanggal dan apply fix via UI.</p>
           </div>
         </div>
       </div>
@@ -558,6 +575,18 @@
     v-model="showSmartFixCanvas"
     @close="closeSmartFixCanvas"
   />
+
+  <!-- Overnight Shift Audit Canvas -->
+  <OvernightShiftAuditCanvas
+    v-model="showOvernightAuditCanvas"
+    @close="closeOvernightAuditCanvas"
+  />
+
+  <!-- Attendance Regeneration Canvas -->
+  <AttendanceRegenerationCanvas
+    v-model="showAttendanceRegenerationCanvas"
+    @close="closeAttendanceRegenerationCanvas"
+  />
 </template>
 
 <script setup>
@@ -572,6 +601,8 @@ import DatabaseBackupCanvas from '@/components/settings/DatabaseBackupCanvas.vue
 import AuditLogCanvas from '@/components/settings/AuditLogCanvas.vue'
 import DeviceEmployeeDuplicateCanvas from '@/components/settings/DeviceEmployeeDuplicateCanvas.vue'
 import SmartFixCheckInCanvas from '@/components/settings/SmartFixCheckInCanvas.vue'
+import OvernightShiftAuditCanvas from '@/components/settings/OvernightShiftAuditCanvas.vue'
+import AttendanceRegenerationCanvas from '@/components/settings/AttendanceRegenerationCanvas.vue'
 import {
   IconEye,
   IconPackage,
@@ -595,6 +626,7 @@ import {
   IconRefresh,
   IconCalculator,
   IconPencil,
+  IconMoon,
 } from '@tabler/icons-vue'
 
 const isDev = import.meta.env.DEV
@@ -630,6 +662,8 @@ const showDatabaseBackupCanvas = ref(false)
 const showAuditLogCanvas = ref(false)
 const showDuplicateCanvas = ref(false)
 const showSmartFixCanvas = ref(false)
+const showOvernightAuditCanvas = ref(false)
+const showAttendanceRegenerationCanvas = ref(false)
 
 // Computed stats
 const hasMetadata = computed(() => metadata.value.length > 0)
@@ -674,6 +708,22 @@ const openAuditLogCanvas = () => {
 // Close audit log canvas
 const closeAuditLogCanvas = () => {
   showAuditLogCanvas.value = false
+}
+
+const openOvernightAuditCanvas = () => {
+  showOvernightAuditCanvas.value = true
+}
+
+const closeOvernightAuditCanvas = () => {
+  showOvernightAuditCanvas.value = false
+}
+
+const openAttendanceRegenerationCanvas = () => {
+  showAttendanceRegenerationCanvas.value = true
+}
+
+const closeAttendanceRegenerationCanvas = () => {
+  showAttendanceRegenerationCanvas.value = false
 }
 
 // Duplicate canvas

@@ -8,7 +8,12 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../../../middlewares/authMiddleware');
 const { authorize } = require('../../../middlewares/permissionMiddleware');
+const { autoAuthorize } = require('../../../middlewares/autoAuthorizeMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
+
+// All routes require authentication + auto-authorization from ROUTE_TO_SUBJECT_MAP
+router.use(authenticate);
+router.use(autoAuthorize);
 
 const {
   listAttendance,
@@ -19,6 +24,8 @@ const {
   reprocessUnmatchedLogs,
   syncAllDevices,
   fixSmartCheckInOut,
+  fixOvernightScheduleAlignment,
+  regenerateAttendanceFromLogsController,
 } = require('../../../controllers/gym/staffAttendance/staffAttendanceController');
 
 /**
@@ -29,7 +36,6 @@ const {
  * @query   page, limit, startDate, endDate, userId, status
  */
 router.get('/',
-  authenticate,
   requireModule('gym'),
   authorize('read', 'StaffAttendance'),
   listAttendance
@@ -43,7 +49,6 @@ router.get('/',
  * @query   startDate, endDate, userId
  */
 router.get('/report',
-  authenticate,
   requireModule('gym'),
   authorize('read', 'StaffAttendance'),
   attendanceReport
@@ -57,7 +62,6 @@ router.get('/report',
  * @query   startDate, endDate, userId, employeeId
  */
 router.get('/report/export',
-  authenticate,
   requireModule('gym'),
   authorize('read', 'StaffAttendance'),
   exportAttendanceReport
@@ -71,7 +75,6 @@ router.get('/report/export',
  * @query   startDate (optional)
  */
 router.post('/sync',
-  authenticate,
   requireModule('gym'),
   authorize('create', 'StaffAttendance'),
   syncAllDevices
@@ -85,7 +88,6 @@ router.post('/sync',
  * @query   startDate, endDate
  */
 router.post('/reprocess',
-  authenticate,
   requireModule('gym'),
   authorize('create', 'StaffAttendance'),
   reprocessUnmatchedLogs
@@ -100,10 +102,35 @@ router.post('/reprocess',
  * @query   dryRun=true|false (default: true), startDate, endDate, employeeId
  */
 router.post('/fix-checkin',
-  authenticate,
   requireModule('gym'),
   authorize('update', 'StaffAttendance'),
   fixSmartCheckInOut
+);
+
+/**
+ * @route   POST /gym/staff-attendance/fix-overnight
+ * @name    fixOvernightScheduleAlignment
+ * @desc    Preview/apply fix for overnight schedules saved on checkout date
+ * @access  Private (admin)
+ * @query   dryRun=true|false, startDate, endDate, employeeQuery|employeeId
+ */
+router.post('/fix-overnight',
+  requireModule('gym'),
+  authorize('update', 'StaffAttendance'),
+  fixOvernightScheduleAlignment
+);
+
+/**
+ * @route   POST /gym/staff-attendance/regenerate-from-logs
+ * @name    regenerateAttendanceFromLogs
+ * @desc    Preview/apply attendance rebuild from existing matched device logs
+ * @access  Private (admin)
+ * @query   dryRun=true|false, startDate, endDate, employeeQuery, forceAll=true|false
+ */
+router.post('/regenerate-from-logs',
+  requireModule('gym'),
+  authorize('update', 'StaffAttendance'),
+  regenerateAttendanceFromLogsController
 );
 
 /**
@@ -113,7 +140,6 @@ router.post('/fix-checkin',
  * @access  Private (admin/manager)
  */
 router.post('/',
-  authenticate,
   requireModule('gym'),
   authorize('create', 'StaffAttendance'),
   createManualAttendance
@@ -126,7 +152,6 @@ router.post('/',
  * @access  Private (admin/manager)
  */
 router.patch('/:id',
-  authenticate,
   requireModule('gym'),
   authorize('update', 'StaffAttendance'),
   updateAttendance

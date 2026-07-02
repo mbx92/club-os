@@ -59,7 +59,17 @@ module.exports = {
             canViewReports: false,
             canManageProducts: false,
           },
-          menuAccess: ['dashboard', 'pos', 'restaurant', 'gym'],
+          // Store explicit sub-keys — parent-only keys (e.g. "restaurant") expand to ALL children.
+          // Must match CASHIER_MENU_ACCESS from utils/menuKeys.js.
+          menuAccess: [
+            'dashboard',
+            'cash-register', 'cash-register.shift', 'cash-register.dashboard', 'cash-register.history', 'cash-register.daily-report', 'cash-register.daily-summary',
+            'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos',
+            'restaurant', 'restaurant.dashboard', 'restaurant.products', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.orders',
+            'vouchers',
+            'back-office', 'back-office.attendance', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
+            'finances', 'finances.expenses', 'finances.petty-cash',
+          ],
         }),
         isActive: true,
         createdAt: new Date(),

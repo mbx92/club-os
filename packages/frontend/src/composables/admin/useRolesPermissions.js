@@ -129,71 +129,74 @@ export const useRolesPermissions = () => {
   }
 
   /**
-   * Get default resources as fallback — subjects matching backend route mapping.
-   * Only includes subjects that have actual backend routes and frontend pages.
+   * Get default resources as fallback — mirrors backend config/routePermissions.js ROUTE_TO_SUBJECT_MAP.
+   * ⚠️  Keep in sync: every subject from GET /permissions/subjects must be represented here.
    */
   const getDefaultResources = () => {
     const CRUD = ['create', 'delete', 'read', 'update']
     const RO = ['read']
     const CRU = ['create', 'read', 'update']
     return [
-      // ── Core Module ──
-      { name: 'Tenant', actions: CRUD },
-      { name: 'User', actions: CRUD },
-      { name: 'Role', actions: CRUD },
-      { name: 'Permission', actions: CRUD },
+      // ── Dashboard ──
       { name: 'Dashboard', actions: RO },
-      { name: 'Auth', actions: CRU },
-      { name: 'Metrics', actions: RO },
-      { name: 'Notification', actions: CRU },
-      { name: 'AuditLog', actions: RO },
-      { name: 'SystemSetting', actions: CRU },
 
       // ── Gym Module ──
-      { name: 'Member', actions: CRUD },
-      { name: 'Membership', actions: CRUD },
-      { name: 'MembershipPayment', actions: CRU },
+      { name: 'ActiveService', actions: CRUD },
       { name: 'CheckIn', actions: CRUD },
-      { name: 'Staff', actions: CRUD },
-      { name: 'StaffAttendance', actions: CRU },
+      { name: 'EmployeeSchedule', actions: CRUD },
+      { name: 'Member', actions: CRUD },
+      { name: 'MembershipPlan', actions: CRUD },
+      { name: 'PTSession', actions: CRUD },
+      { name: 'ServicePlan', actions: CRUD },
       { name: 'Shift', actions: CRU },
+      { name: 'StaffAttendance', actions: CRU },
       { name: 'Trainer', actions: CRU },
-      { name: 'Coach', actions: CRU },
-      { name: 'TrainingPackage', actions: CRUD },
-      { name: 'TrainingSession', actions: CRU },
-      { name: 'ClassSchedule', actions: CRU },
-      { name: 'ClassEnrollment', actions: CRU },
-      { name: 'GymProduct', actions: CRUD },
-      { name: 'GymReport', actions: RO },
+      { name: 'TrainerCommission', actions: CRU },
 
       // ── Restaurant Module ──
-      { name: 'Restaurant', actions: RO },
       { name: 'RestaurantCategory', actions: CRUD },
-      { name: 'RestaurantProduct', actions: CRUD },
       { name: 'RestaurantLocation', actions: CRU },
-      { name: 'RestaurantTable', actions: CRU },
-      { name: 'Order', actions: CRUD },
+      { name: 'RestaurantProduct', actions: CRUD },
       { name: 'RestaurantStock', actions: CRU },
-      { name: 'RestaurantReport', actions: RO },
+      { name: 'RestaurantTable', actions: CRU },
 
       // ── Finance Module ──
-      { name: 'Transaction', actions: CRUD },
-      { name: 'Expense', actions: CRUD },
+      { name: 'CashFlow', actions: RO },
       { name: 'CashRegisterSession', actions: CRU },
+      { name: 'Expense', actions: CRUD },
+      { name: 'ExpenseCategory', actions: CRUD },
+      { name: 'FinanceDashboard', actions: RO },
+      { name: 'FinancialReport', actions: CRUD },
+      { name: 'Income', actions: CRUD },
+      { name: 'IncomeCategory', actions: CRUD },
       { name: 'Invoice', actions: CRU },
       { name: 'Payment', actions: CRU },
-      { name: 'FinanceReport', actions: RO },
+      { name: 'PettyCash', actions: CRUD },
+      { name: 'Subscription', actions: CRUD },
+      { name: 'SubscriptionPlan', actions: RO },
+      { name: 'Supplier', actions: CRUD },
+      { name: 'Transaction', actions: CRUD },
+
+      // ── Vouchers (cross-cutting) ──
       { name: 'Voucher', actions: CRUD },
 
-      // ── POS Module ──
-      { name: 'POSProduct', actions: CRUD },
-      { name: 'POSCategory', actions: CRUD },
-      { name: 'POSTransaction', actions: CRU },
-      { name: 'POSReport', actions: RO },
-
-      // ── Integrations ──
+      // ── System / Core ──
+      { name: 'Auth', actions: CRU },
+      { name: 'DatabaseBackup', actions: CRU },
+      { name: 'Health', actions: RO },
       { name: 'HikvisionDevice', actions: CRU },
-      { name: 'MidtransPayment', actions: CRU },
+      { name: 'Log', actions: CRUD },
+      { name: 'Permission', actions: CRUD },
+      { name: 'PrinterSettings', actions: CRUD },
+      { name: 'ReceiptTemplate', actions: CRUD },
+      { name: 'Role', actions: CRUD },
+      { name: 'Scheduler', actions: RO },
+      { name: 'Settings', actions: CRU },
+      { name: 'SubscriptionFeature', actions: CRU },
+      { name: 'SystemMetrics', actions: RO },
+      { name: 'SystemSettings', actions: CRU },
+      { name: 'Tenant', actions: CRUD },
+      { name: 'User', actions: CRUD },
     ]
   }
 
@@ -432,4 +435,3 @@ export const useRolesPermissions = () => {
     formPermissionsToRules
   }
 }
-

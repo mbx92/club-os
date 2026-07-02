@@ -16,6 +16,51 @@ export const useAuthStore = defineStore('auth', () => {
   const permissions = ref(null)
 
   const isAuthenticated = computed(() => !!token.value)
+
+  const getActiveStorage = () => {
+    return localStorage.getItem('token') ? localStorage : sessionStorage
+  }
+
+  const persistUser = (nextUser) => {
+    if (!nextUser) return
+    const storage = getActiveStorage()
+    storage.setItem('user', JSON.stringify(nextUser))
+  }
+
+  const persistPermissions = (nextPermissions) => {
+    if (!nextPermissions) return
+    const storage = getActiveStorage()
+    storage.setItem('permissions', JSON.stringify(nextPermissions))
+  }
+
+  const mergePermissionUser = (permissionUser) => {
+    if (!permissionUser) return
+
+    user.value = {
+      ...user.value,
+      id: permissionUser.id ?? user.value?.id,
+      email: permissionUser.email ?? user.value?.email,
+      firstName: permissionUser.firstName ?? user.value?.firstName,
+      lastName: permissionUser.lastName ?? user.value?.lastName,
+      isSuperAdmin: permissionUser.isSuperAdmin ?? user.value?.isSuperAdmin,
+      tenantId: permissionUser.tenantId ?? user.value?.tenantId,
+      role: permissionUser.role ?? user.value?.role,
+    }
+
+    persistUser(user.value)
+  }
+
+  const syncSubscriptionFromPermissions = async (permissionPayload) => {
+    if (!permissionPayload?.subscription) return
+
+    try {
+      const { useSubscriptionStore } = await import('@/stores/subscription')
+      const subscriptionStore = useSubscriptionStore()
+      subscriptionStore.setData(permissionPayload.subscription)
+    } catch (error) {
+      debug.warn('[authStore] Failed to sync subscription from permissions payload:', error)
+    }
+  }
   
   // Get tenant theme settings from tenant.settings.theme
   const tenantTheme = computed(() => {
@@ -55,6 +100,7 @@ export const useAuthStore = defineStore('auth', () => {
       token.value = savedToken
       refreshToken.value = savedRefreshToken
       user.value = JSON.parse(savedUser)
+      api.setToken(savedToken)
       
       // Load permissions if available
       if (savedPermissions) {
@@ -73,6 +119,10 @@ export const useAuthStore = defineStore('auth', () => {
       // NOTE: Don't fetch subscription here - it's already loaded from localStorage cache
       // Subscription store automatically loads from cache on init
       if (isDev) debug.log('[authStore] Subscription will be loaded from cache by subscription store')
+
+      fetchUserPermissions().catch(err => {
+        debug.warn('[authStore] Failed to refresh permissions on init, keeping cached permissions:', err)
+      })
       
       if (isDev) debug.log('Auth state initialized successfully')
     } else {
@@ -245,12 +295,19 @@ export const useAuthStore = defineStore('auth', () => {
         perms = response.data.permissions
       } else if (response.data?.permissions) {
         perms = response.data.permissions
+      } else if (response.success && response.data?.rules) {
+        perms = response.data
+      } else if (response.data?.rules) {
+        perms = response.data
       } else if (response.permissions) {
         perms = response.permissions
       }
       
       if (perms) {
         permissions.value = perms
+        mergePermissionUser(perms.user)
+        persistPermissions(perms)
+        await syncSubscriptionFromPermissions(perms)
         if (isDev) debug.log('[authStore] Permissions set:', {
           hasRules: !!(perms.rules && perms.rules.length),
           rulesCount: perms.rules?.length || 0,

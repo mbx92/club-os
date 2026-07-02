@@ -1,13 +1,5 @@
 const { can } = require('../utils/rbac');
-
-/**
- * Tenant-level admin roles that should have full access within their tenant.
- */
-const TENANT_ADMIN_ROLES = ['admin', 'owner'];
-
-function isTenantAdmin(user) {
-  return TENANT_ADMIN_ROLES.includes(user?.role?.name);
-}
+const { isTenantAdmin } = require('../utils/rbacUtils');
 
 /**
  * Permission middleware — replaces the old CASL authorize.

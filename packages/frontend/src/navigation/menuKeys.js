@@ -1,6 +1,11 @@
 // Static menu data for role permission admin editor.
 // ALL_MENU_KEYS = all valid menu keys with labels (UI picker)
 // ROLE_MENU_MAP = default menu templates per role
+//
+// ⚠️  SYNC WARNING: Must stay in sync with backend utils/menuKeys.js (SOURCE OF TRUTH).
+// When modifying ROLE_MENU_MAP or menu keys:
+//   1. Update backend utils/menuKeys.js first
+//   2. Then mirror changes here
 
 export const ROLE_MENU_MAP = {
   admin: [
@@ -32,12 +37,27 @@ export const ROLE_MENU_MAP = {
   cashier: [
     'dashboard',
     'cash-register', 'cash-register.shift', 'cash-register.dashboard', 'cash-register.history', 'cash-register.daily-report', 'cash-register.daily-summary',
-    'gym', 'gym.dashboard', 'gym.members','gym.instructors', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos',
+    'gym', 'gym.dashboard', 'gym.members', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos',
     'restaurant', 'restaurant.dashboard', 'restaurant.products', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.orders',
     'vouchers',
     'back-office', 'back-office.attendance', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
-    'finances', 'finances.expenses',
+    'finances', 'finances.expenses', 'finances.petty-cash',
   ],
+  staff: ['dashboard', 'restaurant'],
+  kitchen: ['restaurant'],
+  waiter: ['restaurant'],
+  owner: [
+    'dashboard',
+    'cash-register', 'cash-register.shift', 'cash-register.dashboard', 'cash-register.history', 'cash-register.daily-report', 'cash-register.daily-summary',
+    'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos', 'gym.reports',
+    'restaurant', 'restaurant.dashboard', 'restaurant.categories', 'restaurant.products', 'restaurant.locations', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.orders', 'restaurant.stock', 'restaurant.reports',
+    'vouchers',
+    'back-office', 'back-office.attendance', 'back-office.attendance-report', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
+    'finances', 'finances.dashboard', 'finances.incomes', 'finances.income-categories', 'finances.expenses', 'finances.expense-categories', 'finances.cash-flow', 'finances.petty-cash', 'finances.vault', 'finances.analytics', 'finances.transactions', 'finances.shareholders', 'finances.reports',
+    'reports', 'reports.revenue', 'reports.attendance', 'reports.member-stats', 'reports.member-reports', 'reports.service-reports', 'reports.product-reports', 'reports.staff-reports', 'reports.forecasting',
+    'settings',
+  ],
+  user: ['dashboard'],
   member: [
     'dashboard',
   ],

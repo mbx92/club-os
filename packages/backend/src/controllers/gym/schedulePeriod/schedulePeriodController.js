@@ -22,6 +22,7 @@
 const { Op } = require('sequelize');
 const { SchedulePeriod, EmployeeSchedule, EmployeeScheduleTemplate, Shift, User, DeviceEmployee, sequelize } = require('../../../models');
 const { createError } = require('../../../utils/errorCodes');
+const { upsertEmployeeScheduleBySlot } = require('../../../utils/employeeScheduleUpsert');
 const logger = require('../../../utils/logger');
 
 /**
@@ -550,7 +551,7 @@ async function assignStaff(req, res, next) {
               shiftEnd = shift.shiftEnd;
             }
 
-            await EmployeeSchedule.upsert(
+            await upsertEmployeeScheduleBySlot(
               {
                 tenantId: effectiveTenantId,
                 periodId,
@@ -563,10 +564,7 @@ async function assignStaff(req, res, next) {
                 isOff,
                 notes: dateEntry.notes || null,
               },
-              {
-                conflictFields: ['tenantId', 'periodId', 'deviceEmployeeId', 'date'],
-                transaction: t,
-              }
+              { transaction: t }
             );
 
             if (isOff) offCount++;
@@ -583,7 +581,7 @@ async function assignStaff(req, res, next) {
             const dow = new Date(dateStr).getDay();
             const isOff = offDays.includes(dow);
 
-            await EmployeeSchedule.upsert(
+            await upsertEmployeeScheduleBySlot(
               {
                 tenantId: effectiveTenantId,
                 periodId,
@@ -596,10 +594,7 @@ async function assignStaff(req, res, next) {
                 isOff,
                 notes: null,
               },
-              {
-                conflictFields: ['tenantId', 'periodId', 'deviceEmployeeId', 'date'],
-                transaction: t,
-              }
+              { transaction: t }
             );
 
             if (isOff) offCount++;
@@ -816,7 +811,7 @@ async function generateFromTemplates(req, res, next) {
             shiftEnd = tpl.shift.shiftEnd;
           }
 
-          await EmployeeSchedule.upsert(
+          await upsertEmployeeScheduleBySlot(
             {
               tenantId: effectiveTenantId,
               periodId,
@@ -829,10 +824,7 @@ async function generateFromTemplates(req, res, next) {
               isOff: tpl.isOff,
               notes: tpl.notes || null,
             },
-            {
-              conflictFields: ['tenantId', 'periodId', 'deviceEmployeeId', 'date'],
-              transaction: t,
-            }
+            { transaction: t }
           );
           generated++;
         }

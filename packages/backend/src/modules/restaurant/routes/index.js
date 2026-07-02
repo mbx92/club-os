@@ -58,7 +58,7 @@ router.use('/dashboard', dashboardRoutes);
 router.get('/stock-report',
   authenticate,
   requireModule('restaurant'),
-  authorize('read', 'StockMovement'),
+  authorize('read', 'RestaurantStock'),
   stockMovementController.getStockReport
 );
 

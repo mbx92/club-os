@@ -34,7 +34,7 @@ router.get('/user', authenticate, auditLog('GET_USER_PERMISSIONS'), getUserPermi
  * @desc Get all routes metadata
  * @access Private
  */
-router.get('/routes', authenticate, auditLog('GET_ROUTES_METADATA'), getRoutesMetadata);
+router.get('/routes', authenticate, authorize('read', 'Role'), auditLog('GET_ROUTES_METADATA'), getRoutesMetadata);
 
 /**
  * @route POST /permissions/routes/regenerate
@@ -50,7 +50,7 @@ router.post('/routes/regenerate', authenticate, requireSuperAdmin, auditLog('REG
  * @desc Get all roles with permissions
  * @access Private
  */
-router.get('/roles', authenticate, auditLog('GET_ALL_ROLES'), getAllRoles);
+router.get('/roles', authenticate, authorize('read', 'Role'), auditLog('GET_ALL_ROLES'), getAllRoles);
 
 /**
  * @route POST /permissions/roles

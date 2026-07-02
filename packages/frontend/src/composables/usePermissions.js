@@ -5,10 +5,14 @@
 
 import { useAuthStore } from '@/stores/auth'
 
+const TENANT_ADMIN_ROLES = new Set(['admin', 'owner'])
+
 function isTenantAdmin(user) {
+  if (!user) return false
+  if (user.isSuperAdmin) return true
   const role = user?.role
   const name = typeof role === 'string' ? role : role?.name
-  return name === 'admin' || name === 'owner'
+  return TENANT_ADMIN_ROLES.has(name?.toLowerCase())
 }
 
 /**

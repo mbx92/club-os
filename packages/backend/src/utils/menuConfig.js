@@ -73,7 +73,7 @@ const MENU_CONFIG = [
         icon: 'PersonStanding',
         path: '/gym/trainers',
         requiredModule: 'gym',
-        requiredPermission: { action: 'read', subject: 'User' },
+        requiredPermission: { action: 'read', subject: 'Trainer' },
       },
     ],
   },
@@ -85,7 +85,7 @@ const MENU_CONFIG = [
     icon: 'ShoppingCart',
     path: null,
     requiredModule: 'pos',
-    requiredPermission: { action: 'read', subject: 'Product' },
+    requiredPermission: { action: 'read', subject: 'RestaurantProduct' },
     children: [
       {
         key: 'pos.products',
@@ -137,7 +137,7 @@ const MENU_CONFIG = [
         icon: 'BookOpen',
         path: '/restaurant/products',
         requiredModule: 'restaurant',
-        requiredPermission: { action: 'read', subject: 'Product' },
+        requiredPermission: { action: 'read', subject: 'RestaurantProduct' },
       },
       {
         key: 'restaurant.stock',
@@ -145,7 +145,7 @@ const MENU_CONFIG = [
         icon: 'Boxes',
         path: '/restaurant/stock',
         requiredModule: 'restaurant',
-        requiredPermission: { action: 'read', subject: 'StockMovement' },
+        requiredPermission: { action: 'read', subject: 'RestaurantStock' },
       },
     ],
   },
