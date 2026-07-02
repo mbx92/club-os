@@ -1,6 +1,6 @@
 /**
  * Permission helpers for frontend.
- * Replaces CASL checks with simple rule matching.
+ * Uses the backend resource->actions mapping directly.
  */
 
 import { useAuthStore } from '@/stores/auth'
@@ -16,21 +16,18 @@ function isTenantAdmin(user) {
 }
 
 /**
- * Check if the user has a rule allowing action on subject.
- * Rules come from backend (authStore.permissions.rules).
+ * Check if the user can perform an action on a resource.
  */
 export function checkPermission(action, subject) {
   const auth = useAuthStore()
   if (auth.user?.isSuperAdmin || isTenantAdmin(auth.user)) return true
 
-  const rules = auth.permissions?.rules || []
-  return rules.some(r => {
-    if (r.inverted) return false
-    const actions = r.actions || []
-    const actionMatch = actions.includes('manage') || actions.includes(action)
-    const subjectMatch = r.subject === 'all' || r.subject === subject
-    return actionMatch && subjectMatch
-  })
+  const resources = auth.permissions?.resources || {}
+  const globalActions = resources['*'] || []
+  if (globalActions.includes('*') || globalActions.includes(action)) return true
+
+  const allowedActions = resources[subject] || []
+  return allowedActions.includes('*') || allowedActions.includes(action)
 }
 
 /**

@@ -385,11 +385,11 @@ defineExpose({ openModal, closeModal, resetForm });
               <h4 class="font-semibold text-base mb-3">
                 Discount Configuration
               </h4>
-              <div class="form-control">
+              <div class="form-control max-w-3xl">
                 <label class="label"
                   ><span class="label-text">Discount Type *</span></label
                 >
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <label
                     v-for="option in typeOptions"
                     :key="option.value"
@@ -403,24 +403,24 @@ defineExpose({ openModal, closeModal, resetForm });
                     />
                     <div
                       :class="[
-                        'card border-2 transition-all',
+                        'rounded-2xl border-2 transition-all',
                         formData.type === option.value
                           ? 'border-primary bg-primary/5'
                           : 'border-base-300 hover:border-base-content/20',
                       ]"
                     >
-                      <div class="card-body p-4">
+                      <div class="flex items-center gap-3 p-3">
                         <div class="flex items-center gap-3">
                           <component
                             :is="option.icon"
-                            :size="24"
+                            :size="20"
                             :class="
                               formData.type === option.value
                                 ? 'text-primary'
                                 : 'text-base-content/60'
                             "
                           />
-                          <span class="font-medium">{{ option.label }}</span>
+                          <span class="text-sm font-medium">{{ option.label }}</span>
                         </div>
                       </div>
                     </div>
@@ -428,7 +428,7 @@ defineExpose({ openModal, closeModal, resetForm });
                 </div>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="mt-4 grid max-w-3xl grid-cols-1 gap-3 md:grid-cols-3">
                 <div class="form-control">
                   <label class="label"
                     ><span class="label-text">Discount Value *</span></label
@@ -439,19 +439,19 @@ defineExpose({ openModal, closeModal, resetForm });
                       v-model="formData.value"
                       :min="0"
                       placeholder="50000"
-                      :input-class="errors.value ? 'input input-bordered join-item w-full input-error' : 'input input-bordered join-item w-full'"
+                      :input-class="errors.value ? 'input input-sm input-bordered join-item w-full input-error' : 'input input-sm input-bordered join-item w-full'"
                     />
                     <input
                       v-else
                       v-model.number="formData.value"
                       type="number"
                       placeholder="20"
-                      class="input input-bordered join-item w-full"
+                      class="input input-sm input-bordered join-item w-full"
                       :class="{ 'input-error': errors.value }"
                       min="0"
                       max="100"
                     />
-                    <span class="btn join-item">{{
+                    <span class="join-item inline-flex h-8 shrink-0 items-center justify-center rounded-r-lg border border-base-300 bg-base-200 px-3 text-sm font-medium text-base-content/70">{{
                       formData.type === "percentage" ? "%" : "Rp"
                     }}</span>
                   </div>
@@ -469,7 +469,7 @@ defineExpose({ openModal, closeModal, resetForm });
                   <CurrencyInput
                     v-model="formData.maxDiscountAmount"
                     placeholder="100000"
-                    :input-class="errors.maxDiscountAmount ? 'input input-bordered w-full input-error' : 'input input-bordered w-full'"
+                    :input-class="errors.maxDiscountAmount ? 'input input-sm input-bordered w-full input-error' : 'input input-sm input-bordered w-full'"
                     :min="0"
                   />
                   <label v-if="errors.maxDiscountAmount" class="label"
@@ -491,7 +491,7 @@ defineExpose({ openModal, closeModal, resetForm });
                   <CurrencyInput
                     v-model="formData.minPurchaseAmount"
                     placeholder="0"
-                    :input-class="errors.minPurchaseAmount ? 'input input-bordered w-full input-error' : 'input input-bordered w-full'"
+                    :input-class="errors.minPurchaseAmount ? 'input input-sm input-bordered w-full input-error' : 'input input-sm input-bordered w-full'"
                     :min="0"
                   />
                   <label v-if="errors.minPurchaseAmount" class="label"
@@ -512,12 +512,12 @@ defineExpose({ openModal, closeModal, resetForm });
             <div>
               <h4 class="font-semibold text-base mb-3">Applicable Items</h4>
               <div class="form-control w-full">
-                <label class="label"
-                  ><span class="label-text font-medium"
+                <div class="mb-4">
+                  <span class="text-sm font-medium"
                     >Apply To <span class="text-error">*</span></span
-                  ></label
-                >
-                <div class="space-y-2">
+                  >
+                </div>
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                   <label
                     v-for="option in applicableToOptions"
                     :key="option.value"
@@ -531,26 +531,24 @@ defineExpose({ openModal, closeModal, resetForm });
                     />
                     <div
                       :class="[
-                        'card border-2 transition-all',
+                        'h-full rounded-2xl border-2 transition-all',
                         formData.applicableTo === option.value
                           ? 'border-primary bg-primary/5'
                           : 'border-base-300 hover:border-base-content/20',
                       ]"
                     >
-                      <div class="card-body p-4">
-                        <div class="flex items-start gap-3">
+                      <div class="flex h-full items-start gap-3 p-4">
                           <input
                             type="radio"
                             :checked="formData.applicableTo === option.value"
-                            class="radio radio-primary mt-1"
+                            class="radio radio-primary mt-0.5 shrink-0"
                           />
-                          <div>
-                            <div class="font-medium">{{ option.label }}</div>
-                            <div class="text-sm text-base-content/60 mt-1">
+                          <div class="min-w-0">
+                            <div class="font-medium leading-tight">{{ option.label }}</div>
+                            <div class="mt-1 text-sm leading-snug text-base-content/60">
                               {{ option.description }}
                             </div>
                           </div>
-                        </div>
                       </div>
                     </div>
                   </label>

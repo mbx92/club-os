@@ -140,7 +140,7 @@
 }
 
 @plugin "daisyui" {
-  themes: light, night, corporate, business, autumn, coffee, emerald, forest, cupcake, dracula, winter, luxury, lofi, synthwave;
+  themes: false;
   root: ":root";
   exclude: rootscrollgutter;
   logs: false;

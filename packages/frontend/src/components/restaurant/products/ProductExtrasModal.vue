@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { IconX, IconPlus, IconMinus, IconToolsKitchen2 } from '@tabler/icons-vue'
+import { getDefaultProductVariant, getProductBasePrice, getVariantEffectivePrice } from '@/utils/restaurantPricing'
 
 const props = defineProps({
   show: {
@@ -40,8 +41,7 @@ const selectedExtras = ref([])
 watch(() => props.show, (newVal) => {
   if (newVal) {
     selectedExtras.value = []
-    // Default variant to first one
-    selectedVariant.value = hasVariants.value ? variants.value[0] : null
+    selectedVariant.value = hasVariants.value ? getDefaultProductVariant(props.product) : null
     
     // Auto-select first option for required radio groups
     Object.entries(props.extras).forEach(([groupName, extras]) => {
@@ -111,12 +111,12 @@ const updateQuantity = (extraId, delta) => {
   }
 }
 
-// Price calculation: Variant Price (or base price) + Extras Total
+// Price calculation: selected variant price override or master price, plus extras total
 const basePrice = computed(() => {
   if (selectedVariant.value) {
-    return parseFloat(selectedVariant.value.price) || 0
+    return getVariantEffectivePrice(props.product, selectedVariant.value)
   }
-  return parseFloat(props.product.price) || 0
+  return getProductBasePrice(props.product)
 })
 
 const extrasTotal = computed(() => {
@@ -225,9 +225,11 @@ const handleClose = () => {
                     class="radio radio-primary mt-0.5 flex-shrink-0"
                   />
                   <div class="flex-1 flex items-center justify-between gap-3">
-                    <span class="font-medium">{{ variant.name }}</span>
+                    <div>
+                      <span class="font-medium">{{ variant.name }}</span>
+                    </div>
                     <span class="font-bold text-primary whitespace-nowrap">
-                      {{ formatCurrency(variant.price) }}
+                      {{ formatCurrency(getVariantEffectivePrice(product, variant)) }}
                     </span>
                   </div>
                 </label>

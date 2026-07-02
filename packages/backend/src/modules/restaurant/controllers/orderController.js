@@ -46,8 +46,7 @@ const getProductVariants = (product) => {
       const name = typeof variant.name === 'string' ? variant.name.trim() : '';
       const sku = typeof variant.sku === 'string' ? variant.sku.trim() : '';
       const price = Number.parseFloat(variant.price);
-
-      if ((!name && !sku) || Number.isNaN(price)) {
+      if (!name && !sku) {
         return null;
       }
 
@@ -55,7 +54,7 @@ const getProductVariants = (product) => {
         ...variant,
         name,
         sku,
-        price
+        price: Number.isFinite(price) ? price : null
       };
     })
     .filter(Boolean);
@@ -134,7 +133,9 @@ const buildOrderItemPricing = (product, item) => {
     );
   }
 
-  const baseUnitPrice = selectedVariant ? selectedVariant.price : parseFloat(product.price);
+  const baseUnitPrice = Number.isFinite(selectedVariant?.price)
+    ? selectedVariant.price
+    : (parseFloat(product.price) || 0);
   const shouldAppendVariantToName = selectedVariant && (
     explicitSelectionProvided || selectedVariant.name.toLowerCase() !== 'regular'
   );
@@ -643,7 +644,7 @@ const createOrder = async (req, res, next) => {
           selectedVariant: selectedVariant ? {
             name: selectedVariant.name,
             sku: selectedVariant.sku || null,
-            price: selectedVariant.price
+            price: baseUnitPrice
           } : undefined,
           extras: selectedExtras.length > 0 ? selectedExtras : undefined,
           extrasTotal: selectedExtras.length > 0 ? extrasTotal : undefined
@@ -1157,7 +1158,7 @@ const addOrderItems = async (req, res, next) => {
           selectedVariant: selectedVariant ? {
             name: selectedVariant.name,
             sku: selectedVariant.sku || null,
-            price: selectedVariant.price
+            price: baseUnitPrice
           } : undefined
         }
       }, { transaction: t });

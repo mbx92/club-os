@@ -12,7 +12,7 @@ const restaurantRoutes = require('./restaurant.routes');
  * Base path: /api/v1/member
  * 
  * All routes require authentication and are intended for member role.
- * Additional role checking can be added via CASL middleware if needed.
+ * Additional role checking can be added via permission middleware if needed.
  */
 
 // Mount sub-routes

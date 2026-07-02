@@ -9,73 +9,17 @@ const LEGACY_THEME_ALIASES = {
   'dynasty-night': 'dynasty-club-night',
 }
 
+const DYNASTY_PRESET = {
+  id: 'dynasty-club',
+  name: 'Dynasty Club',
+  description: 'Premium charcoal and gold palette with clean surfaces for the Dynasty Fitness brand',
+  light: 'dynasty-club',
+  dark: 'dynasty-club-night',
+  preview: { primary: '#F4A823', secondary: '#1A1A2E' }
+}
+
 // Available theme pairs
-export const THEME_PRESETS = [
-  {
-    id: 'dynasty-club',
-    name: 'Dynasty Club',
-    description: 'Premium charcoal and gold palette with clean surfaces for the Dynasty Fitness brand',
-    light: 'dynasty-club',
-    dark: 'dynasty-club-night',
-    preview: { primary: '#F4A823', secondary: '#1A1A2E' }
-  },
-  {
-    id: 'professional',
-    name: 'Executive Strength',
-    description: 'Clean professional palette for backoffice-heavy workflows',
-    light: 'corporate',
-    dark: 'business',
-    preview: { primary: '#3b82f6', secondary: '#1e40af' }
-  },
-  {
-    id: 'warm',
-    name: 'Warm Momentum',
-    description: 'Autumn bronze palette for energetic fitness and wellness operations',
-    light: 'autumn',
-    dark: 'coffee',
-    preview: { primary: '#f97316', secondary: '#78350f' }
-  },
-  {
-    id: 'fresh',
-    name: 'Fresh Recovery',
-    description: 'Balanced green palette for wellness-focused environments',
-    light: 'emerald',
-    dark: 'forest',
-    preview: { primary: '#10b981', secondary: '#065f46' }
-  },
-  {
-    id: 'vibrant',
-    name: 'Studio Pulse',
-    description: 'Playful energy for class-heavy or youth-oriented operations',
-    light: 'cupcake',
-    dark: 'dracula',
-    preview: { primary: '#ec4899', secondary: '#9333ea' }
-  },
-  {
-    id: 'minimal',
-    name: 'Minimal Focus',
-    description: 'Simple bright light mode with crisp dark mode contrast',
-    light: 'light',
-    dark: 'night',
-    preview: { primary: '#570df8', secondary: '#1e3a8a' }
-  },
-  {
-    id: 'luxury',
-    name: 'Championship',
-    description: 'Cool premium palette with gold highlights for a high-end club feel',
-    light: 'winter',
-    dark: 'luxury',
-    preview: { primary: '#3b82f6', secondary: '#fbbf24' }
-  },
-  {
-    id: 'cyber',
-    name: 'After Hours',
-    description: 'Muted gray in daylight with a stylized neon dark mode',
-    light: 'lofi',
-    dark: 'synthwave',
-    preview: { primary: '#6366f1', secondary: '#ec4899' }
-  }
-]
+export const THEME_PRESETS = [DYNASTY_PRESET]
 
 export function useTheme() {
   const authStore = useAuthStore()
@@ -92,16 +36,15 @@ export function useTheme() {
     try {
       const cached = localStorage.getItem(themePresetCacheKey)
       if (cached) {
-        const parsed = JSON.parse(cached)
-        const presetId = parsed.preset === 'dynasty' ? 'dynasty-club' : parsed.preset
-        return THEME_PRESETS.find(p => p.id === presetId) || THEME_PRESETS[0]
+        JSON.parse(cached)
+        return DYNASTY_PRESET
       }
     } catch (e) {
       if (isDev) {
         console.error('[useTheme] Failed to get cached preset:', e)
       }
     }
-    return THEME_PRESETS[0]
+    return DYNASTY_PRESET
   }
 
   // Get current tenant theme preset from settings
@@ -115,17 +58,10 @@ export function useTheme() {
       })
     }
     
-    // If user logged in and has tenant theme, use it
-    if (tenantTheme?.preset) {
-      const presetId = tenantTheme.preset === 'dynasty' ? 'dynasty-club' : tenantTheme.preset
-      const preset = THEME_PRESETS.find(p => p.id === presetId) || THEME_PRESETS[0]
-      if (isDev) {
-        console.log('[useTheme] Preset from tenant:', preset.id)
-      }
-      return preset
+    if (tenantTheme?.preset && isDev) {
+      console.log('[useTheme] Tenant preset detected but theme is locked to Dynasty Club:', tenantTheme.preset)
     }
     
-    // Otherwise use cached preset (for login page)
     const cached = getCachedPreset()
     if (isDev) {
       console.log('[useTheme] Preset from cache:', cached.id)
@@ -135,20 +71,20 @@ export function useTheme() {
 
   // Get light theme name
   const lightTheme = computed(() => {
-    const theme = authStore.tenantTheme?.lightTheme || currentPreset.value.light
+    const theme = currentPreset.value.light
     const resolvedTheme = LEGACY_THEME_ALIASES[theme] || theme
     if (isDev) {
-      console.log('[useTheme] Light theme:', resolvedTheme, 'from tenant:', authStore.tenantTheme?.lightTheme)
+      console.log('[useTheme] Light theme locked to:', resolvedTheme)
     }
     return resolvedTheme
   })
 
   // Get dark theme name
   const darkTheme = computed(() => {
-    const theme = authStore.tenantTheme?.darkTheme || currentPreset.value.dark
+    const theme = currentPreset.value.dark
     const resolvedTheme = LEGACY_THEME_ALIASES[theme] || theme
     if (isDev) {
-      console.log('[useTheme] Dark theme:', resolvedTheme, 'from tenant:', authStore.tenantTheme?.darkTheme)
+      console.log('[useTheme] Dark theme locked to:', resolvedTheme)
     }
     return resolvedTheme
   })
@@ -249,13 +185,17 @@ export function useTheme() {
     }
     
     isLoading.value = true
+    const normalizedThemeSettings = {
+      preset: DYNASTY_PRESET.id,
+      lightTheme: DYNASTY_PRESET.light,
+      darkTheme: DYNASTY_PRESET.dark
+    }
     if (isDev) {
-      console.log('[useTheme] Updating tenant theme:', themeSettings)
+      console.log('[useTheme] Updating tenant theme:', normalizedThemeSettings)
     }
     try {
-      // themeSettings should be: { preset: 'professional', lightTheme: 'corporate', darkTheme: 'business' }
       const response = await api.patch('/tenants/settings', {
-        theme: themeSettings
+        theme: normalizedThemeSettings
       })
       
       if (isDev) {
@@ -269,7 +209,7 @@ export function useTheme() {
         
         // Cache theme preset to localStorage (for login page)
         try {
-          localStorage.setItem(themePresetCacheKey, JSON.stringify(themeSettings))
+          localStorage.setItem(themePresetCacheKey, JSON.stringify(normalizedThemeSettings))
           if (isDev) {
             console.log('[useTheme] Theme cached to localStorage')
           }
@@ -292,7 +232,7 @@ export function useTheme() {
           if (isDev) {
             console.log('[useTheme] Before update:', authStore.user.tenant.settings.theme)
           }
-          authStore.user.tenant.settings.theme = themeSettings
+          authStore.user.tenant.settings.theme = normalizedThemeSettings
           if (isDev) {
             console.log('[useTheme] After update:', authStore.user.tenant.settings.theme)
           }
@@ -313,7 +253,7 @@ export function useTheme() {
         try {
           localStorage.setItem('gym:theme:broadcast', JSON.stringify({
             timestamp: Date.now(),
-            theme: themeSettings
+            theme: normalizedThemeSettings
           }))
           if (isDev) {
             console.log('[useTheme] Broadcast sent')

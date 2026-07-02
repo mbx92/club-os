@@ -16,14 +16,13 @@ const {
   getMenuConfig,
   getAllSubjectsList,
   previewRolePermissions,
-  generateRules,
   deleteRole
 } = require('../../../controllers/core/system/permissionController');
 
 /**
  * @route GET /permissions/user
  * @name permissions.user
- * @desc Get current user permissions (RBAC rules and role permissions)
+ * @desc Get current user permissions and menu access
  * @access Private
  */
 router.get('/user', authenticate, auditLog('GET_USER_PERMISSIONS'), getUserPermissions);
@@ -115,13 +114,5 @@ router.get('/subjects', authenticate, authorize('read', 'Role'), auditLog('GET_S
  * @access Private (Admin/Superadmin)
  */
 router.get('/roles/:id/preview', authenticate, authorize('read', 'Role'), auditLog('PREVIEW_ROLE_PERMISSIONS'), previewRolePermissions);
-
-/**
- * @route POST /permissions/roles/:roleId/generate-rules
- * @name permissions.generateRules
- * @desc Generate RBAC rules from simplified form
- * @access Private (Admin/Superadmin)
- */
-router.post('/roles/:roleId/generate-rules', authenticate, authorize('update', 'Role'), auditLog('GENERATE_RULES'), generateRules);
 
 module.exports = router;

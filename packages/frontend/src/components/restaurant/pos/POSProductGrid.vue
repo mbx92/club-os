@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { IconSearch, IconFilter } from '@tabler/icons-vue'
+import { getDefaultProductVariant, getMinProductPrice, getProductBasePrice, getProductVariants, getVariantEffectivePrice } from '@/utils/restaurantPricing'
 
 const props = defineProps({
   products: {
@@ -55,15 +56,21 @@ const hasExtras = (product) => {
 }
 
 const hasMultipleVariants = (product) => {
-  return product.productDetails?.hasVariants === true && 
-         (product.productDetails?.variants?.length || 0) > 1
+  return product.productDetails?.hasVariants === true &&
+         getProductVariants(product).length > 1
 }
 
 const getMinVariantPrice = (product) => {
-  const variants = product.productDetails?.variants || []
+  const variants = getProductVariants(product)
   if (variants.length <= 1) return null
-  const prices = variants.map(v => parseFloat(v.price) || 0)
-  return Math.min(...prices)
+  return getMinProductPrice(product)
+}
+
+const getProductCardPrice = (product) => {
+  const defaultVariant = getDefaultProductVariant(product)
+  return defaultVariant
+    ? getVariantEffectivePrice(product, defaultVariant)
+    : getProductBasePrice(product)
 }
 
 const getInitials = (name) => {
@@ -235,7 +242,7 @@ const getProductImage = (product) => {
                 </div>
               </template>
               <template v-else>
-                <span class="text-primary-content tracking-wide drop-shadow">{{ formatCurrency(product.price) }}</span>
+                <span class="text-primary-content tracking-wide drop-shadow">{{ formatCurrency(getProductCardPrice(product)) }}</span>
               </template>
               
               <!-- Subtle stock indicator if tracking -->

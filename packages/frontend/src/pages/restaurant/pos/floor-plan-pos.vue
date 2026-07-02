@@ -34,6 +34,7 @@ import TableActionModal from '@/components/restaurant/orders/TableActionModal.vu
 import SplitBillModal from '@/components/restaurant/orders/SplitBillModal.vue'
 import AddItemsToOrderModal from '@/components/restaurant/pos/AddItemsToOrderModal.vue'
 import RestaurantProcessingModal from '@/components/restaurant/shared/RestaurantProcessingModal.vue'
+import { getDefaultProductVariant, getProductBasePrice, getVariantEffectivePrice } from '@/utils/restaurantPricing'
 import {
   IconShoppingCart,
   IconX,
@@ -400,14 +401,19 @@ const addToCart = async (product) => {
   }
 
   // Step 3: Direct Add to Cart
+  const defaultVariant = getDefaultProductVariant(product)
   addProductToCart({
     product,
-    variant: product.productDetails?.variants?.[0] || null,
+    variant: defaultVariant,
     extras: [],
     notes: '',
     quantity: 1,
-    unitPrice: parseFloat(product.price) || 0,
-    totalPrice: parseFloat(product.price) || 0
+    unitPrice: defaultVariant
+      ? getVariantEffectivePrice(product, defaultVariant)
+      : getProductBasePrice(product),
+    totalPrice: defaultVariant
+      ? getVariantEffectivePrice(product, defaultVariant)
+      : getProductBasePrice(product)
   })
 }
 
@@ -445,7 +451,7 @@ const handleCustomizationClose = () => {
 
 const handleExtrasConfirm = (data) => {
   const product = extrasModalProduct.value
-  const variantPrice = data.variantPrice || parseFloat(product.price) || 0
+  const basePrice = data.variantPrice || getProductBasePrice(product)
   const extrasTotal = data.extrasTotal || 0
   
   addProductToCart({
@@ -454,8 +460,8 @@ const handleExtrasConfirm = (data) => {
     extras: data.selectedExtras || [],
     notes: '',
     quantity: 1,
-    unitPrice: variantPrice + extrasTotal,
-    totalPrice: data.total || variantPrice + extrasTotal
+    unitPrice: basePrice + extrasTotal,
+    totalPrice: data.total || basePrice + extrasTotal
   })
   
   showExtrasModal.value = false
@@ -674,7 +680,9 @@ const handleAddItemsSubmit = async (cartItemsToAdd) => {
   try {
     addItemsLoading.value = true
     const items = cartItemsToAdd.map(item => {
-      const basePrice = item.variant ? (item.variant.price ?? 0) : parseFloat(item.product.price) || 0
+      const basePrice = item.variant
+        ? getVariantEffectivePrice(item.product, item.variant)
+        : getProductBasePrice(item.product)
       const extras = item.extras?.filter(e => e.quantity > 0) || []
       return {
         productId: item.product.id,

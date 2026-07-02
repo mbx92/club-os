@@ -224,10 +224,9 @@ export const useAuthStore = defineStore('auth', () => {
             hasPermissions: !!permissions.value,
             permissionsKeys: permissions.value ? Object.keys(permissions.value) : [],
             permissionsStructure: permissions.value ? {
-              hasRules: !!(permissions.value.rules && permissions.value.rules.length),
-              rulesCount: permissions.value.rules?.length || 0,
-              hasRolePermissions: !!(permissions.value.rolePermissions && Object.keys(permissions.value.rolePermissions).length),
-              rolePermissionsKeys: permissions.value.rolePermissions ? Object.keys(permissions.value.rolePermissions) : []
+              hasResources: !!(permissions.value.resources && Object.keys(permissions.value.resources).length),
+              resourceCount: permissions.value.resources ? Object.keys(permissions.value.resources).length : 0,
+              menuAccessCount: permissions.value.menuAccess?.length || 0
             } : null
           })
         }
@@ -295,9 +294,9 @@ export const useAuthStore = defineStore('auth', () => {
         perms = response.data.permissions
       } else if (response.data?.permissions) {
         perms = response.data.permissions
-      } else if (response.success && response.data?.rules) {
+      } else if (response.success && response.data?.resources) {
         perms = response.data
-      } else if (response.data?.rules) {
+      } else if (response.data?.resources) {
         perms = response.data
       } else if (response.permissions) {
         perms = response.permissions
@@ -309,9 +308,9 @@ export const useAuthStore = defineStore('auth', () => {
         persistPermissions(perms)
         await syncSubscriptionFromPermissions(perms)
         if (isDev) debug.log('[authStore] Permissions set:', {
-          hasRules: !!(perms.rules && perms.rules.length),
-          rulesCount: perms.rules?.length || 0,
-          firstRule: perms.rules?.[0]
+          hasResources: !!(perms.resources && Object.keys(perms.resources).length),
+          resourceCount: perms.resources ? Object.keys(perms.resources).length : 0,
+          menuAccessCount: perms.menuAccess?.length || 0
         })
         return permissions.value
       }
@@ -319,8 +318,9 @@ export const useAuthStore = defineStore('auth', () => {
       debug.warn('[authStore] No permissions found in response, using empty permissions')
       // Set minimal empty permissions structure so menu can show with lenient mode
       permissions.value = {
-        rules: [],
-        rolePermissions: {}
+        resources: {},
+        menuAccess: [],
+        uiFlags: {}
       }
       return null
     } catch (error) {

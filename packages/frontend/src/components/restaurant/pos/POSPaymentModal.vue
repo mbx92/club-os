@@ -7,6 +7,7 @@ import { useTransactionSettings } from '@/composables/shared/useTransactionSetti
 import { useSubscriptionStore } from '@/stores/subscription'
 import CurrencyInput from '@/components/shared/CurrencyInput.vue'
 import { BANK_OPTIONS, BANK_SELECTION_PAYMENT_METHODS, buildPaymentBankPayload } from '@/utils/paymentBanks'
+import { getProductBasePrice, getVariantEffectivePrice } from '@/utils/restaurantPricing'
 
 const props = defineProps({
   show: {
@@ -238,10 +239,9 @@ const handleSubmit = () => {
 
   // Build items with variants and extras support
   const items = props.cartItems.map(item => {
-    // Base price = variant price (if selected) or product base price; WITHOUT extras
     const basePrice = item.variant
-      ? (parseFloat(item.variant.price) || 0)
-      : (parseFloat(item.product.price) || 0)
+      ? getVariantEffectivePrice(item.product, item.variant)
+      : getProductBasePrice(item.product)
 
     const itemData = {
       productId: item.product.id,

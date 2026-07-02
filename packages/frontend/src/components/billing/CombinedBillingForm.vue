@@ -14,6 +14,7 @@ import CurrencyInput from '@/components/shared/CurrencyInput.vue'
 import { useMembers } from '@/composables/gym/member-management'
 import ProductExtrasModal from '@/components/restaurant/products/ProductExtrasModal.vue'
 import VoucherApplier from './VoucherApplier.vue'
+import { getDefaultProductVariant, getProductBasePrice, getVariantEffectivePrice } from '@/utils/restaurantPricing'
 import { 
   IconSearch, 
   IconUser, 
@@ -376,12 +377,14 @@ const addToCart = async (product) => {
   }
 
   // Step 3: Direct Add to Cart
-  addProductDirectly(product)
+  addProductDirectly(product, [], getDefaultProductVariant(product))
 }
 
 const addProductDirectly = (product, selectedExtras = [], selectedVariant = null) => {
   const extrasTotal = selectedExtras.reduce((sum, e) => sum + (parseFloat(e.price) || 0) * (e.quantity || 1), 0)
-  const variantPrice = selectedVariant ? (parseFloat(selectedVariant.price) || 0) : (parseFloat(product.price) || 0)
+  const basePrice = selectedVariant
+    ? getVariantEffectivePrice(product, selectedVariant)
+    : getProductBasePrice(product)
   
   // If product has extras or variant selection, always add as new item
   if (selectedExtras.length > 0 || selectedVariant) {
@@ -391,13 +394,13 @@ const addProductDirectly = (product, selectedExtras = [], selectedVariant = null
         cartItemId: createCartItemId(),
         id: product.id,
         name: product.name,
-        price: variantPrice + extrasTotal,
-        basePrice: variantPrice,
+        price: basePrice + extrasTotal,
+        basePrice,
         quantity: 1,
         variant: selectedVariant,
         extras: selectedExtras,
         extrasTotal,
-        unitPrice: variantPrice + extrasTotal,
+        unitPrice: basePrice + extrasTotal,
         notes: ''
       }
     ]
@@ -419,11 +422,11 @@ const addProductDirectly = (product, selectedExtras = [], selectedVariant = null
         cartItemId: createCartItemId(),
         id: product.id,
         name: product.name,
-        price: variantPrice,
+        price: basePrice,
         quantity: 1,
         extras: [],
         extrasTotal: 0,
-        unitPrice: variantPrice,
+        unitPrice: basePrice,
         notes: ''
       }
     ]

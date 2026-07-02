@@ -13,6 +13,11 @@
           <span class="text-sm">Theme settings will apply to all users in your tenant: <strong>{{ tenantName }}</strong></span>
         </div>
 
+        <div class="alert mb-4 border border-primary/20 bg-primary/10 text-primary-content">
+          <IconPalette class="h-5 w-5 text-primary" />
+          <span class="text-sm text-base-content">Theme pilihan lain disembunyikan. Aplikasi sekarang menggunakan branding tetap <strong>Dynasty Club</strong>.</span>
+        </div>
+
         <!-- Current Theme Display -->
         <div class="mb-6">
           <div class="text-sm opacity-70 mb-2">Current Theme</div>
@@ -24,54 +29,30 @@
           </div>
         </div>
 
-        <!-- Theme Presets -->
         <div class="space-y-3">
-          <div class="text-sm font-semibold opacity-70">Choose Theme Preset</div>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div
-              v-for="preset in THEME_PRESETS"
-              :key="preset.id"
-              class="card border-2 cursor-pointer transition-all hover:shadow-md"
-              :class="selectedPreset.id === preset.id ? 'border-primary bg-primary/5' : 'border-base-300'"
-              @click="selectPreset(preset)"
-            >
-              <div class="card-body p-4">
-                <div class="flex items-start gap-3">
-                  <!-- Color Preview -->
-                  <div class="flex gap-1 shrink-0">
-                    <div class="w-6 h-6 rounded" :style="{ backgroundColor: preset.preview.primary }"></div>
-                    <div class="w-6 h-6 rounded" :style="{ backgroundColor: preset.preview.secondary }"></div>
+          <div class="text-sm font-semibold opacity-70">Brand Theme</div>
+
+          <div class="card border-2 border-primary bg-primary/5">
+            <div class="card-body p-4">
+              <div class="flex items-start gap-3">
+                <div class="flex gap-1 shrink-0">
+                  <div class="w-6 h-6 rounded" :style="{ backgroundColor: currentPreset.preview.primary }"></div>
+                  <div class="w-6 h-6 rounded" :style="{ backgroundColor: currentPreset.preview.secondary }"></div>
+                </div>
+
+                <div class="flex-1 min-w-0">
+                  <div class="font-semibold flex items-center gap-2">
+                    {{ currentPreset.name }}
+                    <IconCheck class="w-4 h-4 text-primary" />
                   </div>
-                  
-                  <!-- Info -->
-                  <div class="flex-1 min-w-0">
-                    <div class="font-semibold flex items-center gap-2">
-                      {{ preset.name }}
-                      <IconCheck v-if="selectedPreset.id === preset.id" class="w-4 h-4 text-primary" />
-                    </div>
-                    <div class="text-xs opacity-70 mt-1">{{ preset.description }}</div>
-                    <div class="text-xs opacity-50 mt-1">
-                      {{ preset.light }} / {{ preset.dark }}
-                    </div>
+                  <div class="text-xs opacity-70 mt-1">{{ currentPreset.description }}</div>
+                  <div class="text-xs opacity-50 mt-1">
+                    {{ currentPreset.light }} / {{ currentPreset.dark }}
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <!-- Save Button -->
-        <div class="card-actions justify-end mt-6">
-          <button 
-            class="btn btn-primary"
-            :class="{ 'loading': isLoading }"
-            :disabled="isLoading || !hasChanges"
-            @click="saveThemeSettings"
-          >
-            <IconDeviceFloppy v-if="!isLoading" class="w-5 h-5" />
-            {{ isLoading ? 'Saving...' : 'Save Theme Settings' }}
-          </button>
         </div>
       </div>
     </div>
@@ -167,12 +148,10 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useTheme } from '@/composables/core/useTheme'
 import { useAuthStore } from '@/stores/auth'
-import { useNotification } from '@/composables/core/useNotification'
 import {
   IconPalette,
   IconInfoCircle,
   IconCheck,
-  IconDeviceFloppy,
   IconEye
 } from '@tabler/icons-vue'
 
@@ -183,7 +162,6 @@ if (isDev) {
 }
 
 const authStore = useAuthStore()
-const { showSuccess, handleError } = useNotification()
 
 onMounted(() => {
   if (isDev) {
@@ -195,15 +173,11 @@ onMounted(() => {
 const {
   currentPreset,
   lightTheme,
-  darkTheme,
-  THEME_PRESETS,
-  updateTenantTheme,
-  isLoading
+  darkTheme
 } = useTheme()
 
 const tenantName = computed(() => authStore.user?.tenant?.name || 'Your Organization')
 const selectedPreset = ref(currentPreset.value)
-const hasChanges = computed(() => selectedPreset.value.id !== currentPreset.value.id)
 
 // Preview theme names based on selected preset
 const previewLightTheme = computed(() => selectedPreset.value?.light || lightTheme.value)
@@ -211,32 +185,8 @@ const previewDarkTheme = computed(() => selectedPreset.value?.dark || darkTheme.
 
 // Watch currentPreset to update selectedPreset when theme loads
 watch(() => currentPreset.value, (newPreset) => {
-  if (newPreset && !hasChanges.value) {
+  if (newPreset) {
     selectedPreset.value = newPreset
   }
 }, { immediate: true })
-
-const selectPreset = (preset) => {
-  if (isDev) {
-    console.log('[ThemeSettingsTab] Selected preset:', preset)
-  }
-  selectedPreset.value = preset
-}
-
-const saveThemeSettings = async () => {
-  if (isDev) {
-    console.log('[ThemeSettingsTab] Saving theme:', selectedPreset.value)
-  }
-  const result = await updateTenantTheme({
-    preset: selectedPreset.value.id,
-    lightTheme: selectedPreset.value.light,
-    darkTheme: selectedPreset.value.dark
-  })
-  
-  if (result.success) {
-    showSuccess('Theme settings saved successfully')
-  } else {
-    handleError(result.error, 'Failed to save theme settings')
-  }
-}
 </script>

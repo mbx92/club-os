@@ -15,8 +15,9 @@ export const ROLE_MENU_MAP = {
     'restaurant', 'restaurant.dashboard', 'restaurant.categories', 'restaurant.products', 'restaurant.locations', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.orders', 'restaurant.stock', 'restaurant.reports',
     'vouchers',
     'back-office', 'back-office.attendance', 'back-office.attendance-report', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
-    'finances', 'finances.dashboard', 'finances.incomes', 'finances.income-categories', 'finances.expenses', 'finances.expense-categories', 'finances.cash-flow', 'finances.petty-cash', 'finances.analytics', 'finances.transactions', 'finances.shareholders', 'finances.reports',
+    'finances', 'finances.dashboard', 'finances.incomes', 'finances.income-categories', 'finances.expenses', 'finances.expense-categories', 'finances.cash-flow', 'finances.petty-cash', 'finances.vault', 'finances.analytics', 'finances.transactions', 'finances.shareholders', 'finances.reports',
     'reports', 'reports.revenue', 'reports.attendance', 'reports.member-stats', 'reports.member-reports', 'reports.service-reports', 'reports.product-reports', 'reports.staff-reports', 'reports.forecasting',
+    'subscription', 'subscription.plans', 'subscription.subscriptions', 'subscription.tenants', 'subscription.billing',
     'settings',
   ],
   manager: [
@@ -55,6 +56,7 @@ export const ROLE_MENU_MAP = {
     'back-office', 'back-office.attendance', 'back-office.attendance-report', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
     'finances', 'finances.dashboard', 'finances.incomes', 'finances.income-categories', 'finances.expenses', 'finances.expense-categories', 'finances.cash-flow', 'finances.petty-cash', 'finances.vault', 'finances.analytics', 'finances.transactions', 'finances.shareholders', 'finances.reports',
     'reports', 'reports.revenue', 'reports.attendance', 'reports.member-stats', 'reports.member-reports', 'reports.service-reports', 'reports.product-reports', 'reports.staff-reports', 'reports.forecasting',
+    'subscription', 'subscription.plans', 'subscription.subscriptions', 'subscription.tenants', 'subscription.billing',
     'settings',
   ],
   user: ['dashboard'],
@@ -132,6 +134,7 @@ export const ALL_MENU_KEYS = [
       { key: 'finances.vault', label: 'Vault / Brankas' },
       { key: 'finances.analytics', label: 'Analytics' },
       { key: 'finances.transactions', label: 'Transactions' },
+      { key: 'finances.shareholders', label: 'Pemegang Saham' },
       { key: 'finances.reports', label: 'Reports' },
     ],
   },
@@ -150,6 +153,12 @@ export const ALL_MENU_KEYS = [
   },
   {
     key: 'subscription', label: 'Subscription', icon: 'crown',
+    children: [
+      { key: 'subscription.plans', label: 'Plans' },
+      { key: 'subscription.subscriptions', label: 'Subscriptions' },
+      { key: 'subscription.tenants', label: 'Tenants' },
+      { key: 'subscription.billing', label: 'Billing' },
+    ],
   },
   {
     key: 'settings', label: 'Settings', icon: 'settings',

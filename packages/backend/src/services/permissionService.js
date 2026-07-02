@@ -7,7 +7,7 @@
  * Response shape:
  * {
  *   user:               { id, email, role, isSuperAdmin, tenantId }
- *   rules:              [ { action, subject, conditions, inverted } ]
+ *   resources:          { Member: ['read', 'create'], ... }
  *   uiFlags:            { canManageUsers, canManageRoles, ... }
  *   subscription: {
  *     modules:          { gym: true, pos: false, ... }
@@ -23,10 +23,11 @@
  */
 
 const { Subscription, SubscriptionPlan, Tenant, User, Role } = require('../models');
-const { can, getEffectiveRules } = require('../utils/rbac');
+const { can } = require('../utils/rbac');
 const { MENU_CONFIG } = require('../utils/menuConfig');
 const { getDefaultPermissionsForRole } = require('../utils/defaultRolePermissions');
-const { normalizeMenuAccess, getMenuAccessForRole, hasManageAllRule, deriveMenuAccessFromRules } = require('../utils/menuKeys');
+const { getMenuAccessForRole, hasFullAccess } = require('../utils/menuKeys');
+const { resolveRolePermissions } = require('../utils/permissionUtils');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -126,30 +127,6 @@ function filterMenu(items, user, subInfo, uiFlags) {
   return result;
 }
 
-/**
- * Serialize rules to frontend-compatible format.
- */
-function serializeRules(user) {
-  const rules = getEffectiveRules(user);
-  return rules.map(rule => ({
-    subject:    rule.subject,
-    actions:    rule.actions,
-    conditions: rule.resolvedConditions || undefined,
-    inverted:   rule.inverted   || false,
-  }));
-}
-
-/**
- * Resolve uiFlags for a user.
- */
-function resolveUiFlags(user) {
-  const stored = user.role?.permissions?.uiFlags;
-  if (stored && typeof stored === 'object') return stored;
-
-  const defaults = getDefaultPermissionsForRole(user.role?.name);
-  return defaults?.uiFlags || {};
-}
-
 // ─── Main exported function ────────────────────────────────────────────────────
 
 /**
@@ -162,35 +139,16 @@ async function buildUserPermissions(userId) {
 
   if (!user) throw new Error('User not found');
 
-  const rules     = serializeRules(user);
-  const uiFlags   = resolveUiFlags(user);
-  const subInfo   = await getSubscriptionInfo(user.tenantId);
+  const resolvedPermissions = resolveRolePermissions(user.role?.permissions || {}, user.role?.name);
+  const resources = resolvedPermissions.resources;
+  const uiFlags = resolvedPermissions.uiFlags;
+  const subInfo = await getSubscriptionInfo(user.tenantId);
 
   const menuItems = filterMenu(MENU_CONFIG, user, subInfo, uiFlags);
-  const derivedMenuAccess = deriveMenuAccessFromRules(rules);
-
-  // menuAccess: use role-stored keys (set by admin), fallback to role template defaults,
-  // fallback to derived from rules for custom roles with no explicit menu config.
-  // NEVER merge deriveMenuAccessFromRules on top of an existing template — that
-  // would leak menu keys from rules (e.g. Tenant→settings, Payment→subscription)
-  // that the role template intentionally excludes.
   const roleName = user.role?.name;
-  let menuAccess;
-  const storedMenu = user.role?.permissions?.menuAccess;
-  if (user.isSuperAdmin || hasManageAllRule(rules) || ['admin', 'owner'].includes(roleName)) {
+  let menuAccess = resolvedPermissions.menuAccess;
+  if (user.isSuperAdmin || hasFullAccess(resources) || ['admin', 'owner'].includes(roleName)) {
     menuAccess = getMenuAccessForRole(roleName) || getMenuAccessForRole('admin');
-  } else if (Array.isArray(storedMenu) && storedMenu.length > 0) {
-    menuAccess = normalizeMenuAccess(storedMenu, roleName);
-  } else {
-    const defaults = getDefaultPermissionsForRole(roleName);
-    if (defaults?.menuAccess && defaults.menuAccess.length > 0) {
-      menuAccess = normalizeMenuAccess(defaults.menuAccess, roleName);
-    } else {
-      // No template and no stored config — derive from rules as last resort
-      menuAccess = derivedMenuAccess.length > 0
-        ? normalizeMenuAccess(derivedMenuAccess, roleName)
-        : [...new Set(menuItems.flatMap(i => [i.key, ...(i.children || []).map(c => c.key)]))];
-    }
   }
 
   return {
@@ -203,7 +161,7 @@ async function buildUserPermissions(userId) {
       tenantId:    user.tenantId,
       role: user.role ? { id: user.role.id, name: user.role.name } : null,
     },
-    rules,
+    resources,
     uiFlags,
     subscription: {
       modules:  subInfo.modules,
@@ -219,18 +177,18 @@ async function buildUserPermissions(userId) {
 }
 
 /**
- * Populate Role.permissions with default rules + uiFlags for a given role name.
+ * Populate Role.permissions with default resources + uiFlags for a given role name.
  */
 async function initDefaultPermissionsForRole(roleInstance) {
   const defaults = getDefaultPermissionsForRole(roleInstance.name);
   if (!defaults) return;
 
   const current = roleInstance.permissions || {};
-  if (!current.rules || current.rules.length === 0) {
+  if (!current.resources || Object.keys(current.resources).length === 0) {
     await roleInstance.update({
       permissions: {
         ...current,
-        rules: defaults.rules,
+        resources: defaults.resources,
         uiFlags: defaults.uiFlags,
         menuAccess: defaults.menuAccess,
       },

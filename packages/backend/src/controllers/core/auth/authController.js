@@ -289,7 +289,7 @@ async function login(req, res) {
       }
     });
 
-    // Build permissions payload (CASL rules, uiFlags, menu, subscription)
+    // Build permissions payload (resources, uiFlags, menu, subscription)
     let permissions = null;
     try {
       permissions = await buildUserPermissions(user.id);

@@ -2,10 +2,10 @@ const { can } = require('../utils/rbac');
 const { isTenantAdmin } = require('../utils/rbacUtils');
 
 /**
- * Permission middleware — replaces the old CASL authorize.
+ * Simple resource/action permission middleware.
  *
- * @param {string} action - RBAC action (read, create, update, delete, manage)
- * @param {string} subject - RBAC subject (Member, Tenant, etc.)
+ * @param {string} action - Permission action (read, create, update, delete)
+ * @param {string} subject - Resource name (Member, Tenant, etc.)
  *
  * @example
  * router.get('/', authenticate, authorize('read', 'Member'), getMembers);

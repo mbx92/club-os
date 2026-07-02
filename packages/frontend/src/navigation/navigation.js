@@ -1,5 +1,5 @@
 // Navigation menu untuk gym management system
-// Menggunakan RBAC (action/subject) untuk kontrol akses
+// Menggunakan permission resource/action untuk kontrol akses
 // icon menggunakan tabler icons
 
 // Mode tenant: 'gym' (default), 'fitness', atau 'full'

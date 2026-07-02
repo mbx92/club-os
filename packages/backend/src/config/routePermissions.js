@@ -1,3 +1,5 @@
+const { PERMISSION_CATALOG, PERMISSION_CATALOG_MAP } = require('./permissionCatalog');
+
 /**
  * Route to Subject Mapping Configuration
  * 
@@ -67,8 +69,6 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/permissions/roles/:id/permissions': { subject: 'Role', actions: ['update'] },
   '/permissions/roles/:id/preview': { subject: 'Role', actions: ['read'] },
   '/permissions/roles/:id/reset': { subject: 'Role', actions: ['update'] },
-  '/permissions/roles/:roleId/generate-rules': { subject: 'Role', actions: ['update'] },
-  
   // ═══════════════════════════════════════════════════════════════════════════
   // GYM MODULE
   // ═══════════════════════════════════════════════════════════════════════════
@@ -742,66 +742,69 @@ const ROUTE_TO_SUBJECT_MAP = {
  * @returns {string[]|object[]} Array of unique subject names, or array of {subject, actions} objects
  */
 function getAllSubjects(withActions = false) {
-  if (!withActions) {
-    // Original behavior: return array of strings
-    const subjectsSet = new Set();
-    
-    for (const route in ROUTE_TO_SUBJECT_MAP) {
-      const mapping = ROUTE_TO_SUBJECT_MAP[route];
-      
-      if (mapping.subject) {
-        subjectsSet.add(mapping.subject);
-      } else {
-        // If HTTP method specific
-        Object.values(mapping).forEach(methodMapping => {
-          if (methodMapping.subject) {
-            subjectsSet.add(methodMapping.subject);
-          }
-        });
-      }
-    }
-    
-    return Array.from(subjectsSet).sort();
-  }
-  
-  // New behavior: return array of {subject, actions} objects
   const subjectsMap = new Map();
-  
+
+  for (const item of PERMISSION_CATALOG) {
+    subjectsMap.set(item.subject, {
+      subject: item.subject,
+      label: item.label,
+      module: item.module,
+      actions: new Set(item.actions || []),
+    });
+  }
+
   for (const route in ROUTE_TO_SUBJECT_MAP) {
     const mapping = ROUTE_TO_SUBJECT_MAP[route];
-    
+
     if (mapping.subject) {
-      // Single subject for all methods
       const subject = mapping.subject;
       const actions = mapping.actions || [];
-      
+      const existing = subjectsMap.get(subject) || {
+        subject,
+        label: PERMISSION_CATALOG_MAP.get(subject)?.label || subject,
+        module: PERMISSION_CATALOG_MAP.get(subject)?.module || 'system',
+        actions: new Set(),
+      };
+
       if (!subjectsMap.has(subject)) {
-        subjectsMap.set(subject, new Set());
+        subjectsMap.set(subject, existing);
       }
-      actions.forEach(action => subjectsMap.get(subject).add(action));
+      actions.forEach(action => existing.actions.add(action));
     } else {
-      // HTTP method specific
       Object.values(mapping).forEach(methodMapping => {
         if (methodMapping.subject) {
           const subject = methodMapping.subject;
           const actions = methodMapping.actions || [];
-          
+          const existing = subjectsMap.get(subject) || {
+            subject,
+            label: PERMISSION_CATALOG_MAP.get(subject)?.label || subject,
+            module: PERMISSION_CATALOG_MAP.get(subject)?.module || 'system',
+            actions: new Set(),
+          };
+
           if (!subjectsMap.has(subject)) {
-            subjectsMap.set(subject, new Set());
+            subjectsMap.set(subject, existing);
           }
-          actions.forEach(action => subjectsMap.get(subject).add(action));
+          actions.forEach(action => existing.actions.add(action));
         }
       });
     }
   }
-  
-  // Convert to array of objects and sort by subject name
-  return Array.from(subjectsMap.entries())
-    .map(([subject, actionsSet]) => ({
-      subject,
-      actions: Array.from(actionsSet).sort()
+
+  const result = Array.from(subjectsMap.values())
+    .map(item => ({
+      subject: item.subject,
+      label: item.label,
+      module: item.module,
+      actions: Array.from(item.actions).sort(),
     }))
     .sort((a, b) => a.subject.localeCompare(b.subject));
+
+  if (!withActions) {
+    return result.map(item => item.subject);
+  }
+
+  return result;
 }
 
 /**

@@ -126,25 +126,18 @@ export function deriveMenuAccessFromPermissions(permissions) {
   return deriveMenuAccessFromSubjects(subjects)
 }
 
-/** Check if rules array contains manage-all */
-export function hasManageAllRule(rules) {
-  if (!Array.isArray(rules)) return false
-  return rules.some(r => {
-    const actions = r.actions
-      ? (Array.isArray(r.actions) ? r.actions : [r.actions])
-      : (r.action ? [r.action] : [])
-    return r.subject === 'all' && actions.includes('manage')
-  })
+export function hasFullAccess(resources) {
+  if (!resources || typeof resources !== 'object') return false
+  return Array.isArray(resources['*']) && resources['*'].includes('*')
 }
 
 /** Resolve menu access for edit modal — normalize DB data or use role defaults */
 export function resolveMenuAccessForRole(role) {
   const roleName = role?.name?.toLowerCase()
   const perms = role?.permissions || {}
-  const rules = perms.rules || role?.rules || []
+  const resources = perms.resources || {}
 
-  // Admin/owner with manage-all → all menus checked
-  if (hasManageAllRule(rules) || roleName === 'admin' || roleName === 'owner') {
+  if (hasFullAccess(resources) || roleName === 'admin' || roleName === 'owner') {
     return getAllMenuKeyValues()
   }
 
@@ -158,10 +151,7 @@ export function resolveMenuAccessForRole(role) {
     return normalizeMenuAccess([...ROLE_MENU_MAP[roleName]])
   }
 
-  // Last resort: derive from subjects mentioned in the role's rules
-  return deriveMenuAccessFromSubjects(
-    rules.map(rule => rule?.subject).filter(subject => subject && subject !== 'all')
-  )
+  return deriveMenuAccessFromPermissions(resources)
 }
 
 /** Legacy camelCase keys (pre-RBAC seeder) → PascalCase subjects */
@@ -177,7 +167,7 @@ const LEGACY_SUBJECT_MAP = {
   checkIns: 'CheckIn',
   transactions: 'Transaction',
   expenses: 'Expense',
-  products: 'POSProduct',
+  products: 'RestaurantProduct',
 }
 
 /** Build form permissions with every available resource checked */
@@ -189,32 +179,22 @@ export function buildAllResourcePermissions(availableResources) {
   return result
 }
 
-/** Resolve permissions form data from rules (or role defaults) */
-export function resolvePermissionsFromRules(rules, availableResources, role = null) {
+/** Resolve permissions form data from a resources map (or role defaults) */
+export function resolvePermissionsFromResources(resources, availableResources, role = null) {
   const roleName = role?.name?.toLowerCase()
-  const isFullAccess = hasManageAllRule(rules) || roleName === 'admin' || roleName === 'owner'
+  const isFullAccess = hasFullAccess(resources) || roleName === 'admin' || roleName === 'owner'
 
   if (isFullAccess && availableResources.length > 0) {
     return buildAllResourcePermissions(availableResources)
   }
 
-  if (!Array.isArray(rules) || rules.length === 0) return {}
+  if (!resources || typeof resources !== 'object') return {}
 
-  const CRUD = ['read', 'create', 'update', 'delete']
-  const result = {}
-  rules.forEach(rule => {
-    if (rule.subject && rule.subject !== 'all') {
-      const actions = rule.actions
-        ? (Array.isArray(rule.actions) ? rule.actions : [rule.actions])
-        : (rule.action ? [rule.action] : [])
-      // Expand `manage` to all CRUD actions for the checkbox UI instead of dropping it
-      const resolved = actions
-        .filter(a => a)
-        .flatMap(a => a === 'manage' ? CRUD : [a])
-      if (resolved.length > 0) result[rule.subject] = [...new Set(resolved)]
-    }
-  })
-  return result
+  return Object.fromEntries(
+    Object.entries(resources)
+      .filter(([resource, actions]) => resource !== '*' && Array.isArray(actions) && actions.length > 0)
+      .map(([resource, actions]) => [resource, [...new Set(actions)]])
+  )
 }
 
 /** Map legacy flat permissions object to PascalCase subjects */

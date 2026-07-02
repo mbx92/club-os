@@ -46,7 +46,7 @@ const loadProduct = async () => {
 }
 
 const resetForm = () => {
-  form.value = { name: '', sku: '', price: 0 }
+  form.value = { name: '', sku: '', price: parseFloat(product.value?.price) || 0 }
   isEditing.value = false
   editIndex.value = -1
 }
@@ -64,7 +64,7 @@ const openEditModal = (variant, index) => {
   form.value = {
     name: variant.name || '',
     sku: variant.sku || '',
-    price: parseFloat(variant.price) || 0
+    price: parseFloat(variant.price) || parseFloat(product.value?.price) || 0
   }
   isEditing.value = true
   editIndex.value = index
@@ -119,10 +119,9 @@ const handleDelete = async (index) => {
   await saveVariants(updatedVariants)
 }
 
-const isDefaultVariant = (variant) => {
-  if (!product.value) return false
-  return parseFloat(variant.price) === parseFloat(product.value.price)
-}
+const basePrice = computed(() => {
+  return parseFloat(product.value?.price) || 0
+})
 </script>
 
 <template>
@@ -155,13 +154,15 @@ const isDefaultVariant = (variant) => {
         <tbody>
           <tr v-for="(variant, index) in variants" :key="index">
             <td>
-              <div class="flex items-center gap-2">
-                <span class="font-medium">{{ variant.name }}</span>
-                <span v-if="isDefaultVariant(variant)" class="badge badge-sm badge-primary">Default</span>
-              </div>
+              <span class="font-medium">{{ variant.name }}</span>
             </td>
             <td class="font-mono text-sm">{{ variant.sku || '-' }}</td>
-            <td class="font-semibold">{{ formatCurrency(variant.price) }}</td>
+            <td class="font-semibold">
+              {{ formatCurrency(variant.price) }}
+              <span v-if="parseFloat(variant.price) === basePrice" class="ml-2 text-xs text-base-content/50">
+                Same as master
+              </span>
+            </td>
             <td>
               <div class="flex justify-end gap-1">
                 <button 
@@ -184,11 +185,11 @@ const isDefaultVariant = (variant) => {
     </div>
 
     <!-- Empty State -->
-    <div v-else class="text-center py-12">
-      <div class="text-base-content/60 mb-4">
-        <p>No variants configured for this product.</p>
-        <p class="text-sm mt-2">Variants allow you to offer different sizes or options with different prices.</p>
-      </div>
+      <div v-else class="text-center py-12">
+        <div class="text-base-content/60 mb-4">
+          <p>No variants configured for this product.</p>
+          <p class="text-sm mt-2">Variants can have their own selling price when needed.</p>
+        </div>
       <button class="btn btn-primary btn-sm" @click="openAddModal">
         <IconPlus class="w-4 h-4 mr-1" />
         Add First Variant
@@ -231,10 +232,9 @@ const isDefaultVariant = (variant) => {
               />
             </div>
 
-            <!-- Price -->
             <div class="form-control">
               <label class="label">
-                <span class="label-text font-medium">Price <span class="text-error">*</span></span>
+                <span class="label-text font-medium">Variant Price <span class="text-error">*</span></span>
               </label>
               <CurrencyInput
                 v-model="form.price"
@@ -245,7 +245,7 @@ const isDefaultVariant = (variant) => {
               />
               <label class="label">
                 <span class="label-text-alt text-base-content/50">
-                  Current product base price: {{ product ? formatCurrency(product.price) : '-' }}
+                  Master/default price: {{ formatCurrency(basePrice) }}
                 </span>
               </label>
             </div>

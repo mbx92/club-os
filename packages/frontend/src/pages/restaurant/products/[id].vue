@@ -26,6 +26,7 @@ import {
   IconFlame,
   IconAlertTriangle
 } from '@tabler/icons-vue'
+import { getVariantEffectivePrice } from '@/utils/restaurantPricing'
 
 const route = useRoute()
 const router = useRouter()
@@ -353,7 +354,7 @@ onMounted(async () => {
                     <div class="space-y-1">
                       <div v-for="variant in product.productDetails.variants" :key="variant.sku" class="flex justify-between text-sm">
                         <span class="text-base-content/60">{{ variant.name }}</span>
-                        <span class="font-medium">{{ formatCurrency(variant.price) }}</span>
+                        <span class="font-medium">{{ formatCurrency(getVariantEffectivePrice(product, variant)) }}</span>
                       </div>
                     </div>
                   </div>

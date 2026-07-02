@@ -5,6 +5,7 @@ import POSProductGrid from './POSProductGrid.vue'
 import POSCart from './POSCart.vue'
 import ProductExtrasModal from '@/components/restaurant/products/ProductExtrasModal.vue'
 import { useProductExtras } from '@/composables/restaurant/useProductExtras'
+import { getDefaultProductVariant, getProductBasePrice, getVariantEffectivePrice } from '@/utils/restaurantPricing'
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -71,13 +72,16 @@ const addToCart = async (product) => {
     showExtrasModal.value = true
     return
   }
+  const defaultVariant = getDefaultProductVariant(product)
   addProductToCart({
     product,
-    variant: product.productDetails?.variants?.[0] || null,
+    variant: defaultVariant,
     extras: [],
     notes: '',
     quantity: 1,
-    unitPrice: parseFloat(product.price) || 0
+    unitPrice: defaultVariant
+      ? getVariantEffectivePrice(product, defaultVariant)
+      : getProductBasePrice(product)
   })
 }
 
@@ -98,7 +102,7 @@ const addProductToCart = ({ product, variant, extras, notes, quantity, unitPrice
 
 const handleExtrasConfirm = (data) => {
   const product = extrasModalProduct.value
-  const variantPrice = data.variantPrice || parseFloat(product.price) || 0
+  const basePrice = data.variantPrice || getProductBasePrice(product)
   const extrasTotal  = data.extrasTotal || 0
   addProductToCart({
     product,
@@ -106,7 +110,7 @@ const handleExtrasConfirm = (data) => {
     extras: data.selectedExtras || [],
     notes: '',
     quantity: 1,
-    unitPrice: variantPrice + extrasTotal
+    unitPrice: basePrice + extrasTotal
   })
   showExtrasModal.value = false
   extrasModalProduct.value = null

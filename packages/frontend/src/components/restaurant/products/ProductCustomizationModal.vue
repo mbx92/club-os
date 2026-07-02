@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { IconX, IconShoppingCart, IconCheck } from '@tabler/icons-vue'
+import { getDefaultProductVariant, getProductBasePrice, getVariantEffectivePrice } from '@/utils/restaurantPricing'
 
 const props = defineProps({
   show: {
@@ -46,8 +47,9 @@ const extras = computed(() => {
 
 // Calculate total price
 const itemTotal = computed(() => {
-  // Base price from selected variant
-  const basePrice = selectedVariant.value?.price || parseFloat(props.product.price) || 0
+  const basePrice = selectedVariant.value
+    ? getVariantEffectivePrice(props.product, selectedVariant.value)
+    : getProductBasePrice(props.product)
   
   // Add extras
   const extrasTotal = selectedExtras.value.reduce((sum, extra) => sum + (extra.price || 0), 0)
@@ -86,8 +88,7 @@ const isExtraSelected = (extra) => {
 // Reset state when modal opens
 watch(() => props.show, (newVal) => {
   if (newVal) {
-    // Set default variant to first one
-    selectedVariant.value = variants.value[0] || null
+    selectedVariant.value = getDefaultProductVariant(props.product)
     selectedExtras.value = []
     notes.value = ''
     quantity.value = 1
@@ -162,7 +163,7 @@ const decrementQuantity = () => {
                   <div class="font-medium">{{ variant.name }}</div>
                 </div>
                 <div class="font-bold text-primary">
-                  {{ formatCurrency(variant.price) }}
+                  {{ formatCurrency(getVariantEffectivePrice(product, variant)) }}
                 </div>
               </label>
             </div>
@@ -234,7 +235,7 @@ const decrementQuantity = () => {
         <div class="mt-6 p-4 bg-base-200 rounded-lg space-y-2">
           <div class="flex justify-between text-sm">
             <span>Base Price:</span>
-            <span>{{ formatCurrency(selectedVariant?.price || parseFloat(product.price)) }}</span>
+            <span>{{ formatCurrency(selectedVariant ? getVariantEffectivePrice(product, selectedVariant) : getProductBasePrice(product)) }}</span>
           </div>
           <div v-if="selectedExtras.length > 0" class="flex justify-between text-sm">
             <span>Extras:</span>

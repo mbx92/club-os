@@ -24,6 +24,7 @@ import ProductCustomizationModal from '@/components/restaurant/products/ProductC
 import ProductExtrasModal from '@/components/restaurant/products/ProductExtrasModal.vue'
 import { IconReceipt, IconList, IconDashboard, IconShoppingCart, IconCrown, IconTicket, IconAlertTriangle } from '@tabler/icons-vue'
 import { useVouchers } from '@/composables/gym/voucher-management'
+import { getDefaultProductVariant, getProductBasePrice, getVariantEffectivePrice } from '@/utils/restaurantPricing'
 
 const router = useRouter()
 const { showSuccess, showError } = useNotification()
@@ -164,14 +165,19 @@ const addToCart = async (product) => {
 
   // Step 3: Direct Add to Cart
   // No extras, no variant selection needed
+  const defaultVariant = getDefaultProductVariant(product)
   addProductToCart({
     product,
-    variant: product.productDetails?.variants?.[0] || null,
+    variant: defaultVariant,
     extras: [],
     notes: '',
     quantity: 1,
-    unitPrice: parseFloat(product.price) || 0,
-    totalPrice: parseFloat(product.price) || 0
+    unitPrice: defaultVariant
+      ? getVariantEffectivePrice(product, defaultVariant)
+      : getProductBasePrice(product),
+    totalPrice: defaultVariant
+      ? getVariantEffectivePrice(product, defaultVariant)
+      : getProductBasePrice(product)
   })
 }
 
@@ -242,8 +248,8 @@ const handleExtrasConfirm = (data) => {
   }
 
   const product = extrasModalProduct.value
-  // Total = Variant Price + Extras Total
-  const variantPrice = data.variantPrice || parseFloat(product.price) || 0
+  // Total = Master product price + extras total
+  const basePrice = data.variantPrice || getProductBasePrice(product)
   const extrasTotal = data.extrasTotal || 0
   
   addProductToCart({
@@ -252,8 +258,8 @@ const handleExtrasConfirm = (data) => {
     extras: data.selectedExtras || [],
     notes: '',
     quantity: 1,
-    unitPrice: variantPrice + extrasTotal,
-    totalPrice: data.total || variantPrice + extrasTotal
+    unitPrice: basePrice + extrasTotal,
+    totalPrice: data.total || basePrice + extrasTotal
   })
   
   showExtrasModal.value = false

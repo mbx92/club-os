@@ -116,8 +116,8 @@
                 <span class="font-semibold">{{ getMenuAccessCount(role.permissions) }}</span>
               </div>
               <div class="flex items-center justify-between text-sm">
-                <span class="opacity-70">RBAC Rules</span>
-                <span class="font-semibold">{{ getRulesCount(role.permissions) }}</span>
+                <span class="opacity-70">Allowed Actions</span>
+                <span class="font-semibold">{{ Object.values(getDisplayPermissions(role.permissions)).reduce((sum, actions) => sum + (Array.isArray(actions) ? actions.length : 0), 0) }}</span>
               </div>
             </div>
 
@@ -427,7 +427,10 @@
                     <!-- Resource Info -->
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center justify-between mb-1.5">
-                        <h4 class="font-semibold text-sm">{{ resource.name }}</h4>
+                        <div class="min-w-0">
+                          <h4 class="font-semibold text-sm truncate">{{ resource.label || resource.name }}</h4>
+                          <p v-if="resource.label && resource.label !== resource.name" class="text-[10px] opacity-50 truncate">{{ resource.name }}</p>
+                        </div>
                         <span class="text-xs opacity-60 whitespace-nowrap ml-2">
                           {{ getSelectedActions(resource.name).length }}/{{ resource.actions.length }}
                         </span>
@@ -604,14 +607,6 @@
           </a>
           <a
             class="tab gap-2"
-            :class="{ 'tab-active': permissionView === 'rules-tab' }"
-            @click="permissionView = 'rules-tab'"
-          >
-            <IconShield class="w-4 h-4" />
-            RBAC Rules
-          </a>
-          <a
-            class="tab gap-2"
             :class="{ 'tab-active': permissionView === 'menu' }"
             @click="permissionView = 'menu'"
           >
@@ -635,9 +630,9 @@
               <div class="stat-figure text-secondary">
                 <IconShield class="w-8 h-8" />
               </div>
-              <div class="stat-title">RBAC Rules</div>
-              <div class="stat-value text-secondary">{{ getRulesCount(viewingRole?.permissions) }}</div>
-              <div class="stat-desc">Defined permission rules</div>
+              <div class="stat-title">Actions</div>
+              <div class="stat-value text-secondary">{{ Object.values(getDisplayPermissions(viewingRole?.permissions)).reduce((sum, actions) => sum + (Array.isArray(actions) ? actions.length : 0), 0) }}</div>
+              <div class="stat-desc">Total allowed actions</div>
             </div>
             <div class="stat">
               <div class="stat-figure text-accent">
@@ -719,44 +714,7 @@
           </div>
           <div v-if="Object.keys(getDisplayPermissions(viewingRole?.permissions)).length === 0" class="text-center py-8 opacity-50">
             <IconDatabase class="w-12 h-12 mx-auto mb-2" />
-            <p>No legacy resource permissions defined</p>
-          </div>
-        </div>
-
-        <!-- RBAC Rules View -->
-        <div v-if="permissionView === 'rules-tab'" class="space-y-3 max-h-[500px] overflow-y-auto">
-          <div
-            v-for="(rule, index) in viewingRole?.permissions?.rules || []"
-            :key="index"
-            class="card bg-base-200"
-          >
-            <div class="card-body p-4">
-              <div class="flex items-start justify-between mb-2">
-                <div class="flex-1">
-                  <div class="flex items-center gap-2 mb-2">
-                    <span class="badge badge-primary">{{ rule.subject || 'Unknown' }}</span>
-                    <span v-if="rule.inverted" class="badge badge-error badge-sm">INVERTED</span>
-                  </div>
-                  <div class="flex flex-wrap gap-2">
-                    <span
-                      v-for="action in (rule.actions || [])"
-                      :key="action"
-                      class="badge badge-sm badge-outline capitalize"
-                    >
-                      {{ action }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div v-if="rule.conditions" class="mt-3 pt-3 border-t border-base-300">
-                <div class="text-xs opacity-70 mb-1">Conditions:</div>
-                <pre class="text-xs bg-base-300 p-2 rounded overflow-x-auto">{{ JSON.stringify(rule.conditions, null, 2) }}</pre>
-              </div>
-            </div>
-          </div>
-          <div v-if="!viewingRole?.permissions?.rules || viewingRole.permissions.rules.length === 0" class="text-center py-8 opacity-50">
-            <IconShield class="w-12 h-12 mx-auto mb-2" />
-            <p>No RBAC rules defined</p>
+            <p>No resource permissions defined</p>
           </div>
         </div>
 
@@ -814,8 +772,7 @@ import { ALL_MENU_KEYS, ROLE_MENU_MAP } from '@/navigation/menuKeys'
 import {
   getAllMenuKeyValues,
   resolveMenuAccessForRole,
-  resolvePermissionsFromRules,
-  mapLegacyPermissions,
+  resolvePermissionsFromResources,
   buildAllResourcePermissions,
   normalizeMenuAccess
 } from '@/navigation/menuKeyUtils'
@@ -845,13 +802,15 @@ import {
   IconUsers,
   IconCash,
   IconToolsKitchen2,
-  IconBrain,
   IconFileInvoice,
-  IconChartBar,
   IconSettings,
   IconUserCog,
   IconCrown,
-  IconCashRegister
+  IconCashRegister,
+  IconTicket,
+  IconBuildingSkyscraper,
+  IconReportAnalytics,
+  IconServerCog
 } from '@tabler/icons-vue'
 
 const { showError } = useNotification()
@@ -868,8 +827,7 @@ const {
   createRole,
   updateRole,
   deleteRole,
-  regenerateRoutes,
-  rulesToFormPermissions
+  regenerateRoutes
 } = useRolesPermissions()
 
 const roleModal = ref(null)
@@ -881,25 +839,49 @@ const searchQuery = ref('')
 const permissionSearch = ref('')
 const viewMode = ref('cards') // 'cards' or 'list'
 const activeModule = ref('all')
-const permissionView = ref('summary') // 'summary', 'resources', 'rules-tab', 'menu'
+const permissionView = ref('summary') // 'summary', 'resources', 'menu'
 
 // Check if user is superadmin
 const isSuperAdmin = ref(authStore.user?.isSuperAdmin || false)
 
-// Available module tabs — dynamically computed to only show tabs with content
-const TAB_DEFS = [
-  { id: 'all', label: 'All', icon: IconShield },
-  { id: 'dashboard', label: 'Dashboard', icon: IconDashboard },
-  { id: 'gym', label: 'Gym', icon: IconUsers },
-  { id: 'restaurant', label: 'Restaurant', icon: IconToolsKitchen2 },
-  { id: 'finance', label: 'Finance', icon: IconFileInvoice },
-  { id: 'system', label: 'System', icon: IconSettings },
+const MODULE_META = {
+  all: { id: 'all', label: 'All', icon: IconShield },
+  dashboard: { id: 'dashboard', label: 'Dashboard', icon: IconDashboard },
+  'cash-register': { id: 'cash-register', label: 'Cash Register', icon: IconCashRegister },
+  gym: { id: 'gym', label: 'Gym', icon: IconUsers },
+  restaurant: { id: 'restaurant', label: 'Restaurant', icon: IconToolsKitchen2 },
+  vouchers: { id: 'vouchers', label: 'Vouchers', icon: IconTicket },
+  'back-office': { id: 'back-office', label: 'Back Office', icon: IconBuildingSkyscraper },
+  finances: { id: 'finances', label: 'Finances', icon: IconFileInvoice },
+  reports: { id: 'reports', label: 'Reports', icon: IconReportAnalytics },
+  subscription: { id: 'subscription', label: 'Subscription', icon: IconCrown },
+  settings: { id: 'settings', label: 'Settings', icon: IconSettings },
+  system: { id: 'system', label: 'System', icon: IconServerCog },
+}
+
+const MODULE_ORDER = [
+  'all',
+  'dashboard',
+  'cash-register',
+  'gym',
+  'restaurant',
+  'vouchers',
+  'back-office',
+  'finances',
+  'reports',
+  'subscription',
+  'settings',
+  'system',
 ]
+
 const permissionModules = computed(() => {
-  return TAB_DEFS.filter(tab => {
-    if (tab.id === 'all') return true
-    return availableResources.value.some(r => getResourceModule(r.name) === tab.id)
-  })
+  const availableModuleIds = new Set(
+    availableResources.value.map(resource => resource.module || 'system')
+  )
+
+  return MODULE_ORDER
+    .filter(id => id === 'all' || availableModuleIds.has(id))
+    .map(id => MODULE_META[id] || { id, label: id, icon: IconShield })
 })
 
 // Role Templates — subjects must match backend config/routePermissions.js ROUTE_TO_SUBJECT_MAP
@@ -1036,12 +1018,15 @@ const filteredPermissionsByModule = computed(() => {
   // Filter by search
   if (permissionSearch.value) {
     const query = permissionSearch.value.toLowerCase()
-    filtered = filtered.filter(r => r.name.toLowerCase().includes(query))
+    filtered = filtered.filter(r =>
+      r.name.toLowerCase().includes(query) ||
+      (r.label || '').toLowerCase().includes(query)
+    )
   }
 
-  // Filter by module (pass PascalCase name directly)
+  // Filter by module from backend catalog
   if (activeModule.value !== 'all') {
-    filtered = filtered.filter(r => getResourceModule(r.name) === activeModule.value)
+    filtered = filtered.filter(r => (r.module || 'system') === activeModule.value)
   }
 
   return filtered
@@ -1059,105 +1044,14 @@ const selectedActionCount = computed(() => {
   }, 0)
 })
 
-// Helper: Get resource module by subject name (PascalCase from backend)
-  const getResourceModule = (resourceName) => {
-    // ⚠️  Only contains subjects from backend config/routePermissions.js ROUTE_TO_SUBJECT_MAP.
-    // Every subject returned by GET /permissions/subjects must have an entry here.
-    const MODULE_MAP = {
-      // Dashboard
-      'Dashboard':           'dashboard',
-
-      // Gym
-      'ActiveService':       'gym',
-      'CheckIn':             'gym',
-      'EmployeeSchedule':    'gym',
-      'Member':              'gym',
-      'MembershipPlan':      'gym',
-      'PTSession':           'gym',
-      'ServicePlan':         'gym',
-      'Shift':               'gym',
-      'StaffAttendance':     'gym',
-      'Trainer':             'gym',
-      'TrainerCommission':   'gym',
-
-      // Restaurant
-      'RestaurantCategory':  'restaurant',
-      'RestaurantLocation':  'restaurant',
-      'RestaurantProduct':   'restaurant',
-      'RestaurantStock':     'restaurant',
-      'RestaurantTable':     'restaurant',
-
-      // Finance
-      'CashFlow':            'finance',
-      'CashRegisterSession': 'finance',
-      'Expense':             'finance',
-      'ExpenseCategory':     'finance',
-      'FinanceDashboard':    'finance',
-      'FinancialReport':     'finance',
-      'Income':              'finance',
-      'IncomeCategory':      'finance',
-      'Invoice':             'finance',
-      'Payment':             'finance',
-      'PettyCash':           'finance',
-      'Subscription':        'finance',
-      'SubscriptionPlan':    'finance',
-      'Supplier':            'finance',
-      'Transaction':         'finance',
-
-      // Vouchers (cross-cutting)
-      'Voucher':             'finance',
-
-      // System / Core
-      'Auth':                'system',
-      'DatabaseBackup':      'system',
-      'Health':              'system',
-      'HikvisionDevice':     'system',
-      'Log':                 'system',
-      'Permission':          'system',
-      'PrinterSettings':     'system',
-      'ReceiptTemplate':     'system',
-      'Role':                'system',
-      'Scheduler':           'system',
-      'Settings':            'system',
-      'SubscriptionFeature': 'system',
-      'SystemMetrics':       'system',
-      'SystemSettings':      'system',
-      'Tenant':              'system',
-      'User':                'system',
-    }
-
-    // Direct lookup
-    if (MODULE_MAP[resourceName]) return MODULE_MAP[resourceName]
-
-    // Fallback: prefix-based detection for future subjects
-    const name = resourceName.toLowerCase()
-    if (name.startsWith('restaurant')) return 'restaurant'
-    if (name.startsWith('gym'))        return 'gym'
-    if (name.startsWith('pos'))        return 'pos'
-    if (name.startsWith('finance'))    return 'finance'
-    if (name.includes('report'))       return 'reports'
-    if (name === 'dashboard')          return 'dashboard'
-
-    return 'system'
-  }
-
 // Helper: Get selected actions for a resource
 const getSelectedActions = (resourceName) => {
   return formData.value.permissions[resourceName] || []
 }
 
-// Helper: Filter permissions - exclude rules and uiFlags for display
+// Helper: Extract resource permissions for display
 const getDisplayPermissions = (permissions) => {
-  if (!permissions) return {}
-  
-  const filtered = {}
-  for (const [key, value] of Object.entries(permissions)) {
-    // Skip rules and uiFlags - only show legacy resource permissions
-    if (key !== 'rules' && key !== 'uiFlags' && key !== 'menuAccess' && Array.isArray(value)) {
-      filtered[key] = value
-    }
-  }
-  return filtered
+  return permissions?.resources || {}
 }
 
 // Helper: Get permission count
@@ -1170,12 +1064,6 @@ const getPermissionCount = (permissions) => {
 const getMenuAccessCount = (permissions) => {
   if (!permissions?.menuAccess) return 0
   return permissions.menuAccess.length
-}
-
-// Helper: Get RBAC rules count
-const getRulesCount = (permissions) => {
-  if (!permissions?.rules) return 0
-  return permissions.rules.length
 }
 
 // Helper: Get accessible modules — extract unique top-level names from menuAccess keys
@@ -1272,7 +1160,7 @@ const openCreateModal = () => {
   roleModal.value?.showModal()
 }
 
-// Open edit modal — prefer rules as source of truth, fallback to legacy permissions
+// Open edit modal
 const openEditModal = (role) => {
   editingRole.value = role
 
@@ -1286,30 +1174,8 @@ const openEditModal = (role) => {
 
   const roleName = role.name?.toLowerCase()
 
-  // Priority 1: rules array (new backend format)
-  const rulesSrc = perms.rules || role.rules
-  if (Array.isArray(rulesSrc) && rulesSrc.length > 0) {
-    existingPermissions = resolvePermissionsFromRules(rulesSrc, availableResources.value, role)
-    if (import.meta.env.DEV) console.log('[EditModal] Loaded from rules:', existingPermissions)
-  }
-  // Priority 2: rolePermissions object
-  else if (perms.rolePermissions && Object.keys(perms.rolePermissions).length > 0) {
-    const rp = perms.rolePermissions
-    Object.entries(rp).forEach(([subject, val]) => {
-      if (Array.isArray(val) && val.length > 0) existingPermissions[subject] = val
-      else if (val && typeof val === 'object') {
-        const actions = Object.entries(val).filter(([, v]) => v).map(([a]) => a)
-        if (actions.length > 0) existingPermissions[subject] = actions
-      }
-    })
-    if (import.meta.env.DEV) console.log('[EditModal] Loaded from rolePermissions:', existingPermissions)
-  }
-  // Priority 3: flat permissions object (legacy camelCase pre-RBAC)
-  else {
-    const legacy = getDisplayPermissions(perms)
-    existingPermissions = mapLegacyPermissions(legacy, availableResources.value)
-    if (import.meta.env.DEV) console.log('[EditModal] Loaded from legacy permissions:', existingPermissions)
-  }
+  existingPermissions = resolvePermissionsFromResources(perms.resources, availableResources.value, role)
+  if (import.meta.env.DEV) console.log('[EditModal] Loaded resources:', existingPermissions)
 
   // Admin/owner fallback: always show all resources checked in UI
   if ((roleName === 'admin' || roleName === 'owner') && availableResources.value.length > 0) {
@@ -1398,7 +1264,7 @@ const togglePermission = (resource, action) => {
 const handleRegenerateRoutes = async () => {
   const confirmed = await dialog.confirm({
     title: 'Sync Routes Metadata',
-    message: 'This will re-scan all route files and update available resources. Continue?',
+    message: 'This will refresh route metadata and update the available permission catalog. Continue?',
     confirmText: 'Sync',
     cancelText: 'Cancel'
   })

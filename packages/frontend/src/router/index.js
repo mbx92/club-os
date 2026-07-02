@@ -287,19 +287,10 @@ router.beforeEach(async (to, from) => {
 
   // Auto-redirect from root to appropriate dashboard based on available modules
   if (to.path === '/' && auth.user && !isSuperAdmin) {
-    // Check if user is kasir — redirect to floor plan POS
-    
     // Resolve role name — role can be a string ('Member') or object ({ name: 'Member' })
     const userRoleName = typeof auth.user?.role === 'string'
       ? (auth.user.role || '').toLowerCase()
       : (auth.user?.role?.name || '').toLowerCase()
-    
-    const isKasir = userRoleName === 'kasir' || userRoleName === 'cashier'
-
-    if (isKasir) {
-      debug.log('[Router Guard] Kasir role detected, redirecting to floor plan POS')
-      return { path: '/restaurant/pos/floor-plan-pos', replace: true }
-    }
 
     // Check if user is member — redirect to member dashboard
     const isMember = userRoleName === 'member'

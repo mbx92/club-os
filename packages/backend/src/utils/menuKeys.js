@@ -19,6 +19,7 @@ const ADMIN_MENU_ACCESS = [
   'back-office', 'back-office.attendance', 'back-office.attendance-report', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
   'finances', 'finances.dashboard', 'finances.incomes', 'finances.income-categories', 'finances.expenses', 'finances.expense-categories', 'finances.cash-flow', 'finances.petty-cash', 'finances.vault', 'finances.analytics', 'finances.transactions', 'finances.shareholders', 'finances.reports',
   'reports', 'reports.revenue', 'reports.attendance', 'reports.member-stats', 'reports.member-reports', 'reports.service-reports', 'reports.product-reports', 'reports.staff-reports', 'reports.forecasting',
+  'subscription', 'subscription.plans', 'subscription.subscriptions', 'subscription.tenants', 'subscription.billing',
   'settings',
 ];
 
@@ -133,23 +134,14 @@ const LEGACY_MENU_KEY_MAP = {
 
 const VALID_MENU_KEYS = new Set(ADMIN_MENU_ACCESS);
 
-/** When a parent key is present, include all its children from the canonical list */
-function expandParentMenuKeys(keys) {
-  const result = new Set(keys);
-  for (const key of keys) {
-    if (!key.includes('.')) {
-      for (const valid of VALID_MENU_KEYS) {
-        if (valid.startsWith(key + '.')) result.add(valid);
-      }
-    }
-  }
-  return [...result];
-}
-
 /**
  * Normalize stored menuAccess — remap legacy keys, drop unknown/stale entries.
+ * Stored menuAccess should preserve explicit child selections from the admin UI.
+ * If a parent key exists without any explicit children, we still expand it as a
+ * legacy compatibility fallback for older records that stored parent-only keys.
+ *
  * @param {string[]} keys
- * @param {string} [roleName] - optional role name to restrict parent-key expansion
+ * @param {string} [roleName] - optional role name to restrict legacy parent-key expansion
  */
 function normalizeMenuAccess(keys, roleName) {
   if (!Array.isArray(keys)) return [];
@@ -172,22 +164,25 @@ function normalizeMenuAccess(keys, roleName) {
     }
   }
 
-  // Expand parent-only keys to their children, but restrict to the role template
-  // when available so cashier doesn't get admin-level children from parents like `gym`.
-  return expandParentKeysInRoleContext([...result], roleName);
+  return expandLegacyParentOnlyKeys([...result], roleName);
 }
 
 /**
- * Expand parent keys (e.g. 'gym') to their children, optionally restricted
- * by the role template from ROLE_MENU_MAP.
+ * Expand parent keys only when no explicit child for that parent is present.
+ * This preserves partial selections like:
+ *   ['back-office', 'back-office.attendance', 'back-office.schedule']
+ * and avoids re-adding unchecked children such as `back-office.devices`.
  */
-function expandParentKeysInRoleContext(keys, roleName) {
+function expandLegacyParentOnlyKeys(keys, roleName) {
   const result = new Set(keys);
   const roleTemplate = roleName ? (ROLE_MENU_MAP[roleName] || ROLE_MENU_MAP[roleName.toLowerCase()] || null) : null;
   const allowedChildren = roleTemplate ? new Set(roleTemplate) : VALID_MENU_KEYS;
 
   for (const key of keys) {
     if (!key.includes('.')) {
+      const hasExplicitChild = keys.some(candidate => candidate.startsWith(key + '.'));
+      if (hasExplicitChild) continue;
+
       for (const valid of VALID_MENU_KEYS) {
         if (valid.startsWith(key + '.') && allowedChildren.has(valid)) {
           result.add(valid);
@@ -204,23 +199,20 @@ function getMenuAccessForRole(roleName) {
   return ROLE_MENU_MAP[roleName] || ROLE_MENU_MAP[key] || [];
 }
 
-function hasManageAllRule(rules) {
-  if (!Array.isArray(rules)) return false;
-  return rules.some(r => {
-    const actions = r.actions
-      ? (Array.isArray(r.actions) ? r.actions : [r.actions])
-      : (r.action ? [r.action] : []);
-    return r.subject === 'all' && actions.includes('manage');
-  });
+function hasFullAccess(resources) {
+  if (!resources || typeof resources !== 'object') return false;
+  return Array.isArray(resources['*']) && resources['*'].includes('*');
 }
 
-function deriveMenuAccessFromRules(rules) {
-  if (!Array.isArray(rules)) return [];
+function deriveMenuAccessFromResources(resources, roleName) {
+  if (!resources || typeof resources !== 'object') return [];
+  if (hasFullAccess(resources)) {
+    return roleName ? getMenuAccessForRole(roleName) : [...VALID_MENU_KEYS];
+  }
 
   const result = new Set();
-  for (const rule of rules) {
-    const subject = rule?.subject;
-    if (!subject || subject === 'all') continue;
+  for (const subject of Object.keys(resources)) {
+    if (!subject || subject === 'all' || subject === '*') continue;
 
     const menuKeys = SUBJECT_MENU_MAP[subject] || [];
     for (const key of menuKeys) {
@@ -228,15 +220,15 @@ function deriveMenuAccessFromRules(rules) {
     }
   }
 
-  return normalizeMenuAccess([...result]);
+  return normalizeMenuAccess([...result], roleName);
 }
 
 module.exports = {
   ADMIN_MENU_ACCESS,
   ROLE_MENU_MAP,
+  deriveMenuAccessFromResources,
+  hasFullAccess,
   normalizeMenuAccess,
   getMenuAccessForRole,
-  hasManageAllRule,
-  deriveMenuAccessFromRules,
   VALID_MENU_KEYS,
 };
