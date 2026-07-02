@@ -45,6 +45,16 @@ meta:
       <a
         role="tab"
         class="tab relative"
+        :class="{ 'tab-active': activeTab === 'integrations' }"
+        @click="activeTab = 'integrations'"
+      >
+        <IconPlug class="w-4 h-4 mr-2" />
+        Integrations
+        <span v-if="activeTab === 'integrations'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></span>
+      </a>
+      <a
+        role="tab"
+        class="tab relative"
         :class="{ 'tab-active': activeTab === 'theme' }"
         @click="activeTab = 'theme'"
       >
@@ -141,6 +151,11 @@ meta:
         <TransactionTab />
       </div>
 
+      <!-- Integrations Tab -->
+      <div v-if="activeTab === 'integrations'" key="integrations">
+        <IntegrationSettingsTab />
+      </div>
+
       <!-- Theme Settings Tab -->
       <div v-if="activeTab === 'theme'" key="theme">
         <ThemeSettingsTab />
@@ -190,6 +205,7 @@ import TenantSettingsTab from '@/components/settings/TenantSettingsTab.vue'
 import WorkingHoursTab from '@/components/settings/WorkingHoursTab.vue'
 import ThemeSettingsTab from '@/components/settings/ThemeSettingsTab.vue'
 import TransactionTab from '@/components/settings/TransactionTab.vue'
+import IntegrationSettingsTab from '@/components/settings/IntegrationSettingsTab.vue'
 import SubscriptionsTab from '@/components/settings/SubscriptionsTab.vue'
 import UserManagementTab from '@/components/settings/UserManagementTab.vue'
 import RolesPermissionsTab from '@/components/settings/RolesPermissionsTab.vue'
@@ -202,14 +218,14 @@ import {
   IconClock,
   IconPalette,
   IconCreditCard,
+  IconPlug,
   IconReceipt,
   IconUsers,
   IconShield,
   IconPrinter,
   IconFileText,
   IconFileAnalytics,
-  IconSettings,
-  IconInfoCircle
+  IconSettings
 } from '@tabler/icons-vue'
 
 const isDev = import.meta.env.DEV
@@ -227,4 +243,3 @@ watch(activeTab, (newTab) => {
   }
 })
 </script>
-

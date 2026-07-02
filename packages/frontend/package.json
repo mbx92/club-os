@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@sentry/vue": "^10.63.0",
     "@tabler/icons": "^3.35.0",
     "@tabler/icons-vue": "^3.35.0",
     "@vueuse/core": "^13.9.0",

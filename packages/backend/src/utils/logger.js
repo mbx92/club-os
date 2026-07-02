@@ -1,6 +1,7 @@
 const { createLogger, format, transports } = require('winston');
 const DailyRotateFile = require('winston-daily-rotate-file');
 const path = require('path');
+const { captureBackendLog } = require('./glitchtip');
 
 // Lazy-load Log model to avoid circular dependency
 let Log = null;
@@ -266,8 +267,7 @@ logger.logInfo = (message, meta = {}) => {
 
 logger.logError = (message, meta = {}) => {
   try {
-    logger.log('error', message, meta);
-    saveToDatabase('error', message, meta);
+    logger.error(message, meta);
   } catch (err) {
     console.error('Error in error logger:', err);
   }
@@ -279,6 +279,17 @@ logger.logWarn = (message, meta = {}) => {
     saveToDatabase('warn', message, meta);
   } catch (err) {
     console.error('Error in warn logger:', err);
+  }
+};
+
+const originalError = logger.error.bind(logger);
+logger.error = (message, meta = {}) => {
+  try {
+    originalError(message, meta);
+    saveToDatabase('error', message, meta);
+    void captureBackendLog(message, meta);
+  } catch (err) {
+    console.error('Error in base error logger:', err);
   }
 };
 

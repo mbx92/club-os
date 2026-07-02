@@ -53,15 +53,6 @@
                     <button
                       role="tab"
                       class="tab gap-1.5"
-                      :class="{ 'tab-active': activeTab === 'cloud' }"
-                      @click="activeTab = 'cloud'"
-                    >
-                      <IconCloudUpload class="w-4 h-4" />
-                      Cloud Storage
-                    </button>
-                    <button
-                      role="tab"
-                      class="tab gap-1.5"
                       :class="{ 'tab-active': activeTab === 'import' }"
                       @click="activeTab = 'import'"
                     >
@@ -121,6 +112,9 @@
                               <div class="text-lg font-bold leading-tight text-base-content">
                                 {{ cloudStorageLabel }}
                               </div>
+                              <p class="text-xs leading-5 text-base-content/55">
+                                Konfigurasi provider cloud dipindahkan ke tab <strong>Integrations</strong>.
+                              </p>
                               <div class="flex flex-wrap gap-2">
                                 <span class="badge badge-outline">{{ enabledCloudProviderCount }} cloud aktif</span>
                                 <span class="badge badge-outline">{{ requiredCloudProviderCount }} wajib</span>
@@ -295,248 +289,6 @@
                   </div>
                 </template>
 
-                <template v-else>
-                  <div class="space-y-6">
-                    <div class="rounded-[1.4rem] border border-warning/30 bg-warning/10 p-4">
-                      <div class="flex items-start gap-3">
-                        <IconAlertTriangle class="mt-0.5 h-5 w-5 text-warning" />
-                        <div class="text-sm text-base-content/72">
-                          Access key dan secret key disimpan di tenant settings. Pastikan akses ke tab ini hanya untuk admin tepercaya.
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="space-y-6">
-                      <div class="card border border-base-300 bg-base-100 shadow-sm">
-                        <div class="card-body gap-5 p-5 sm:p-6">
-                          <div>
-                            <h3 class="card-title text-lg flex items-center gap-2">
-                              <IconCloudUpload class="w-5 h-5" />
-                              Google Drive
-                            </h3>
-                            <p class="mt-1 text-sm text-base-content/65">
-                              Cocok bila tim operasional lebih nyaman memantau salinan backup dari Google Drive.
-                            </p>
-                          </div>
-
-                          <div class="flex flex-wrap gap-2">
-                            <span class="badge" :class="googleDriveSettings.enabled ? 'badge-success' : 'badge-ghost'">
-                              {{ googleDriveSettings.enabled ? 'Enabled' : 'Disabled' }}
-                            </span>
-                            <span class="badge" :class="googleDriveSettings.enabled && googleDriveSettings.required ? 'badge-warning' : 'badge-ghost'">
-                              {{ googleDriveSettings.enabled && googleDriveSettings.required ? 'Required' : 'Optional' }}
-                            </span>
-                          </div>
-
-                          <div class="grid gap-3">
-                            <label class="flex items-start gap-3 rounded-2xl border border-base-300 bg-base-200/55 px-4 py-3.5 cursor-pointer">
-                              <input
-                                v-model="googleDriveSettings.enabled"
-                                type="checkbox"
-                                class="checkbox checkbox-sm checkbox-primary mt-0.5"
-                              >
-                              <div>
-                                <div class="font-medium">Aktifkan Google Drive</div>
-                                <div class="text-sm text-base-content/58">Upload backup ke folder Drive tenant setelah file lokal selesai dibuat.</div>
-                              </div>
-                            </label>
-
-                            <label
-                              class="flex items-start gap-3 rounded-2xl border border-base-300 bg-base-200/55 px-4 py-3.5"
-                              :class="googleDriveSettings.enabled ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'"
-                            >
-                              <input
-                                v-model="googleDriveSettings.required"
-                                type="checkbox"
-                                class="checkbox checkbox-sm checkbox-warning mt-0.5"
-                                :disabled="!googleDriveSettings.enabled"
-                              >
-                              <div>
-                                <div class="font-medium">Jadikan upload sebagai syarat wajib</div>
-                                <div class="text-sm text-base-content/58">Gunakan bila backup dianggap belum lengkap tanpa salinan ke Drive.</div>
-                              </div>
-                            </label>
-                          </div>
-
-                          <div>
-                            <label class="label px-1">
-                              <span class="label-text font-medium flex items-center gap-2">
-                                <IconFolder class="w-4 h-4" />
-                                Folder ID
-                              </span>
-                            </label>
-                            <input
-                              v-model="googleDriveSettings.folderId"
-                              type="text"
-                              class="input input-bordered h-12 w-full rounded-2xl"
-                              placeholder="1ESvPnfhl6eG21uIyE42ywJY8FtM3xDuV"
-                            >
-                          </div>
-
-                          <div class="flex flex-col gap-3 border-t border-base-300 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                            <p class="text-sm text-base-content/58">
-                              Tombol proses akan membuat file backup baru lalu mengirimkannya hanya ke Google Drive.
-                            </p>
-
-                            <div class="flex flex-wrap justify-end gap-2">
-                              <button
-                                class="btn btn-ghost btn-sm gap-2"
-                                :disabled="isSavingBackupSettings || isCreatingBackup || !googleDriveSettings.enabled"
-                                @click="handleProcessCloudBackup('google_drive')"
-                              >
-                                <span v-if="isProcessingGoogleDrive" class="loading loading-spinner loading-sm"></span>
-                                <IconCloudUpload v-else class="w-4 h-4" />
-                                Proses Backup
-                              </button>
-                              <button
-                                class="btn btn-primary btn-sm gap-2"
-                                :disabled="isSavingBackupSettings || isCreatingBackup"
-                                @click="handleSaveGoogleDriveSettings"
-                              >
-                                <span v-if="isSavingBackupSettings" class="loading loading-spinner loading-sm"></span>
-                                <IconDeviceFloppy v-else class="w-4 h-4" />
-                                Simpan Google Drive
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div class="card border border-base-300 bg-base-100 shadow-sm">
-                        <div class="card-body gap-5 p-5 sm:p-6">
-                          <div>
-                            <h3 class="card-title text-lg flex items-center gap-2">
-                              <IconCloudUpload class="w-5 h-5" />
-                              S3 / MinIO
-                            </h3>
-                            <p class="mt-1 text-sm text-base-content/65">
-                              Cocok untuk object storage pribadi, server internal, atau MinIO self-hosted.
-                            </p>
-                          </div>
-
-                          <div class="flex flex-wrap gap-2">
-                            <span class="badge" :class="minioSettings.enabled ? 'badge-success' : 'badge-ghost'">
-                              {{ minioSettings.enabled ? 'Enabled' : 'Disabled' }}
-                            </span>
-                            <span class="badge" :class="minioSettings.enabled && minioSettings.required ? 'badge-warning' : 'badge-ghost'">
-                              {{ minioSettings.enabled && minioSettings.required ? 'Required' : 'Optional' }}
-                            </span>
-                          </div>
-
-                          <div class="grid gap-3">
-                            <label class="flex items-start gap-3 rounded-2xl border border-base-300 bg-base-200/55 px-4 py-3.5 cursor-pointer">
-                              <input
-                                v-model="minioSettings.enabled"
-                                type="checkbox"
-                                class="checkbox checkbox-sm checkbox-primary mt-0.5"
-                              >
-                              <div>
-                                <div class="font-medium">Aktifkan MinIO / S3</div>
-                                <div class="text-sm text-base-content/58">Upload file backup ke bucket tujuan menggunakan S3-compatible API.</div>
-                              </div>
-                            </label>
-
-                            <label
-                              class="flex items-start gap-3 rounded-2xl border border-base-300 bg-base-200/55 px-4 py-3.5"
-                              :class="minioSettings.enabled ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'"
-                            >
-                              <input
-                                v-model="minioSettings.required"
-                                type="checkbox"
-                                class="checkbox checkbox-sm checkbox-warning mt-0.5"
-                                :disabled="!minioSettings.enabled"
-                              >
-                              <div>
-                                <div class="font-medium">Jadikan upload sebagai syarat wajib</div>
-                                <div class="text-sm text-base-content/58">Gunakan bila backup harus sukses tersalin ke object storage.</div>
-                              </div>
-                            </label>
-                          </div>
-
-                          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
-                              <label class="label px-1"><span class="label-text font-medium">Endpoint</span></label>
-                              <input v-model="minioSettings.endpoint" type="text" class="input input-bordered h-12 w-full rounded-2xl" placeholder="http://127.0.0.1:9000">
-                            </div>
-                            <div>
-                              <label class="label px-1"><span class="label-text font-medium">Bucket</span></label>
-                              <input v-model="minioSettings.bucket" type="text" class="input input-bordered h-12 w-full rounded-2xl" placeholder="database-backups">
-                            </div>
-                            <div>
-                              <label class="label px-1"><span class="label-text font-medium">Access Key</span></label>
-                              <input v-model="minioSettings.accessKeyId" type="text" class="input input-bordered h-12 w-full rounded-2xl" placeholder="minioadmin">
-                            </div>
-                            <div>
-                              <label class="label px-1"><span class="label-text font-medium">Secret Key</span></label>
-                              <input v-model="minioSettings.secretAccessKey" type="password" class="input input-bordered h-12 w-full rounded-2xl" placeholder="Masukkan secret key">
-                            </div>
-                            <div>
-                              <label class="label px-1"><span class="label-text font-medium">Region</span></label>
-                              <input v-model="minioSettings.region" type="text" class="input input-bordered h-12 w-full rounded-2xl" placeholder="us-east-1">
-                            </div>
-                            <div>
-                              <label class="label px-1"><span class="label-text font-medium">Object Prefix</span></label>
-                              <input v-model="minioSettings.objectPrefix" type="text" class="input input-bordered h-12 w-full rounded-2xl" placeholder="club-os/backups">
-                            </div>
-                          </div>
-
-                          <div class="grid gap-3">
-                            <label class="flex items-start gap-3 rounded-2xl border border-base-300 bg-base-200/55 px-4 py-3.5 cursor-pointer">
-                              <input
-                                v-model="minioSettings.forcePathStyle"
-                                type="checkbox"
-                                class="checkbox checkbox-sm checkbox-primary mt-0.5"
-                              >
-                              <div>
-                                <div class="font-medium">Force path style</div>
-                                <div class="text-sm text-base-content/58">Biasanya dibutuhkan untuk MinIO dan endpoint lokal tanpa virtual-hosted bucket.</div>
-                              </div>
-                            </label>
-
-                            <label class="flex items-start gap-3 rounded-2xl border border-base-300 bg-base-200/55 px-4 py-3.5 cursor-pointer">
-                              <input
-                                v-model="minioSettings.useSsl"
-                                type="checkbox"
-                                class="checkbox checkbox-sm checkbox-primary mt-0.5"
-                              >
-                              <div>
-                                <div class="font-medium">Gunakan HTTPS default</div>
-                                <div class="text-sm text-base-content/58">Dipakai bila endpoint ditulis tanpa awalan `http://` atau `https://`.</div>
-                              </div>
-                            </label>
-                          </div>
-
-                          <div class="flex flex-col gap-3 border-t border-base-300 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                            <p class="text-sm text-base-content/58">
-                              Tombol proses akan membuat file backup baru lalu mengirimkannya hanya ke MinIO / S3.
-                            </p>
-
-                            <div class="flex flex-wrap justify-end gap-2">
-                              <button
-                                class="btn btn-ghost btn-sm gap-2"
-                                :disabled="isSavingBackupSettings || isCreatingBackup || !minioSettings.enabled"
-                                @click="handleProcessCloudBackup('minio')"
-                              >
-                                <span v-if="isProcessingMinio" class="loading loading-spinner loading-sm"></span>
-                                <IconCloudUpload v-else class="w-4 h-4" />
-                                Proses Backup
-                              </button>
-                              <button
-                                class="btn btn-primary btn-sm gap-2"
-                                :disabled="isSavingBackupSettings || isCreatingBackup"
-                                @click="handleSaveMinioSettings"
-                              >
-                                <span v-if="isSavingBackupSettings" class="loading loading-spinner loading-sm"></span>
-                                <IconDeviceFloppy v-else class="w-4 h-4" />
-                                Simpan MinIO
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </template>
               </div>
             </div>
           </div>
@@ -578,7 +330,6 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useDatabaseBackup } from '@/composables/admin/useDatabaseBackup'
 import ProductionImportPanel from '@/components/settings/ProductionImportPanel.vue'
 import { useTenantSettings } from '@/composables/admin/useTenantSettings'
-import { useNotification } from '@/composables/core/useNotification'
 import { useAuthStore } from '@/stores/auth'
 import {
   IconDatabase,
@@ -586,12 +337,6 @@ import {
   IconPlus,
   IconRefresh,
   IconInfoCircle,
-  IconCloudUpload,
-  IconFolder,
-  IconDeviceFloppy,
-  IconFiles,
-  IconFileZip,
-  IconClock,
   IconList,
   IconFileOff,
   IconFile,
@@ -612,7 +357,6 @@ const emit = defineEmits(['update:modelValue', 'close'])
 
 // Composables
 const authStore = useAuthStore()
-const { showWarning } = useNotification()
 const {
   backups,
   databaseInfo,
@@ -626,16 +370,13 @@ const {
 } = useDatabaseBackup()
 const {
   currentTenantId,
-  fetchTenantSettings,
-  patchTenantSettings,
-  saving: isSavingBackupSettings
+  fetchTenantSettings
 } = useTenantSettings()
 
 // Refs
 const activeTab = ref('backup')
 const deleteModal = ref(null)
 const backupToDelete = ref(null)
-const activeCloudProcess = ref('')
 const createDefaultGoogleDriveSettings = () => ({
   enabled: false,
   required: false,
@@ -711,14 +452,6 @@ const cloudStorageLabel = computed(() => {
   return `Local + ${providers.join(' + ')}`
 })
 
-const isProcessingGoogleDrive = computed(() => {
-  return isCreatingBackup.value && activeCloudProcess.value === 'google_drive'
-})
-
-const isProcessingMinio = computed(() => {
-  return isCreatingBackup.value && activeCloudProcess.value === 'minio'
-})
-
 // Methods
 const handleClose = () => {
   emit('update:modelValue', false)
@@ -774,147 +507,11 @@ const handleRefresh = async () => {
   ])
 }
 
-const buildBackupSettingsPayload = () => ({
-  backup: {
-    googleDrive: {
-      enabled: googleDriveSettings.value.enabled,
-      required: googleDriveSettings.value.enabled ? googleDriveSettings.value.required : false,
-      folderId: googleDriveSettings.value.folderId.trim()
-    },
-    minio: {
-      enabled: minioSettings.value.enabled,
-      required: minioSettings.value.enabled ? minioSettings.value.required : false,
-      endpoint: minioSettings.value.endpoint.trim(),
-      region: minioSettings.value.region.trim() || 'us-east-1',
-      bucket: minioSettings.value.bucket.trim(),
-      accessKeyId: minioSettings.value.accessKeyId.trim(),
-      secretAccessKey: minioSettings.value.secretAccessKey.trim(),
-      objectPrefix: minioSettings.value.objectPrefix.trim(),
-      forcePathStyle: minioSettings.value.forcePathStyle,
-      useSsl: minioSettings.value.useSsl
-    }
-  }
-})
-
-const validateGoogleDriveSettings = () => {
-  const folderId = googleDriveSettings.value.folderId.trim()
-
-  if (googleDriveSettings.value.enabled && !folderId) {
-    showWarning('Folder ID wajib diisi saat Google Drive backup aktif')
-    return false
-  }
-
-  googleDriveSettings.value.folderId = folderId
-  return true
-}
-
-const validateMinioSettings = () => {
-  const endpoint = minioSettings.value.endpoint.trim()
-  const bucket = minioSettings.value.bucket.trim()
-  const accessKeyId = minioSettings.value.accessKeyId.trim()
-  const secretAccessKey = minioSettings.value.secretAccessKey.trim()
-
-  if (minioSettings.value.enabled) {
-    if (!endpoint) {
-      showWarning('Endpoint wajib diisi saat MinIO backup aktif')
-      return false
-    }
-
-    if (!bucket) {
-      showWarning('Bucket wajib diisi saat MinIO backup aktif')
-      return false
-    }
-
-    if (!accessKeyId || !secretAccessKey) {
-      showWarning('Access key dan secret key wajib diisi saat MinIO backup aktif')
-      return false
-    }
-  }
-
-  minioSettings.value.endpoint = endpoint
-  minioSettings.value.bucket = bucket
-  minioSettings.value.accessKeyId = accessKeyId
-  minioSettings.value.secretAccessKey = secretAccessKey
-  minioSettings.value.region = minioSettings.value.region.trim() || 'us-east-1'
-  minioSettings.value.objectPrefix = minioSettings.value.objectPrefix.trim()
-
-  return true
-}
-
-const saveBackupSettings = async (successMessage) => {
-  const payload = buildBackupSettingsPayload()
-  const result = await patchTenantSettings(payload, successMessage)
-
-  if (result.success) {
-    applyBackupSettings(payload)
-  }
-
-  return result
-}
-
-const handleSaveGoogleDriveSettings = async () => {
-  if (!validateGoogleDriveSettings()) {
-    return
-  }
-  await saveBackupSettings('Google Drive backup settings updated successfully')
-}
-
-const handleSaveMinioSettings = async () => {
-  if (!validateMinioSettings()) {
-    return
-  }
-  await saveBackupSettings('MinIO backup settings updated successfully')
-}
-
 const handleCreateBackup = async () => {
   try {
     await createBackup()
   } catch (error) {
     console.error('Failed to create backup:', error)
-  }
-}
-
-const handleProcessCloudBackup = async (provider) => {
-  if (provider === 'google_drive') {
-    if (!googleDriveSettings.value.enabled) {
-      showWarning('Aktifkan Google Drive dulu sebelum memproses backup')
-      return
-    }
-
-    if (!validateGoogleDriveSettings()) {
-      return
-    }
-  }
-
-  if (provider === 'minio') {
-    if (!minioSettings.value.enabled) {
-      showWarning('Aktifkan MinIO dulu sebelum memproses backup')
-      return
-    }
-
-    if (!validateMinioSettings()) {
-      return
-    }
-  }
-
-  const saveResult = await saveBackupSettings(
-    provider === 'google_drive'
-      ? 'Google Drive settings saved'
-      : 'MinIO settings saved'
-  )
-
-  if (!saveResult.success) {
-    return
-  }
-
-  activeCloudProcess.value = provider
-
-  try {
-    await createBackup({ cloudProvider: provider })
-  } catch (error) {
-    console.error(`Failed to process ${provider} backup:`, error)
-  } finally {
-    activeCloudProcess.value = ''
   }
 }
 

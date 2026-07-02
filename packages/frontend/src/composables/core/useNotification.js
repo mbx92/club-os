@@ -1,5 +1,9 @@
 import { ref } from 'vue'
 import { getErrorConfig } from '@/utils/errorMessages'
+import {
+  captureFrontendException,
+  shouldReportHandledFrontendError
+} from '@/services/glitchtip'
 
 const notifications = ref([])
 let notificationId = 0
@@ -198,6 +202,20 @@ export const useNotification = () => {
     }
 
     showNotification(message, 'error', duration, title)
+
+    if (shouldReportHandledFrontendError(error)) {
+      captureFrontendException(error, {
+        tags: {
+          handled: 'true',
+          source: 'useNotification'
+        },
+        extra: {
+          defaultMessage,
+          displayedMessage: message,
+          displayedTitle: title
+        }
+      })
+    }
 
     return message
   }

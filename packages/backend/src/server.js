@@ -1,6 +1,7 @@
 const app = require('./app');
 const sequelize = require('./utils/db');
 const { initializeScheduledJobs } = require('./utils/scheduler');
+const { captureBackendException, flushGlitchtip } = require('./utils/glitchtip');
 
 const PORT = process.env.PORT || 3000;
 
@@ -12,15 +13,22 @@ console.log('Database config:', {
 });
 
 // Handle uncaught errors
-process.on('uncaughtException', (err) => {
+process.on('uncaughtException', async (err) => {
   console.error('❌ Uncaught Exception:', err.message);
   console.error('Stack:', err.stack);
+  await captureBackendException(err, { mechanism: 'uncaughtException' });
+  await flushGlitchtip();
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', async (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise);
   console.error('Reason:', reason);
+  await captureBackendException(
+    reason instanceof Error ? reason : new Error(String(reason)),
+    { mechanism: 'unhandledRejection', extra: { reason: String(reason) } }
+  );
+  await flushGlitchtip();
   process.exit(1);
 });
 
