@@ -6,6 +6,7 @@ services:
     image: club-os-backend:latest
     restart: unless-stopped
     environment:
+      TZ: Asia/Makassar
       NODE_ENV: production
       PORT: 3000
       DB_HOST: ${DB_HOST:-host.docker.internal}
