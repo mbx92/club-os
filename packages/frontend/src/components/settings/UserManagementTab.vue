@@ -81,7 +81,16 @@
                   </div>
                 </td>
                 <td>
-                  <span class="badge badge-sm">{{ user.role?.name || 'N/A' }}</span>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="badge badge-sm capitalize">{{ user.role?.name || 'N/A' }}</span>
+                    <span
+                      v-if="resolveRoleRecord(user.role)"
+                      class="badge badge-xs"
+                      :class="isSystemRole(resolveRoleRecord(user.role)) ? 'badge-primary' : 'badge-secondary'"
+                    >
+                      {{ isSystemRole(resolveRoleRecord(user.role)) ? 'System' : 'Custom' }}
+                    </span>
+                  </div>
                 </td>
                 <td>
                   <span class="text-sm">{{ user.tenant?.name || 'N/A' }}</span>
@@ -217,20 +226,52 @@
             <label class="label">
               <span class="label-text font-semibold">Role *</span>
             </label>
-            <select
-              v-model="formData.roleId"
-              class="select select-bordered w-full"
-              required
-            >
-              <option value="" disabled>Select a role</option>
-              <option
-                v-for="role in availableRoles"
-                :key="role.id"
-                :value="role.id"
+            <div class="dropdown w-full">
+              <button
+                type="button"
+                tabindex="0"
+                class="select select-bordered w-full flex items-center justify-between gap-2 min-h-[3rem] h-auto py-2 text-left"
+                :class="{ 'text-base-content/40': !selectedRole }"
               >
-                {{ role.name }}
-              </option>
-            </select>
+                <span v-if="selectedRole" class="flex items-center gap-2 flex-wrap">
+                  <span class="capitalize">{{ selectedRole.name }}</span>
+                  <span
+                    class="badge badge-xs"
+                    :class="isSystemRole(selectedRole) ? 'badge-primary' : 'badge-secondary'"
+                  >
+                    {{ isSystemRole(selectedRole) ? 'System' : 'Custom' }}
+                  </span>
+                </span>
+                <span v-else>Select a role</span>
+              </button>
+              <ul
+                tabindex="0"
+                class="dropdown-content menu bg-base-100 rounded-box z-[100] w-full p-2 shadow-lg border border-base-300 max-h-60 overflow-y-auto"
+              >
+                <li v-for="role in sortedAvailableRoles" :key="role.id">
+                  <button
+                    type="button"
+                    class="flex items-center justify-between gap-2"
+                    :class="{ 'active': formData.roleId === role.id }"
+                    @click="selectRole(role.id)"
+                  >
+                    <span class="capitalize font-medium">{{ role.name }}</span>
+                    <span
+                      class="badge badge-xs shrink-0"
+                      :class="isSystemRole(role) ? 'badge-primary' : 'badge-secondary'"
+                    >
+                      {{ isSystemRole(role) ? 'System' : 'Custom' }}
+                    </span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+            <label class="label py-1">
+              <span class="label-text-alt text-base-content/50 flex flex-wrap items-center gap-1">
+                <span class="badge badge-xs badge-primary">System</span> role bawaan platform ·
+                <span class="badge badge-xs badge-secondary">Custom</span> salinan khusus tenant Anda
+              </span>
+            </label>
           </div>
 
           <!-- Tenant (only for super admin) -->
@@ -334,6 +375,35 @@ const availableRoles = computed(() => {
   return roles.value.filter(role => role.isActive)
 })
 
+const isSystemRole = (role) => !role?.tenantId
+
+const resolveRoleRecord = (roleRef) => {
+  if (!roleRef) return null
+  if (typeof roleRef === 'object' && roleRef.id) {
+    return roles.value.find(r => r.id === roleRef.id) || roleRef
+  }
+  return roles.value.find(r => r.id === roleRef) || null
+}
+
+const sortedAvailableRoles = computed(() => {
+  return [...availableRoles.value].sort((leftRole, rightRole) => {
+    const nameCompare = leftRole.name.localeCompare(rightRole.name, 'en', { sensitivity: 'base' })
+    if (nameCompare !== 0) return nameCompare
+    if (isSystemRole(leftRole) && !isSystemRole(rightRole)) return -1
+    if (!isSystemRole(leftRole) && isSystemRole(rightRole)) return 1
+    return 0
+  })
+})
+
+const selectedRole = computed(() =>
+  availableRoles.value.find(role => role.id === formData.value.roleId) || null
+)
+
+const selectRole = (roleId) => {
+  formData.value.roleId = roleId
+  document.activeElement?.blur()
+}
+
 const availableTenants = computed(() => {
   return tenants.value || []
 })
@@ -408,6 +478,10 @@ const closeUserModal = () => {
 }
 
 const handleSubmit = async () => {
+  if (!formData.value.roleId) {
+    return
+  }
+
   const payload = {
     firstName: formData.value.firstName,
     lastName: formData.value.lastName || undefined,
