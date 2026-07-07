@@ -24,6 +24,7 @@ const {
 } = require('../../../utils/attendanceSchedule');
 const { createError } = require('../../../utils/errorCodes');
 const logger = require('../../../utils/logger');
+const overnightFixService = require('../../../services/overnightFixService');
 
 /** Normalize any date value (Date object or string) to "YYYY-MM-DD" */
 function toDateStr(d) {
@@ -137,63 +138,14 @@ function formatLocalDateTime(date, timezone) {
   }).format(new Date(date));
 }
 
-function isEventInCorrectedShiftWindow(eventDate, correctedSchedule, timezone) {
+// Delegate to overnightFixService (kept as local aliases for backward-compat within this file)
+const isEventInCorrectedShiftWindow = (eventDate, correctedSchedule, timezone) => {
   const metrics = getScheduleMetricsForEvent(new Date(eventDate), correctedSchedule, timezone);
   if (!metrics) return false;
-
   return metrics.minsAfterStart >= -240
     && metrics.minsAfterStart <= metrics.shiftDuration + 240
-    && (
-      metrics.distToStart <= 240
-      || metrics.distToEnd <= 240
-      || isPlausibleCheckout(metrics, 240)
-    );
-}
-
-function buildAttendancePreviewRecord(record, correctedSchedule, timezone) {
-  const checkInMetrics = record.checkInTime
-    ? getScheduleMetricsForEvent(new Date(record.checkInTime), correctedSchedule, timezone)
-    : null;
-  const checkOutMetrics = record.checkOutTime
-    ? getScheduleMetricsForEvent(new Date(record.checkOutTime), correctedSchedule, timezone)
-    : null;
-
-  return {
-    id: record.id,
-    date: toDateStr(record.date),
-    scheduleId: record.scheduleId || null,
-    checkInLocal: formatLocalDateTime(record.checkInTime, timezone),
-    checkOutLocal: formatLocalDateTime(record.checkOutTime, timezone),
-    checkInNearShiftStart: Boolean(checkInMetrics && checkInMetrics.distToStart <= 240),
-    checkOutNearShiftEnd: Boolean(checkOutMetrics && isPlausibleCheckout(checkOutMetrics, 240)),
-  };
-}
-
-function isAttendanceAlignedToSchedule(record, schedule, timezone) {
-  if (!record || !schedule) return false;
-
-  const checkInMetrics = record.checkInTime
-    ? getScheduleMetricsForEvent(new Date(record.checkInTime), schedule, timezone)
-    : null;
-  const checkOutMetrics = record.checkOutTime
-    ? getScheduleMetricsForEvent(new Date(record.checkOutTime), schedule, timezone)
-    : null;
-
-  const checkInAligned = !record.checkInTime || (
-    checkInMetrics
-    && checkInMetrics.dayOffset === 0
-    && checkInMetrics.minsAfterStart >= -240
-    && checkInMetrics.distToStart <= 240
-  );
-
-  const checkOutAligned = !record.checkOutTime || (
-    checkOutMetrics
-    && checkOutMetrics.minsAfterStart >= 0
-    && checkOutMetrics.distToEnd <= 240
-  );
-
-  return checkInAligned && checkOutAligned;
-}
+    && (metrics.distToStart <= 240 || metrics.distToEnd <= 240 || isPlausibleCheckout(metrics, 240));
+};
 
 function analyzeOvernightScheduleIssue(schedule, logs, attendances, siblingSchedules, timezone) {
   if (!isOvernightSchedule(schedule)) return null;
@@ -349,8 +301,9 @@ async function collectOvernightShiftIssues({
   employeeQuery,
   employeeId,
   deviceEmployeeId,
+  resolvedEmployeeId: preResolvedId,
 }) {
-  const resolvedEmployeeId = await resolveAttendanceAuditEmployeeId({
+  const resolvedEmployeeId = preResolvedId ?? await resolveAttendanceAuditEmployeeId({
     employeeQuery,
     employeeId,
     deviceEmployeeId,
@@ -1840,7 +1793,7 @@ async function fixSmartCheckInOut(req, res, next) {
  * @access  Private (admin)
  * @query   dryRun=true|false (default: true)
  *          startDate, endDate (filter by current stored schedule date)
- *          employeeQuery / employeeId (optional)
+ *          employeeQuery / employeeId / deviceEmployeeId (optional)
  */
 async function fixOvernightScheduleAlignment(req, res, next) {
   try {
@@ -1857,224 +1810,38 @@ async function fixOvernightScheduleAlignment(req, res, next) {
     const isDryRun = dryRun !== 'false';
     const tenantTimezone = req.user?.tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
 
-    const auditResult = await collectOvernightShiftIssues({
-      tenantId,
-      isSuperAdmin,
-      tenantTimezone,
-      startDate,
-      endDate,
+    const resolvedEmployeeId = await resolveDeviceEmployeeId({
       employeeQuery,
       employeeId,
       deviceEmployeeId,
-    });
-
-    if (isDryRun) {
-      return res.json({
-        success: true,
-        mode: 'dry_run',
-        total: auditResult.candidates.length,
-        summary: auditResult.summary,
-        fixes: auditResult.candidates,
-      });
-    }
-
-    const fixableCandidates = auditResult.candidates.filter((item) => item.canFix);
-    const applied = [];
-    const skipped = [];
-
-    await sequelize.transaction(async (transaction) => {
-      for (const candidate of fixableCandidates) {
-        const schedule = await EmployeeSchedule.findByPk(candidate.scheduleId, {
-          transaction,
-          lock: transaction.LOCK.UPDATE,
-        });
-
-        if (!schedule) {
-          skipped.push({
-            scheduleId: candidate.scheduleId,
-            employeeNo: candidate.employeeNo,
-            reason: 'schedule tidak ditemukan',
-          });
-          continue;
-        }
-
-        const deviceEmployee = await DeviceEmployee.findByPk(schedule.deviceEmployeeId, {
-          attributes: ['id', 'employeeNo', 'name', 'userId', 'deviceId', 'tenantId'],
-          transaction,
-        });
-
-        const currentScheduleDate = toDateStr(schedule.date);
-        const suggestedScheduleDate = getPreviousDateOnly(currentScheduleDate);
-
-        const sameSlotConflict = await EmployeeSchedule.findOne({
-          where: {
-            id: { [Op.ne]: schedule.id },
-            tenantId: schedule.tenantId,
-            deviceEmployeeId: schedule.deviceEmployeeId,
-            date: suggestedScheduleDate,
-            shiftStart: schedule.shiftStart,
-            shiftEnd: schedule.shiftEnd,
-            isOff: false,
-          },
-          transaction,
-          lock: transaction.LOCK.UPDATE,
-        });
-
-        if (sameSlotConflict) {
-          skipped.push({
-            scheduleId: schedule.id,
-            employeeNo: deviceEmployee?.employeeNo || null,
-            reason: 'slot shift yang sama sudah ada di tanggal sebelumnya',
-          });
-          continue;
-        }
-
-        const freshLogs = await DeviceAttendanceLog.findAll({
-          where: {
-            tenantId: schedule.tenantId,
-            matchedDeviceEmployeeId: schedule.deviceEmployeeId,
-            eventTime: {
-              [Op.gte]: dateOnlyUtc(suggestedScheduleDate, { dayOffset: -1 }),
-              [Op.lte]: dateOnlyUtc(currentScheduleDate, { dayOffset: 1, endOfDay: true }),
-            },
-          },
-          order: [['eventTime', 'ASC']],
-          transaction,
-        });
-
-        const freshAttendances = await StaffAttendance.findAll({
-          where: {
-            tenantId: schedule.tenantId,
-            deviceEmployeeId: schedule.deviceEmployeeId,
-            date: {
-              [Op.gte]: suggestedScheduleDate,
-              [Op.lte]: currentScheduleDate,
-            },
-          },
-          order: [['date', 'ASC'], ['createdAt', 'ASC']],
-          transaction,
-          lock: transaction.LOCK.UPDATE,
-        });
-
-        const siblingSchedules = await EmployeeSchedule.findAll({
-          where: {
-            tenantId: schedule.tenantId,
-            deviceEmployeeId: schedule.deviceEmployeeId,
-            date: {
-              [Op.gte]: suggestedScheduleDate,
-              [Op.lte]: currentScheduleDate,
-            },
-            isOff: false,
-          },
-          include: [{ model: DeviceEmployee, as: 'deviceEmployee', attributes: ['id', 'employeeNo', 'name'] }],
-          transaction,
-        });
-
-        const analysis = analyzeOvernightScheduleIssue(
-          schedule,
-          freshLogs,
-          freshAttendances,
-          siblingSchedules,
-          tenantTimezone
-        );
-
-        if (!analysis?.canFix || !analysis.startLogId || !analysis.endLogId) {
-          skipped.push({
-            scheduleId: schedule.id,
-            employeeNo: deviceEmployee?.employeeNo || null,
-            reason: analysis?.reason || 'sinyal log tidak cukup untuk rebuild shift malam',
-          });
-          continue;
-        }
-
-        const startLog = freshLogs.find((log) => log.id === analysis.startLogId);
-        const endLog = freshLogs.find((log) => log.id === analysis.endLogId);
-
-        if (!startLog || !endLog) {
-          skipped.push({
-            scheduleId: schedule.id,
-            employeeNo: deviceEmployee?.employeeNo || null,
-            reason: 'raw log untuk rebuild tidak ditemukan',
-          });
-          continue;
-        }
-
-        await schedule.update({ date: suggestedScheduleDate }, { transaction });
-
-        const relatedAttendanceIds = analysis.relatedAttendances.map((item) => item.id);
-        if (relatedAttendanceIds.length > 0) {
-          await StaffAttendance.destroy({
-            where: { id: { [Op.in]: relatedAttendanceIds } },
-            transaction,
-          });
-        }
-
-        const replayLogs = [startLog, endLog]
-          .filter(Boolean)
-          .sort((a, b) => new Date(a.eventTime) - new Date(b.eventTime));
-
-        for (const log of replayLogs) {
-          await HikvisionEventProcessor.upsertStaffAttendance(
-            { id: log.deviceId, tenantId: log.tenantId },
-            deviceEmployee,
-            { eventTime: log.eventTime, verifyMode: log.verifyMode, cardNo: log.cardNo },
-            log.id,
-            transaction,
-            tenantTimezone
-          );
-        }
-
-        const rebuiltAttendance = await StaffAttendance.findOne({
-          where: {
-            tenantId: schedule.tenantId,
-            deviceEmployeeId: schedule.deviceEmployeeId,
-            scheduleId: schedule.id,
-            date: suggestedScheduleDate,
-          },
-          order: [['createdAt', 'DESC']],
-          transaction,
-        });
-
-        applied.push({
-          scheduleId: schedule.id,
-          employeeId: schedule.deviceEmployeeId,
-          employeeNo: deviceEmployee?.employeeNo || null,
-          employeeName: deviceEmployee?.name || null,
-          fromDate: currentScheduleDate,
-          toDate: suggestedScheduleDate,
-          shiftStart: schedule.shiftStart,
-          shiftEnd: schedule.shiftEnd,
-          rebuiltAttendanceId: rebuiltAttendance?.id || null,
-          checkInLocal: rebuiltAttendance?.checkInTime
-            ? formatLocalDateTime(rebuiltAttendance.checkInTime, tenantTimezone)
-            : null,
-          checkOutLocal: rebuiltAttendance?.checkOutTime
-            ? formatLocalDateTime(rebuiltAttendance.checkOutTime, tenantTimezone)
-            : null,
-        });
-      }
-    });
-
-    logger.info('[fixOvernightScheduleAlignment] APPLIED', {
       tenantId,
-      totalDetected: auditResult.candidates.length,
-      totalFixable: fixableCandidates.length,
-      totalApplied: applied.length,
-      totalSkipped: skipped.length,
+      isSuperAdmin,
+    });
+
+    const result = await overnightFixService.runOvernightFixForTenant({
+      tenantId,
+      tenantTimezone,
+      startDate,
+      endDate,
+      resolvedEmployeeId,
+      dryRun: isDryRun,
+    });
+
+    logger.info('[fixOvernightScheduleAlignment]', {
+      tenantId,
+      mode: isDryRun ? 'dry_run' : 'applied',
+      detected: result.candidates.length,
+      applied: result.applied.length,
+      skipped: result.skipped.length,
     });
 
     return res.json({
       success: true,
-      mode: 'applied',
-      total: auditResult.candidates.length,
-      summary: {
-        ...auditResult.summary,
-        applied: applied.length,
-        skipped: skipped.length,
-      },
-      fixes: auditResult.candidates,
-      applied,
-      skipped,
+      mode: isDryRun ? 'dry_run' : 'applied',
+      total: result.candidates.length,
+      summary: result.summary,
+      fixes: result.candidates,
+      ...(isDryRun ? {} : { applied: result.applied, skipped: result.skipped }),
     });
   } catch (err) {
     return next(err);

@@ -4,6 +4,7 @@ const logger = require('../utils/logger');
 const cleanupExpiredReports = require('../jobs/cleanupExpiredReports');
 const hikvisionSyncJob = require('../jobs/hikvisionSyncJob');
 const attendanceRegenerationJob = require('../jobs/attendanceRegenerationJob');
+const overnightFixJob = require('../jobs/overnightFixJob');
 const { createBackup } = require('../../scripts/backupDatabase');
 const { createSequelizeBackup } = require('../../scripts/backupDatabaseSequelize');
 const { resolveAutoBackupOptions } = require('./backupGoogleDriveConfig');
@@ -48,6 +49,15 @@ const schedulerStatus = {
       name: 'Attendance Repair',
       schedule: process.env.ATTENDANCE_REPAIR_CRON || '0 * * * *',
       description: 'Rebuild suspect attendances from matched logs every hour',
+      lastRun: null,
+      nextRun: null,
+      status: 'pending',
+      isRunning: false
+    },
+    overnightFix: {
+      name: 'Overnight Fix',
+      schedule: process.env.OVERNIGHT_FIX_CRON || '30 7 * * *',
+      description: 'Auto-correct overnight schedules saved on checkout date instead of shift start date',
       lastRun: null,
       nextRun: null,
       status: 'pending',
@@ -376,11 +386,27 @@ function scheduleAttendanceRepair() {
   });
 }
 
+function scheduleOvernightFix() {
+  overnightFixJob.scheduleOvernightFixJob();
+
+  logger.logSystem('Overnight fix scheduler initialized (daily 07:30)', {
+    action: 'OVERNIGHT_FIX_SCHEDULER_INITIALIZED',
+    userId: null,
+    tenantId: null,
+    ip: 'system',
+    userAgent: 'scheduled-task',
+    method: 'SYSTEM',
+    path: '/system/scheduler',
+    skipDb: true,
+  });
+}
+
 function initializeScheduledJobs() {
   scheduleLogCleanup();
   scheduleReportCleanup();
   scheduleHikvisionSync();
   scheduleAttendanceRepair();
+  scheduleOvernightFix();
   scheduleAutoBackup();
   
   schedulerStatus.initialized = true;
