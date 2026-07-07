@@ -44,8 +44,13 @@
                     <input v-model="filters.endDate" type="date" class="input input-bordered input-sm" />
                   </div>
                   <div class="form-control min-w-[220px]">
-                    <label class="label label-text text-xs pb-1">Employee ID (opsional)</label>
-                    <input v-model="filters.employeeId" type="text" class="input input-bordered input-sm font-mono" placeholder="UUID device employee" />
+                    <label class="label label-text text-xs pb-1">Employee No / UUID</label>
+                    <input
+                      v-model="filters.employeeQuery"
+                      type="text"
+                      class="input input-bordered input-sm"
+                      placeholder="contoh: 2 atau UUID"
+                    />
                   </div>
                   <button
                     class="btn btn-warning btn-sm gap-2"
@@ -237,14 +242,14 @@ const confirmDialog = ref(null)
 const filters = reactive({
   startDate: '',
   endDate: '',
-  employeeId: '',
+  employeeQuery: '',
 })
 
 const buildParams = (dryRun) => {
   const p = { dryRun: String(dryRun) }
   if (filters.startDate) p.startDate = filters.startDate
   if (filters.endDate) p.endDate = filters.endDate
-  if (filters.employeeId) p.employeeId = filters.employeeId
+  if (filters.employeeQuery) p.employeeQuery = filters.employeeQuery
   return p
 }
 

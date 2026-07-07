@@ -305,8 +305,18 @@ function analyzeOvernightScheduleIssue(schedule, logs, attendances, siblingSched
   };
 }
 
-async function resolveAttendanceAuditEmployeeId({ employeeQuery, employeeId, tenantId, isSuperAdmin }) {
-  const lookup = String(employeeId || employeeQuery || '').trim();
+/**
+ * Resolve employee filter to DeviceEmployee UUID.
+ * Accepts employeeNo (e.g. "2"), deviceEmployeeId UUID, or employeeQuery alias.
+ */
+async function resolveDeviceEmployeeId({
+  employeeQuery,
+  employeeId,
+  deviceEmployeeId,
+  tenantId,
+  isSuperAdmin,
+}) {
+  const lookup = String(deviceEmployeeId || employeeId || employeeQuery || '').trim();
   if (!lookup) return null;
 
   const where = {};
@@ -319,7 +329,15 @@ async function resolveAttendanceAuditEmployeeId({ employeeQuery, employeeId, ten
     attributes: ['id'],
   });
 
-  return employee?.id || '__no_employee_match__';
+  return employee?.id || null;
+}
+
+async function resolveAttendanceAuditEmployeeId(params) {
+  const lookup = String(params.deviceEmployeeId || params.employeeId || params.employeeQuery || '').trim();
+  if (!lookup) return null;
+
+  const resolved = await resolveDeviceEmployeeId(params);
+  return resolved || '__no_employee_match__';
 }
 
 async function collectOvernightShiftIssues({
@@ -330,10 +348,12 @@ async function collectOvernightShiftIssues({
   endDate,
   employeeQuery,
   employeeId,
+  deviceEmployeeId,
 }) {
   const resolvedEmployeeId = await resolveAttendanceAuditEmployeeId({
     employeeQuery,
     employeeId,
+    deviceEmployeeId,
     tenantId,
     isSuperAdmin,
   });
@@ -635,7 +655,7 @@ function computeScheduleStatus(attendance, schedule, timezone) {
  *          When startDate+endDate are provided, also includes employees who have
  *          a schedule in that range but no attendance record (shown as absent).
  * @access  Private (admin/manager)
- * @query   page, limit, startDate, endDate, userId, employeeId, status, includeAbsent
+ * @query   page, limit, startDate, endDate, userId, employeeId, employeeQuery, deviceEmployeeId, status, includeAbsent
  */
 async function listAttendance(req, res, next) {
   try {
@@ -647,9 +667,19 @@ async function listAttendance(req, res, next) {
       endDate,
       userId,
       employeeId,
+      employeeQuery,
+      deviceEmployeeId,
       status,
       includeAbsent = 'true',
     } = req.query;
+
+    const resolvedEmployeeId = await resolveDeviceEmployeeId({
+      employeeQuery,
+      employeeId,
+      deviceEmployeeId,
+      tenantId,
+      isSuperAdmin,
+    });
 
     const tenantTimezone = req.user?.tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
     const pageNum   = parseInt(page);
@@ -671,7 +701,7 @@ async function listAttendance(req, res, next) {
       if (startDate) attWhere.date[Op.gte] = startDate;
       if (endDate)   attWhere.date[Op.lte] = endDate;
     }
-    if (employeeId) attWhere.deviceEmployeeId = employeeId;
+    if (resolvedEmployeeId) attWhere.deviceEmployeeId = resolvedEmployeeId;
     else if (userId) attWhere.userId = userId;
     // Virtual/computed statuses — not stored in DB, handled after merge
     const virtualStatuses = [
@@ -702,7 +732,7 @@ async function listAttendance(req, res, next) {
       if (effectiveStart) scheduleRangeWhere.date[Op.gte] = effectiveStart;
       if (effectiveEnd)   scheduleRangeWhere.date[Op.lte] = effectiveEnd;
     }
-    if (employeeId) scheduleRangeWhere.deviceEmployeeId = employeeId;
+    if (resolvedEmployeeId) scheduleRangeWhere.deviceEmployeeId = resolvedEmployeeId;
 
     // Load ALL schedules including off-days (isOff:true → shown as off_day, isOff:false → absent if no tap)
     const allSchedules = (effectiveStart || effectiveEnd)
@@ -755,7 +785,7 @@ async function listAttendance(req, res, next) {
       if (effectiveStart) logRangeWhere.eventTime[Op.gte] = new Date(`${effectiveStart}T00:00:00`);
       if (effectiveEnd) logRangeWhere.eventTime[Op.lte] = new Date(`${effectiveEnd}T23:59:59`);
     }
-    if (employeeId) logRangeWhere.matchedDeviceEmployeeId = employeeId;
+    if (resolvedEmployeeId) logRangeWhere.matchedDeviceEmployeeId = resolvedEmployeeId;
 
     const rawLogs = (effectiveStart || effectiveEnd)
       ? await DeviceAttendanceLog.findAll({
@@ -944,25 +974,32 @@ async function listAttendance(req, res, next) {
  * @route   GET /gym/staff-attendance/report
  * @desc    Generate staff attendance summary report
  * @access  Private (admin/manager)
- * @query   startDate, endDate, userId
+ * @query   startDate, endDate, userId, employeeId, employeeQuery, deviceEmployeeId
  */
 async function attendanceReport(req, res, next) {
   try {
     const { tenantId, isSuperAdmin } = req.user;
-    const { startDate, endDate, userId, employeeId } = req.query;
+    const { startDate, endDate, userId, employeeId, employeeQuery, deviceEmployeeId } = req.query;
 
     if (!startDate || !endDate) {
       throw createError('VALIDATION_ERROR', 'startDate and endDate are required');
     }
 
     const tenantTimezone = req.user?.tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
+    const resolvedEmployeeId = await resolveDeviceEmployeeId({
+      employeeQuery,
+      employeeId,
+      deviceEmployeeId,
+      tenantId,
+      isSuperAdmin,
+    });
 
     // ── 1. Load attendance records ─────────────────────────────────────────
     const attWhere = {
       date: { [Op.gte]: startDate, [Op.lte]: endDate },
     };
     if (!isSuperAdmin) attWhere.tenantId = tenantId;
-    if (employeeId) attWhere.deviceEmployeeId = employeeId;
+    if (resolvedEmployeeId) attWhere.deviceEmployeeId = resolvedEmployeeId;
     else if (userId) attWhere.userId = userId;
 
     const records = await StaffAttendance.findAll({
@@ -979,7 +1016,7 @@ async function attendanceReport(req, res, next) {
       date: { [Op.gte]: startDate, [Op.lte]: endDate },
     };
     if (!isSuperAdmin) scheduleWhere.tenantId = tenantId;
-    if (employeeId) scheduleWhere.deviceEmployeeId = employeeId;
+    if (resolvedEmployeeId) scheduleWhere.deviceEmployeeId = resolvedEmployeeId;
     else if (userId) scheduleWhere.userId = userId;
 
     const schedules = await EmployeeSchedule.findAll({
@@ -1582,7 +1619,7 @@ async function syncAllDevices(req, res, next) {
  * @access  Private (admin)
  * @query   dryRun=true|false (default: true)
  *          startDate, endDate (optional — limit date range)
- *          employeeId (optional — limit to specific employee)
+ *          employeeId / employeeQuery / deviceEmployeeId (optional — employeeNo or UUID)
  */
 async function fixSmartCheckInOut(req, res, next) {
   try {
@@ -1592,10 +1629,19 @@ async function fixSmartCheckInOut(req, res, next) {
       startDate,
       endDate,
       employeeId,
+      employeeQuery,
+      deviceEmployeeId,
     } = req.query;
 
     const isDryRun = dryRun !== 'false';
     const tenantTimezone = req.user?.tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
+    const resolvedEmployeeId = await resolveDeviceEmployeeId({
+      employeeQuery,
+      employeeId,
+      deviceEmployeeId,
+      tenantId,
+      isSuperAdmin,
+    });
 
     // ── 1. Find attendance with checkIn but no checkOut ──────────────────
     const where = {
@@ -1608,7 +1654,7 @@ async function fixSmartCheckInOut(req, res, next) {
       if (startDate) where.date[Op.gte] = startDate;
       if (endDate)   where.date[Op.lte] = endDate;
     }
-    if (employeeId) where.deviceEmployeeId = employeeId;
+    if (resolvedEmployeeId) where.deviceEmployeeId = resolvedEmployeeId;
 
     const records = await StaffAttendance.findAll({
       where,
@@ -1629,7 +1675,7 @@ async function fixSmartCheckInOut(req, res, next) {
       if (startDate) whereReverse.date[Op.gte] = startDate;
       if (endDate)   whereReverse.date[Op.lte] = endDate;
     }
-    if (employeeId) whereReverse.deviceEmployeeId = employeeId;
+    if (resolvedEmployeeId) whereReverse.deviceEmployeeId = resolvedEmployeeId;
 
     const reverseRecords = await StaffAttendance.findAll({
       where: whereReverse,
@@ -1648,7 +1694,7 @@ async function fixSmartCheckInOut(req, res, next) {
       if (startDate) whereComplete.date[Op.gte] = startDate;
       if (endDate)   whereComplete.date[Op.lte] = endDate;
     }
-    if (employeeId) whereComplete.deviceEmployeeId = employeeId;
+    if (resolvedEmployeeId) whereComplete.deviceEmployeeId = resolvedEmployeeId;
 
     const completeRecords = await StaffAttendance.findAll({
       where: whereComplete,
@@ -1805,6 +1851,7 @@ async function fixOvernightScheduleAlignment(req, res, next) {
       endDate,
       employeeQuery,
       employeeId,
+      deviceEmployeeId,
     } = req.query;
 
     const isDryRun = dryRun !== 'false';
@@ -1818,6 +1865,7 @@ async function fixOvernightScheduleAlignment(req, res, next) {
       endDate,
       employeeQuery,
       employeeId,
+      deviceEmployeeId,
     });
 
     if (isDryRun) {
@@ -2037,7 +2085,7 @@ async function fixOvernightScheduleAlignment(req, res, next) {
  * @route   POST /gym/staff-attendance/regenerate-from-logs
  * @desc    Preview/apply attendance regeneration from raw matched logs
  * @access  Private (admin)
- * @query   dryRun=true|false, startDate, endDate, employeeQuery, forceAll=true|false
+ * @query   dryRun=true|false, startDate, endDate, employeeQuery, employeeId, deviceEmployeeId, forceAll=true|false
  */
 async function regenerateAttendanceFromLogsController(req, res, next) {
   try {
@@ -2047,6 +2095,8 @@ async function regenerateAttendanceFromLogsController(req, res, next) {
       startDate,
       endDate,
       employeeQuery = '',
+      employeeId,
+      deviceEmployeeId,
       forceAll = 'false',
     } = req.query;
 
@@ -2060,7 +2110,7 @@ async function regenerateAttendanceFromLogsController(req, res, next) {
       tenantId,
       startDate: startDate || defaults.startDate,
       endDate: endDate || defaults.endDate,
-      employeeQuery,
+      employeeQuery: employeeQuery || employeeId || deviceEmployeeId || '',
       forceAll: forceAll === 'true',
       dryRun: dryRun !== 'false',
       trigger: 'manual_ui',
@@ -2078,24 +2128,31 @@ async function regenerateAttendanceFromLogsController(req, res, next) {
  *          Sheet 1: Ringkasan per karyawan
  *          Sheet 2: Detail harian
  * @access  Private (admin/manager)
- * @query   startDate, endDate, userId, employeeId
+ * @query   startDate, endDate, userId, employeeId, employeeQuery, deviceEmployeeId
  */
 async function exportAttendanceReport(req, res, next) {
   try {
     const ExcelJS = require('exceljs');
     const { tenantId, isSuperAdmin } = req.user;
-    const { startDate, endDate, userId, employeeId } = req.query;
+    const { startDate, endDate, userId, employeeId, employeeQuery, deviceEmployeeId } = req.query;
 
     if (!startDate || !endDate) {
       throw createError('VALIDATION_ERROR', 'startDate and endDate are required');
     }
 
     const tenantTimezone = req.user?.tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
+    const resolvedEmployeeId = await resolveDeviceEmployeeId({
+      employeeQuery,
+      employeeId,
+      deviceEmployeeId,
+      tenantId,
+      isSuperAdmin,
+    });
 
     // ── Same data loading logic as attendanceReport ─────────────────────
     const attWhere = { date: { [Op.gte]: startDate, [Op.lte]: endDate } };
     if (!isSuperAdmin) attWhere.tenantId = tenantId;
-    if (employeeId) attWhere.deviceEmployeeId = employeeId;
+    if (resolvedEmployeeId) attWhere.deviceEmployeeId = resolvedEmployeeId;
     else if (userId) attWhere.userId = userId;
 
     const records = await StaffAttendance.findAll({
@@ -2109,7 +2166,7 @@ async function exportAttendanceReport(req, res, next) {
 
     const scheduleWhere = { date: { [Op.gte]: startDate, [Op.lte]: endDate } };
     if (!isSuperAdmin) scheduleWhere.tenantId = tenantId;
-    if (employeeId) scheduleWhere.deviceEmployeeId = employeeId;
+    if (resolvedEmployeeId) scheduleWhere.deviceEmployeeId = resolvedEmployeeId;
     else if (userId) scheduleWhere.userId = userId;
 
     const schedules = await EmployeeSchedule.findAll({

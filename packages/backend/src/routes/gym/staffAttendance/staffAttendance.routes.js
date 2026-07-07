@@ -33,7 +33,7 @@ const {
  * @name    listStaffAttendance
  * @desc    List staff attendance records
  * @access  Private (admin/manager)
- * @query   page, limit, startDate, endDate, userId, status
+ * @query   page, limit, startDate, endDate, userId, employeeId, employeeQuery, deviceEmployeeId, status
  */
 router.get('/',
   requireModule('gym'),
@@ -99,7 +99,7 @@ router.post('/reprocess',
  * @desc    Smart fix: detect attendance where checkIn is near shiftEnd (should be checkOut)
  *          or checkOut is near shiftStart (should be checkIn). Supports dry-run preview.
  * @access  Private (admin)
- * @query   dryRun=true|false (default: true), startDate, endDate, employeeId
+ * @query   dryRun=true|false (default: true), startDate, endDate, employeeId, employeeQuery, deviceEmployeeId
  */
 router.post('/fix-checkin',
   requireModule('gym'),
@@ -125,7 +125,7 @@ router.post('/fix-overnight',
  * @name    regenerateAttendanceFromLogs
  * @desc    Preview/apply attendance rebuild from existing matched device logs
  * @access  Private (admin)
- * @query   dryRun=true|false, startDate, endDate, employeeQuery, forceAll=true|false
+ * @query   dryRun=true|false, startDate, endDate, employeeQuery, employeeId, deviceEmployeeId, forceAll=true|false
  */
 router.post('/regenerate-from-logs',
   requireModule('gym'),

@@ -28,6 +28,8 @@ export function useStaffAttendance() {
       if (params.startDate) queryParams.append('startDate', params.startDate)
       if (params.endDate) queryParams.append('endDate', params.endDate)
       if (params.userId) queryParams.append('userId', params.userId)
+      if (params.employeeId) queryParams.append('employeeId', params.employeeId)
+      if (params.employeeQuery) queryParams.append('employeeQuery', params.employeeQuery)
       if (params.deviceEmployeeId) queryParams.append('deviceEmployeeId', params.deviceEmployeeId)
       if (params.status && params.status !== 'all') queryParams.append('status', params.status)
 
