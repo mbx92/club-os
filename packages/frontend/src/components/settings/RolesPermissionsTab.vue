@@ -1002,6 +1002,8 @@ const roleTemplates = [
       Voucher:             ['read', 'create', 'update'],
       CashRegisterSession: ['read', 'create', 'update'],
       ActiveService:       ['read', 'create', 'update'],
+      StaffAttendance:     ['read'],
+      HikvisionDevice:     ['read'],
     }
   },
   {

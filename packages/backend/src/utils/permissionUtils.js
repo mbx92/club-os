@@ -1,5 +1,9 @@
 const { getDefaultPermissionsForRole } = require('./defaultRolePermissions');
-const { normalizeMenuAccess, deriveMenuAccessFromResources } = require('./menuKeys');
+const {
+  normalizeMenuAccess,
+  deriveMenuAccessFromResources,
+  deriveMinimumResourcesFromMenuAccess,
+} = require('./menuKeys');
 
 const FULL_ACCESS_RESOURCE = '*';
 const FULL_ACCESS_ACTION = '*';
@@ -237,6 +241,25 @@ function deriveUiFlags(resources = {}) {
   };
 }
 
+function mergeResourceActions(base = {}, additions = {}) {
+  const merged = { ...base };
+
+  for (const [subject, actions] of Object.entries(additions)) {
+    merged[subject] = [...new Set([...(merged[subject] || []), ...actions])];
+  }
+
+  return merged;
+}
+
+function applyMenuAccessResourceGrants(resources = {}, menuAccess = [], roleName) {
+  const normalizedMenu = normalizeMenuAccess(menuAccess, roleName);
+  const menuGrants = deriveMinimumResourcesFromMenuAccess(normalizedMenu);
+
+  return normalizeResourcePermissions(
+    mergeResourceActions(resources, menuGrants)
+  );
+}
+
 function resolveRolePermissions(rawPermissions = {}, roleName) {
   const defaults = getDefaultPermissionsForRole(roleName);
   const defaultResources = normalizeResourcePermissions(defaults?.resources || {});
@@ -259,7 +282,7 @@ function resolveRolePermissions(rawPermissions = {}, roleName) {
   }
 
   return {
-    resources: resolvedResources,
+    resources: applyMenuAccessResourceGrants(resolvedResources, menuAccess, roleName),
     uiFlags,
     menuAccess,
   };
@@ -292,9 +315,14 @@ function buildRolePermissionsPayload(input = {}, roleName, currentPermissions = 
   const nextUiFlags = input.uiFlags !== undefined
     ? normalizeUiFlags(input.uiFlags)
     : (hasStoredUiFlags ? current.uiFlags : deriveUiFlags(nextResources));
+  const resourcesWithMenuGrants = applyMenuAccessResourceGrants(
+    nextResources,
+    nextMenuAccess,
+    roleName
+  );
 
   return {
-    resources: nextResources,
+    resources: resourcesWithMenuGrants,
     uiFlags: nextUiFlags,
     menuAccess: nextMenuAccess,
   };
@@ -304,11 +332,13 @@ module.exports = {
   CRUD_ACTIONS,
   FULL_ACCESS_ACTION,
   FULL_ACCESS_RESOURCE,
+  applyMenuAccessResourceGrants,
   buildRolePermissionsPayload,
   deriveUiFlags,
   getStoredResources,
   hasFullAccess,
   hasResourceAccess,
+  mergeResourceActions,
   normalizeResourcePermissions,
   normalizeUiFlags,
   resolveRolePermissions,

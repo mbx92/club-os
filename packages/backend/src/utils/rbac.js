@@ -1,10 +1,12 @@
 const { getDefaultPermissionsForRole } = require('./defaultRolePermissions');
 const {
+  applyMenuAccessResourceGrants,
   getStoredResources,
   hasFullAccess,
   hasResourceAccess,
   normalizeResourcePermissions,
 } = require('./permissionUtils');
+const { normalizeMenuAccess } = require('./menuKeys');
 
 function getEffectiveResources(user) {
   if (!user) return {};
@@ -13,17 +15,28 @@ function getEffectiveResources(user) {
   const defaultResources = normalizeResourcePermissions(defaults?.resources || {});
   const storedResources = getStoredResources(user.role?.permissions || {});
 
+  let resources;
   if (Object.keys(storedResources).length === 0) {
-    return defaultResources;
+    resources = defaultResources;
+  } else {
+    // Legacy roles may only have partial `rules` stored (e.g. cashier seeded
+    // before Tenant:read existed). Merge defaults underneath so boot-critical
+    // reads like tenant settings / payment methods keep working.
+    resources = normalizeResourcePermissions({
+      ...defaultResources,
+      ...storedResources,
+    });
   }
 
-  // Legacy roles may only have partial `rules` stored (e.g. cashier seeded
-  // before Tenant:read existed). Merge defaults underneath so boot-critical
-  // reads like tenant settings / payment methods keep working.
-  return normalizeResourcePermissions({
-    ...defaultResources,
-    ...storedResources,
-  });
+  const rawMenuAccess = Array.isArray(user.role?.permissions?.menuAccess)
+    ? user.role.permissions.menuAccess
+    : (defaults?.menuAccess || []);
+
+  return applyMenuAccessResourceGrants(
+    resources,
+    normalizeMenuAccess(rawMenuAccess, user.role?.name),
+    user.role?.name
+  );
 }
 
 function can(user, action, subject) {

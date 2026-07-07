@@ -224,10 +224,32 @@ function deriveMenuAccessFromResources(resources, roleName) {
   return normalizeMenuAccess([...result], roleName);
 }
 
+/**
+ * Minimum API permissions implied by checked menu keys.
+ * Prevents 403 when menu access is granted but the matching resource
+ * checkbox was never saved (common after new subjects are added to the catalog).
+ */
+function deriveMinimumResourcesFromMenuAccess(menuAccess = []) {
+  if (!Array.isArray(menuAccess) || menuAccess.length === 0) return {};
+
+  const keys = new Set(menuAccess);
+  const resources = {};
+
+  for (const [subject, menuKeys] of Object.entries(SUBJECT_MENU_MAP)) {
+    if (menuKeys.some(key => keys.has(key))) {
+      resources[subject] = ['read'];
+    }
+  }
+
+  return resources;
+}
+
 module.exports = {
   ADMIN_MENU_ACCESS,
   ROLE_MENU_MAP,
+  SUBJECT_MENU_MAP,
   deriveMenuAccessFromResources,
+  deriveMinimumResourcesFromMenuAccess,
   hasFullAccess,
   normalizeMenuAccess,
   getMenuAccessForRole,
