@@ -675,7 +675,7 @@ export const navigation = [
         to: "/gym/hikvision/devices",
         icon: "device-cctv",
         menuKey: "back-office.devices",
-        action: "manage",
+        action: "read",
         subject: "HikvisionDevice",
       },
       {
@@ -683,7 +683,7 @@ export const navigation = [
         to: "/gym/hikvision/employees",
         icon: "users-group",
         menuKey: "back-office.employee",
-        action: "manage",
+        action: "read",
         subject: "HikvisionDevice",
       },
       {
@@ -691,8 +691,8 @@ export const navigation = [
         to: "/gym/backoffice/employee-schedule",
         icon: "clock-hour-4",
         menuKey: "back-office.schedule",
-        action: "manage",
-        subject: "StaffAttendance",
+        action: "read",
+        subject: "EmployeeSchedule",
       },
       // {
       //   label: "Staff Mapping",

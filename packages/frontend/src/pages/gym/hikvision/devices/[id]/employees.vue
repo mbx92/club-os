@@ -2,6 +2,8 @@
 meta:
   title: Device Employees
   layout: default
+  action: read
+  subject: HikvisionDevice
 </route>
 
 <template>

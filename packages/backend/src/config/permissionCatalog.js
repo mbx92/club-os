@@ -12,6 +12,7 @@ const PERMISSION_CATALOG = [
   { subject: 'PTSession', label: 'PT Sessions', module: 'gym', actions: ['create', 'delete', 'read', 'update'] },
   { subject: 'ServicePlan', label: 'Service Plans', module: 'gym', actions: ['create', 'delete', 'read', 'update'] },
 
+  { subject: 'BackOffice', label: 'Back Office', module: 'back-office', actions: ['read'] },
   { subject: 'StaffAttendance', label: 'Staff Attendance', module: 'back-office', actions: ['create', 'delete', 'read', 'update'] },
   { subject: 'EmployeeSchedule', label: 'Employee Schedules', module: 'back-office', actions: ['create', 'delete', 'read', 'update'] },
   { subject: 'Shift', label: 'Shifts', module: 'back-office', actions: ['create', 'delete', 'read', 'update'] },

@@ -2,6 +2,8 @@
 meta:
   title: Staff Mapping
   layout: default
+  action: read
+  subject: HikvisionDevice
 </route>
 
 <template>

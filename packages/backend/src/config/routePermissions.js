@@ -124,6 +124,11 @@ const ROUTE_TO_SUBJECT_MAP = {
     GET: { subject: 'StaffAttendance', actions: ['read'] },
     POST: { subject: 'StaffAttendance', actions: ['create'] }
   },
+  // Frontend SPA routes (enforced via Vue route meta; listed here for permission catalog sync)
+  '/gym/hikvision/attendance': { subject: 'StaffAttendance', actions: ['read'] },
+  '/gym/hikvision/attendance/report': { subject: 'StaffAttendance', actions: ['read'] },
+  '/gym/hikvision/devices': { subject: 'HikvisionDevice', actions: ['read'] },
+  '/gym/hikvision/employees': { subject: 'HikvisionDevice', actions: ['read'] },
   '/gym/staff-attendance/report': { subject: 'StaffAttendance', actions: ['read'] },
   '/gym/staff-attendance/report/export': { subject: 'StaffAttendance', actions: ['read'] },
   '/gym/staff-attendance/sync': { subject: 'StaffAttendance', actions: ['create'] },

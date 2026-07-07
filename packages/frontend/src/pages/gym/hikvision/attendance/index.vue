@@ -2,6 +2,8 @@
 meta:
   title: Staff Attendance
   layout: default
+  action: read
+  subject: StaffAttendance
 </route>
 
 <template>

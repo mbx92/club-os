@@ -2,6 +2,8 @@
 meta:
   title: Device Sync
   layout: default
+  action: update
+  subject: HikvisionDevice
 </route>
 
 <template>

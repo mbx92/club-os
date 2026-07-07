@@ -88,6 +88,7 @@ const SUBJECT_MENU_MAP = {
   RestaurantTable: ['restaurant.tables', 'restaurant.floor-plan'],
   RestaurantStock: ['restaurant.stock'],
   StaffAttendance: ['back-office.attendance', 'back-office.attendance-report'],
+  BackOffice: ['back-office'],
   EmployeeSchedule: ['back-office.schedule'],
   Shift: ['back-office.schedule'],
   HikvisionDevice: ['back-office.devices', 'back-office.employee'],

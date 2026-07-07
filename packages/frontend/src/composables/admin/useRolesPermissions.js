@@ -42,6 +42,7 @@ export const useRolesPermissions = () => {
       { name: 'TrainerCommission', label: 'Trainer Commissions', module: 'gym', actions: ['create', 'read', 'update'] },
       { name: 'EmployeeSchedule', label: 'Employee Schedules', module: 'back-office', actions: CRUD },
       { name: 'Shift', label: 'Shifts', module: 'back-office', actions: CRUD },
+      { name: 'BackOffice', label: 'Back Office', module: 'back-office', actions: RO },
       { name: 'StaffAttendance', label: 'Staff Attendance', module: 'back-office', actions: CRUD },
       { name: 'HikvisionDevice', label: 'Hikvision Devices', module: 'back-office', actions: CRUD },
       { name: 'RestaurantCategory', label: 'Restaurant Categories', module: 'restaurant', actions: CRUD },

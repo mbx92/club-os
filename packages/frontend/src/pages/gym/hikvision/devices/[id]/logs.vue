@@ -2,6 +2,8 @@
 meta:
   title: Device Logs
   layout: default
+  action: read
+  subject: HikvisionDevice
 </route>
 
 <template>
