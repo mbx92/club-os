@@ -179,6 +179,39 @@ export function buildAllResourcePermissions(availableResources) {
   return result
 }
 
+/** Extract resource->actions map from any stored role.permissions shape (resources, rules, legacy). */
+export function extractStoredResourcesFromRolePermissions(permissions = {}) {
+  const merged = {}
+
+  if (permissions?.resources && typeof permissions.resources === 'object') {
+    Object.entries(permissions.resources).forEach(([resource, actions]) => {
+      if (resource === '*' || !Array.isArray(actions) || actions.length === 0) return
+      merged[resource] = [...new Set(actions)]
+    })
+  }
+
+  if (Array.isArray(permissions?.rules)) {
+    permissions.rules.forEach((rule) => {
+      if (!rule?.subject || rule.inverted) return
+      const actions = Array.isArray(rule.actions)
+        ? rule.actions
+        : [rule.action].filter(Boolean)
+      if (!actions.length) return
+      merged[rule.subject] = [...new Set([...(merged[rule.subject] || []), ...actions])]
+    })
+  }
+
+  const reserved = new Set(['resources', 'rules', 'menuAccess', 'uiFlags', 'rolePermissions'])
+  Object.entries(permissions).forEach(([key, value]) => {
+    if (reserved.has(key)) return
+    if (!Array.isArray(value) || value.length === 0) return
+    const mapped = LEGACY_SUBJECT_MAP[key] || (key.charAt(0).toUpperCase() + key.slice(1))
+    merged[mapped] = [...new Set(value)]
+  })
+
+  return merged
+}
+
 /** Resolve permissions form data from a resources map (or role defaults) */
 export function resolvePermissionsFromResources(resources, availableResources, role = null) {
   const roleName = role?.name?.toLowerCase()

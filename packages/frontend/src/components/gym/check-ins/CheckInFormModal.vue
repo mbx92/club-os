@@ -398,11 +398,6 @@ defineExpose({ openModal, closeModal, resetForm })
           @input="handleMemberSearch"
           autocomplete="off"
         />
-        <label class="label py-1">
-          <span class="label-text-alt text-base-content/50">
-            Pencarian langsung ke server — semua member aktif dapat ditemukan, tidak dibatasi 100 data terbaru.
-          </span>
-        </label>
       </div>
 
       <!-- Members List -->

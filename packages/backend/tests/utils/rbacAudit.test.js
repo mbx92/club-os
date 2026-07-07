@@ -240,4 +240,32 @@ describe('RBAC — default role catalog sanity', () => {
     expect(can(legacyCashier, 'read', 'Transaction')).toBe(true);
     expect(getEffectiveResources(legacyCashier).Tenant).toContain('read');
   });
+
+  test('empty resources object does not block legacy rules from being applied', () => {
+    const user = makeUser({
+      role: 'cashier',
+      permissions: {
+        resources: {},
+        rules: [
+          { subject: 'Transaction', actions: ['read', 'create'] },
+        ],
+      },
+    });
+
+    expect(can(user, 'create', 'Transaction')).toBe(true);
+  });
+
+  test('cashier with Expense:create in resources is allowed to create expenses', () => {
+    const user = makeUser({
+      role: 'cashier',
+      permissions: {
+        resources: { Expense: ['read', 'create'] },
+        menuAccess: ['finances', 'finances.expenses'],
+      },
+    });
+
+    expect(can(user, 'create', 'Expense')).toBe(true);
+    expect(can(user, 'read', 'Expense')).toBe(true);
+    expect(can(user, 'delete', 'Expense')).toBe(false);
+  });
 });

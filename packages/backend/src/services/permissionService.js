@@ -23,7 +23,7 @@
  */
 
 const { Subscription, SubscriptionPlan, Tenant, User, Role } = require('../models');
-const { can } = require('../utils/rbac');
+const { can, getEffectiveResources } = require('../utils/rbac');
 const { MENU_CONFIG } = require('../utils/menuConfig');
 const { getDefaultPermissionsForRole } = require('../utils/defaultRolePermissions');
 const { getMenuAccessForRole, hasFullAccess } = require('../utils/menuKeys');
@@ -140,7 +140,7 @@ async function buildUserPermissions(userId) {
   if (!user) throw new Error('User not found');
 
   const resolvedPermissions = resolveRolePermissions(user.role?.permissions || {}, user.role?.name);
-  const resources = resolvedPermissions.resources;
+  const resources = getEffectiveResources(user);
   const uiFlags = resolvedPermissions.uiFlags;
   const subInfo = await getSubscriptionInfo(user.tenantId);
 

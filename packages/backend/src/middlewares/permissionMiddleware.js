@@ -34,9 +34,14 @@ function authorize(action, subject) {
         return next();
       }
       if (process.env.NODE_ENV !== 'production') {
-        console.warn(`[permission] 403 Forbidden: ${req.method} ${req.originalUrl} — user role="${req.user.role?.name}", action="${action}", subject="${subject}"`);
+        console.warn(`[permission] 403 Forbidden: ${req.method} ${req.originalUrl} — user role="${req.user.role?.name}" (id=${req.user.role?.id}), action="${action}", subject="${subject}"`);
       }
-      return res.status(403).json({ message: 'Forbidden' });
+      return res.status(403).json({
+        message: 'Forbidden',
+        code: 'PERMISSION_DENIED',
+        required: { action, subject },
+        role: req.user.role ? { id: req.user.role.id, name: req.user.role.name } : null,
+      });
     }
 
     // Fallback: if subject is some other object, just check via string

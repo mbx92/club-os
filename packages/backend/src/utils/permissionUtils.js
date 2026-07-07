@@ -173,15 +173,25 @@ function resourcesFromLegacyFlatPermissions(permissions = {}) {
 }
 
 function getStoredResources(permissions = {}) {
+  let merged = {};
+
   if (permissions?.resources && typeof permissions.resources === 'object') {
-    return normalizeResourcePermissions(permissions.resources);
+    merged = normalizeResourcePermissions(permissions.resources);
   }
 
   const fromRolePermissions = resourcesFromRolePermissions(permissions?.rolePermissions);
-  if (Object.keys(fromRolePermissions).length > 0) return fromRolePermissions;
+  if (Object.keys(fromRolePermissions).length > 0) {
+    merged = normalizeResourcePermissions({ ...merged, ...fromRolePermissions });
+  }
 
   const fromRules = resourcesFromRules(permissions?.rules);
-  if (Object.keys(fromRules).length > 0) return fromRules;
+  if (Object.keys(fromRules).length > 0) {
+    merged = normalizeResourcePermissions({ ...merged, ...fromRules });
+  }
+
+  if (Object.keys(merged).length > 0) {
+    return merged;
+  }
 
   return resourcesFromLegacyFlatPermissions(permissions);
 }
@@ -203,7 +213,8 @@ function hasResourceAccess(resources = {}, action, resource) {
   const wildcardActions = normalized[FULL_ACCESS_RESOURCE] || [];
   if (wildcardActions.includes(action)) return true;
 
-  const actions = normalized[resource] || [];
+  const normalizedSubject = normalizeResourceName(resource) || resource;
+  const actions = normalized[normalizedSubject] || [];
   return actions.includes(FULL_ACCESS_ACTION) || actions.includes(action);
 }
 
@@ -228,10 +239,11 @@ function deriveUiFlags(resources = {}) {
 
 function resolveRolePermissions(rawPermissions = {}, roleName) {
   const defaults = getDefaultPermissionsForRole(roleName);
-  const resources = getStoredResources(rawPermissions);
-  const resolvedResources = Object.keys(resources).length > 0
-    ? resources
-    : normalizeResourcePermissions(defaults?.resources);
+  const defaultResources = normalizeResourcePermissions(defaults?.resources || {});
+  const storedResources = getStoredResources(rawPermissions);
+  const resolvedResources = Object.keys(storedResources).length > 0
+    ? normalizeResourcePermissions({ ...defaultResources, ...storedResources })
+    : defaultResources;
 
   const uiFlags = rawPermissions?.uiFlags
     ? normalizeUiFlags(rawPermissions.uiFlags)
@@ -255,9 +267,21 @@ function resolveRolePermissions(rawPermissions = {}, roleName) {
 
 function buildRolePermissionsPayload(input = {}, roleName, currentPermissions = {}) {
   const current = resolveRolePermissions(currentPermissions, roleName);
+  const storedResources = getStoredResources(currentPermissions);
+  const defaultResources = normalizeResourcePermissions(
+    getDefaultPermissionsForRole(roleName)?.resources || {}
+  );
+  const baseResources = normalizeResourcePermissions({
+    ...defaultResources,
+    ...storedResources,
+  });
+
   const nextResources = input.resources !== undefined
-    ? normalizeResourcePermissions(input.resources)
-    : current.resources;
+    ? normalizeResourcePermissions({
+        ...baseResources,
+        ...normalizeResourcePermissions(input.resources),
+      })
+    : (Object.keys(storedResources).length > 0 ? baseResources : current.resources);
   const nextMenuAccess = input.menuAccess !== undefined
     ? normalizeMenuAccess(input.menuAccess, roleName)
     : current.menuAccess;

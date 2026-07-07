@@ -827,6 +827,7 @@ import {
   getAllMenuKeyValues,
   resolveMenuAccessForRole,
   resolvePermissionsFromResources,
+  extractStoredResourcesFromRolePermissions,
   buildAllResourcePermissions,
   normalizeMenuAccess
 } from '@/navigation/menuKeyUtils'
@@ -1265,7 +1266,8 @@ const openCreateModal = () => {
 
 const populateFormFromRole = (role, { asCustomCopy = false } = {}) => {
   const perms = role.permissions || {}
-  let existingPermissions = resolvePermissionsFromResources(perms.resources, availableResources.value, role)
+  const rawResources = extractStoredResourcesFromRolePermissions(perms)
+  let existingPermissions = resolvePermissionsFromResources(rawResources, availableResources.value, role)
 
   const roleName = role.name?.toLowerCase()
   if ((roleName === 'admin' || roleName === 'owner') && availableResources.value.length > 0) {
