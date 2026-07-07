@@ -206,6 +206,24 @@ describe('RBAC — autoAuthorize route matching (RBAC-05)', () => {
     expect(findRouteMapping(fullPath, 'GET')).toMatchObject({ subject: 'StaffAttendance', actions: ['read'] });
   });
 
+  test('FIXED: trailing slash on staff-attendance list must require read, not empty :id update', () => {
+    const req = { baseUrl: '/api/v1/gym/staff-attendance', path: '/' };
+    const fullPath = getFullRoutePath(req);
+
+    expect(fullPath).toBe('/gym/staff-attendance');
+    expect(findRouteMapping(fullPath, 'GET')).toMatchObject({ subject: 'StaffAttendance', actions: ['read'] });
+  });
+
+  test('cashier can read staff-attendance list route (read permission only)', () => {
+    const user = makeUser({ role: 'cashier', permissions: {} });
+    const fullPath = getFullRoutePath({ baseUrl: '/api/v1/gym/staff-attendance', path: '/' });
+    const mapping = findRouteMapping(fullPath, 'GET');
+
+    expect(mapping).toMatchObject({ subject: 'StaffAttendance', actions: ['read'] });
+    expect(can(user, 'read', 'StaffAttendance')).toBe(true);
+    expect(mapping.actions.every((action) => can(user, action, mapping.subject))).toBe(true);
+  });
+
   test('FIXED (RBAC-02/05): the dedicated Transaction cancel/refund routes now have ' +
     'explicit map entries requiring the "cancel" action, not "update"', () => {
     for (const suffix of ['cancel', 'refund', 'refund-items']) {

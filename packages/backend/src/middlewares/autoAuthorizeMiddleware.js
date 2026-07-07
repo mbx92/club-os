@@ -32,7 +32,11 @@ function matchRoute(pattern, requestPath) {
   const params = {};
   for (let i = 0; i < patternParts.length; i++) {
     if (patternParts[i].startsWith(':')) {
-      params[patternParts[i].slice(1)] = pathParts[i];
+      const value = pathParts[i];
+      // Do not treat a trailing slash as an empty :id — e.g.
+      // /gym/staff-attendance/ must stay the list route (read), not :id (update).
+      if (!value) return null;
+      params[patternParts[i].slice(1)] = value;
     } else if (patternParts[i] !== pathParts[i]) {
       return null;
     }
@@ -55,7 +59,9 @@ function matchRoute(pattern, requestPath) {
  */
 function getFullRoutePath(req) {
   const full = `${req.baseUrl || ''}${req.path || ''}` || '/';
-  return full.replace(/^\/api\/v\d+/, '') || '/';
+  const stripped = full.replace(/^\/api\/v\d+/, '') || '/';
+  if (stripped.length <= 1) return stripped;
+  return stripped.replace(/\/+$/, '');
 }
 
 /**
@@ -141,10 +147,16 @@ function autoAuthorize(req, res, next) {
   const allowed = actions.some(action => can(req.user, action, subject));
 
   if (!allowed) {
+    const requiredAction = actions[0];
     if (process.env.NODE_ENV !== 'production') {
       console.warn(`[autoAuthorize] 403 Forbidden: ${req.method} ${fullPath} — role="${req.user.role?.name}", required=[${actions.join(',')}] on "${subject}"`);
     }
-    return res.status(403).json({ message: 'Forbidden' });
+    return res.status(403).json({
+      message: 'Forbidden',
+      code: 'PERMISSION_DENIED',
+      required: { action: requiredAction, actions, subject },
+      role: req.user.role ? { id: req.user.role.id, name: req.user.role.name } : null,
+    });
   }
 
   next();
