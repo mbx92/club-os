@@ -29,6 +29,8 @@ const LEGACY_RESOURCE_MAP = {
   transactions: 'Transaction',
   expenses: 'Expense',
   products: 'RestaurantProduct',
+  staffAttendance: 'StaffAttendance',
+  'staff-attendance': 'StaffAttendance',
 };
 
 function normalizeUiFlags(uiFlags = {}) {
@@ -108,7 +110,7 @@ function resourcesFromRules(rules = []) {
   const resources = {};
 
   for (const rule of rules) {
-    const subject = rule?.subject;
+    const subject = normalizeResourceName(rule?.subject) || rule?.subject;
     if (!subject || rule?.inverted) continue;
 
     const actions = normalizeActionList(rule.actions || rule.action, {

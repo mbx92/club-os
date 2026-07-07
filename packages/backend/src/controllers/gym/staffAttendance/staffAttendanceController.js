@@ -16,8 +16,10 @@ const {
   getPreviousDateOnly,
   getScheduleMetricsForEvent,
   hasScheduleEnded,
+  isPlausibleCheckIn,
   isPlausibleCheckout,
   parseTimeToMinutes,
+  shouldSwapOvernightTimes,
   toLocalDateOnly,
 } = require('../../../utils/attendanceSchedule');
 const { createError } = require('../../../utils/errorCodes');
@@ -1637,7 +1639,26 @@ async function fixSmartCheckInOut(req, res, next) {
       order: [['date', 'ASC']],
     });
 
-    const allRecords = [...records, ...reverseRecords];
+    const whereComplete = {};
+    if (!isSuperAdmin) whereComplete.tenantId = tenantId;
+    whereComplete.checkInTime = { [Op.ne]: null };
+    whereComplete.checkOutTime = { [Op.ne]: null };
+    if (startDate || endDate) {
+      whereComplete.date = {};
+      if (startDate) whereComplete.date[Op.gte] = startDate;
+      if (endDate)   whereComplete.date[Op.lte] = endDate;
+    }
+    if (employeeId) whereComplete.deviceEmployeeId = employeeId;
+
+    const completeRecords = await StaffAttendance.findAll({
+      where: whereComplete,
+      include: [
+        { model: DeviceEmployee, as: 'deviceEmployee', attributes: ['id', 'employeeNo', 'name'] },
+      ],
+      order: [['date', 'ASC']],
+    });
+
+    const allRecords = [...records, ...reverseRecords, ...completeRecords];
     const fixes = [];
 
     for (const rec of allRecords) {
@@ -1656,29 +1677,44 @@ async function fixSmartCheckInOut(req, res, next) {
 
       if (!schedule || !schedule.shiftStart || !schedule.shiftEnd) continue;
 
-      const [ssh, ssm] = schedule.shiftStart.split(':').map(Number);
-      const [seh, sem] = schedule.shiftEnd.split(':').map(Number);
-      const shiftStartMins = ssh * 60 + ssm;
-      const shiftEndMins   = seh * 60 + sem;
-      const shiftDuration  = shiftEndMins > shiftStartMins
-        ? shiftEndMins - shiftStartMins
-        : (1440 - shiftStartMins) + shiftEndMins;
-      const halfShift = shiftDuration / 2;
+      const checkInMetrics = rec.checkInTime
+        ? getScheduleMetricsForEvent(new Date(rec.checkInTime), schedule, tenantTimezone)
+        : null;
+      const checkOutMetrics = rec.checkOutTime
+        ? getScheduleMetricsForEvent(new Date(rec.checkOutTime), schedule, tenantTimezone)
+        : null;
+
+      // ── Case C: both present but reversed for overnight shift (06:00 in, 21:00 out)
+      if (rec.checkInTime && rec.checkOutTime && shouldSwapOvernightTimes(rec.checkInTime, rec.checkOutTime, schedule, tenantTimezone)) {
+        const fix = {
+          id: rec.id,
+          employee: `${emp.employeeNo} - ${emp.name}`,
+          date: recDate,
+          action: 'swap_reversed_overnight_times',
+          checkInLocal: formatLocalDateTime(rec.checkInTime, tenantTimezone),
+          checkOutLocal: formatLocalDateTime(rec.checkOutTime, tenantTimezone),
+          shiftStart: schedule.shiftStart,
+          shiftEnd: schedule.shiftEnd,
+        };
+
+        if (!isDryRun) {
+          await rec.update({
+            checkInTime: rec.checkOutTime,
+            checkOutTime: rec.checkInTime,
+          });
+          fix.applied = true;
+        }
+
+        fixes.push(fix);
+        continue;
+      }
 
       // ── Case A: has checkIn, no checkOut → maybe checkIn is actually checkOut
-      if (rec.checkInTime && !rec.checkOutTime) {
+      if (rec.checkInTime && !rec.checkOutTime && checkInMetrics) {
         const tapTime = new Date(rec.checkInTime);
-        const localTime = tapTime.toLocaleTimeString('en-GB', { timeZone: tenantTimezone, hour12: false });
-        const [eh, em] = localTime.split(':').map(Number);
-        const eventMins = eh * 60 + em;
+        const localTime = formatLocalDateTime(tapTime, tenantTimezone)?.slice(11, 16) || '';
 
-        const distToStart = Math.abs(eventMins - shiftStartMins);
-        const distToEnd   = Math.abs(eventMins - shiftEndMins);
-        const minsAfterStart = eventMins >= shiftStartMins
-          ? eventMins - shiftStartMins
-          : (1440 - shiftStartMins) + eventMins;
-
-        if (distToEnd < distToStart && minsAfterStart > halfShift) {
+        if (isPlausibleCheckout(checkInMetrics, 240)) {
           const fix = {
             id: rec.id,
             employee: `${emp.employeeNo} - ${emp.name}`,
@@ -1687,8 +1723,8 @@ async function fixSmartCheckInOut(req, res, next) {
             tapTime: localTime,
             shiftStart: schedule.shiftStart,
             shiftEnd: schedule.shiftEnd,
-            distToStart,
-            distToEnd,
+            distToStart: checkInMetrics.distToStart,
+            distToEnd: checkInMetrics.distToEnd,
           };
 
           if (!isDryRun) {
@@ -1701,19 +1737,11 @@ async function fixSmartCheckInOut(req, res, next) {
       }
 
       // ── Case B: has checkOut, no checkIn → maybe checkOut is actually checkIn
-      if (!rec.checkInTime && rec.checkOutTime) {
+      if (!rec.checkInTime && rec.checkOutTime && checkOutMetrics) {
         const tapTime = new Date(rec.checkOutTime);
-        const localTime = tapTime.toLocaleTimeString('en-GB', { timeZone: tenantTimezone, hour12: false });
-        const [eh, em] = localTime.split(':').map(Number);
-        const eventMins = eh * 60 + em;
+        const localTime = formatLocalDateTime(tapTime, tenantTimezone)?.slice(11, 16) || '';
 
-        const distToStart = Math.abs(eventMins - shiftStartMins);
-        const distToEnd   = Math.abs(eventMins - shiftEndMins);
-        const minsAfterStart = eventMins >= shiftStartMins
-          ? eventMins - shiftStartMins
-          : (1440 - shiftStartMins) + eventMins;
-
-        if (distToStart < distToEnd && minsAfterStart < halfShift) {
+        if (isPlausibleCheckIn(checkOutMetrics, 240)) {
           const fix = {
             id: rec.id,
             employee: `${emp.employeeNo} - ${emp.name}`,
@@ -1722,8 +1750,8 @@ async function fixSmartCheckInOut(req, res, next) {
             tapTime: localTime,
             shiftStart: schedule.shiftStart,
             shiftEnd: schedule.shiftEnd,
-            distToStart,
-            distToEnd,
+            distToStart: checkOutMetrics.distToStart,
+            distToEnd: checkOutMetrics.distToEnd,
           };
 
           if (!isDryRun) {
@@ -1738,8 +1766,9 @@ async function fixSmartCheckInOut(req, res, next) {
 
     const checkInToOut = fixes.filter(f => f.action === 'checkIn_to_checkOut').length;
     const checkOutToIn = fixes.filter(f => f.action === 'checkOut_to_checkIn').length;
+    const swapped = fixes.filter(f => f.action === 'swap_reversed_overnight_times').length;
 
-    logger.info(`[fixSmartCheckInOut] ${isDryRun ? 'DRY RUN' : 'APPLIED'}: ${fixes.length} fixes (${checkInToOut} in→out, ${checkOutToIn} out→in)`);
+    logger.info(`[fixSmartCheckInOut] ${isDryRun ? 'DRY RUN' : 'APPLIED'}: ${fixes.length} fixes (${checkInToOut} in→out, ${checkOutToIn} out→in, ${swapped} swapped)`);
 
     return res.json({
       success: true,
@@ -1748,6 +1777,7 @@ async function fixSmartCheckInOut(req, res, next) {
       summary: {
         checkInToCheckOut: checkInToOut,
         checkOutToCheckIn: checkOutToIn,
+        swappedReversedOvernight: swapped,
         scannedRecords: allRecords.length,
       },
       fixes,

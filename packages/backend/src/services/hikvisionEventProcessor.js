@@ -24,9 +24,13 @@ const {
 } = require('../models');
 const HikvisionService = require('./hikvisionService');
 const {
+  getNextDateOnly,
+  getOvernightShiftAnchorDate,
   getPreviousDateOnly,
   getScheduleMetricsForEvent,
+  isPlausibleCheckIn,
   isPlausibleCheckout,
+  shouldSwapOvernightTimes,
   toLocalDateOnly,
 } = require('../utils/attendanceSchedule');
 const logger = require('../utils/logger');
@@ -100,6 +104,30 @@ function pickPreferredAttendance(current, candidate) {
   if (currentState === 'open' && candidateState !== 'open') return current;
 
   return current;
+}
+
+async function finalizeAttendanceTimes(attendance, schedule, timezone, transaction) {
+  if (!attendance?.checkInTime || !attendance?.checkOutTime || !schedule) {
+    return attendance;
+  }
+
+  if (!shouldSwapOvernightTimes(attendance.checkInTime, attendance.checkOutTime, schedule, timezone)) {
+    return attendance;
+  }
+
+  await attendance.update({
+    checkInTime: attendance.checkOutTime,
+    checkOutTime: attendance.checkInTime,
+  }, { transaction });
+
+  logger.info('StaffAttendance overnight times swapped to restore chronological order', {
+    attendanceId: attendance.id,
+    scheduleId: schedule.id,
+    checkInTime: attendance.checkInTime,
+    checkOutTime: attendance.checkOutTime,
+  });
+
+  return attendance;
 }
 
 class HikvisionEventProcessor {
@@ -338,7 +366,8 @@ class HikvisionEventProcessor {
     const tz = timezone || process.env.TZ || 'Asia/Jakarta';
     const dateOnly = toLocalDateOnly(eventDate, tz);
     const previousDate = getPreviousDateOnly(dateOnly);
-    const candidateDates = [previousDate, dateOnly];
+    const nextDate = getNextDateOnly(dateOnly);
+    const candidateDates = [...new Set([previousDate, dateOnly, nextDate])];
 
     const schedules = await EmployeeSchedule.findAll({
       where: {
@@ -389,6 +418,7 @@ class HikvisionEventProcessor {
 
     const contexts = schedules.map((schedule) => ({
       schedule,
+      anchorDate: getOvernightShiftAnchorDate(schedule, eventDate, tz),
       attendance: attendanceByScheduleId.get(schedule.id) || null,
       metrics: getScheduleMetricsForEvent(eventDate, schedule, tz),
     }));
@@ -419,7 +449,15 @@ class HikvisionEventProcessor {
         checkOutTime: eventDate,
         deviceId: device.id,
         scheduleId: openAttendanceCandidate.schedule.id,
+        date: openAttendanceCandidate.anchorDate,
       }, { transaction });
+
+      await finalizeAttendanceTimes(
+        openAttendanceCandidate.attendance,
+        openAttendanceCandidate.schedule,
+        tz,
+        transaction
+      );
 
       logger.info('StaffAttendance checkOut updated', {
         deviceEmployeeId: employee.id,
@@ -448,8 +486,16 @@ class HikvisionEventProcessor {
         checkInTime: eventDate,
         deviceId: device.id,
         scheduleId: checkoutOnlyCandidate.schedule.id,
+        date: checkoutOnlyCandidate.anchorDate,
         status: computed.status,
       }, { transaction });
+
+      await finalizeAttendanceTimes(
+        checkoutOnlyCandidate.attendance,
+        checkoutOnlyCandidate.schedule,
+        tz,
+        transaction
+      );
 
       logger.info('StaffAttendance checkIn backfilled on checkout-only record', {
         deviceEmployeeId: employee.id,
@@ -469,8 +515,13 @@ class HikvisionEventProcessor {
           context.metrics,
           ACCESS_DOOR_GUARDS.maxCheckoutDistanceFromShiftEndMinutes
         ),
+        isCheckInCandidate: isPlausibleCheckIn(
+          context.metrics,
+          ACCESS_DOOR_GUARDS.maxCheckoutDistanceFromShiftEndMinutes
+        ),
         score: Math.min(context.metrics.distToStart, context.metrics.distToEnd),
       }))
+      .filter((context) => context.isCheckoutCandidate || context.isCheckInCandidate)
       .sort((a, b) => {
         if (a.score !== b.score) return a.score - b.score;
         return a.metrics.distToStart - b.metrics.distToStart;
@@ -479,7 +530,7 @@ class HikvisionEventProcessor {
     if (newScheduleCandidate) {
       const computed = computeShiftStatus(eventDate, newScheduleCandidate.schedule, tz);
 
-      await StaffAttendance.create(
+      const created = await StaffAttendance.create(
         {
           tenantId: device.tenantId,
           deviceEmployeeId: employee.id,
@@ -487,12 +538,19 @@ class HikvisionEventProcessor {
           deviceId: device.id,
           scheduleId: newScheduleCandidate.schedule.id,
           logId,
-          checkInTime: newScheduleCandidate.isCheckoutCandidate ? null : eventDate,
+          checkInTime: newScheduleCandidate.isCheckInCandidate ? eventDate : null,
           checkOutTime: newScheduleCandidate.isCheckoutCandidate ? eventDate : null,
-          date: newScheduleCandidate.schedule.date,
+          date: newScheduleCandidate.anchorDate,
           status: newScheduleCandidate.isCheckoutCandidate ? 'present' : computed.status,
         },
         { transaction }
+      );
+
+      await finalizeAttendanceTimes(
+        created,
+        newScheduleCandidate.schedule,
+        tz,
+        transaction
       );
 
       logger.info(

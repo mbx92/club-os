@@ -12,6 +12,12 @@ function getPreviousDateOnly(dateStr) {
   return `${prev.getUTCFullYear()}-${String(prev.getUTCMonth() + 1).padStart(2, '0')}-${String(prev.getUTCDate()).padStart(2, '0')}`;
 }
 
+function getNextDateOnly(dateStr) {
+  const [y, m, d] = String(dateStr).split('-').map(Number);
+  const next = new Date(Date.UTC(y, m - 1, d + 1));
+  return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-${String(next.getUTCDate()).padStart(2, '0')}`;
+}
+
 function parseTimeToMinutes(timeStr) {
   if (!timeStr) return null;
   const [h, m] = String(timeStr).split(':').map(Number);
@@ -42,19 +48,21 @@ function getScheduleMetricsForEvent(eventDate, schedule, timezone) {
 
   const tz = timezone || process.env.TZ || 'Asia/Jakarta';
   const scheduleDate = String(schedule.date).split('T')[0];
+  const anchorDate = getOvernightShiftAnchorDate(schedule, eventDate, tz);
   const eventLocalDate = toLocalDateOnly(eventDate, tz);
   const eventLocalMinutes = getLocalTimeMinutes(eventDate, tz);
   const shiftStartMinutes = parseTimeToMinutes(schedule.shiftStart);
   const rawShiftEndMinutes = parseTimeToMinutes(schedule.shiftEnd);
   const isOvernight = rawShiftEndMinutes <= shiftStartMinutes;
   const shiftEndMinutes = isOvernight ? rawShiftEndMinutes + 1440 : rawShiftEndMinutes;
-  const dayOffset = diffDateOnlyDays(scheduleDate, eventLocalDate);
+  const dayOffset = diffDateOnlyDays(anchorDate, eventLocalDate);
   const eventOffsetMinutes = (dayOffset * 1440) + eventLocalMinutes;
   const shiftDuration = shiftEndMinutes - shiftStartMinutes;
   const minsAfterStart = eventOffsetMinutes - shiftStartMinutes;
 
   return {
     dayOffset,
+    anchorDate,
     eventLocalDate,
     eventLocalMinutes,
     eventOffsetMinutes,
@@ -69,12 +77,73 @@ function getScheduleMetricsForEvent(eventDate, schedule, timezone) {
   };
 }
 
+function isOvernightSchedule(schedule) {
+  const shiftStart = parseTimeToMinutes(schedule?.shiftStart);
+  const shiftEnd = parseTimeToMinutes(schedule?.shiftEnd);
+  if (shiftStart === null || shiftEnd === null) return false;
+  return shiftEnd <= shiftStart;
+}
+
+function isPlausibleCheckIn(metrics, maxCheckInDistanceFromShiftStartMinutes = 120) {
+  if (!metrics) return false;
+
+  return metrics.distToStart <= maxCheckInDistanceFromShiftStartMinutes
+    && metrics.distToStart <= metrics.distToEnd
+    && metrics.minsAfterStart <= metrics.halfShift;
+}
+
 function isPlausibleCheckout(metrics, maxCheckoutDistanceFromShiftEndMinutes = 120) {
   if (!metrics) return false;
 
   return metrics.distToEnd < metrics.distToStart
     && metrics.minsAfterStart > metrics.halfShift
     && metrics.distToEnd <= maxCheckoutDistanceFromShiftEndMinutes;
+}
+
+/**
+ * Night shifts are anchored on the shift START calendar date.
+ * Schedules are sometimes stored on the checkout date (next morning) — remap.
+ */
+function getOvernightShiftAnchorDate(schedule, eventDate, timezone) {
+  const scheduleDate = String(schedule?.date || '').split('T')[0];
+  if (!scheduleDate || !isOvernightSchedule(schedule)) return scheduleDate;
+
+  const tz = timezone || process.env.TZ || 'Asia/Jakarta';
+  const eventLocalDate = toLocalDateOnly(eventDate, tz);
+  const eventLocalMinutes = getLocalTimeMinutes(eventDate, tz);
+  const shiftStartMinutes = parseTimeToMinutes(schedule.shiftStart);
+  const rawShiftEndMinutes = parseTimeToMinutes(schedule.shiftEnd);
+  const dayOffset = diffDateOnlyDays(scheduleDate, eventLocalDate);
+
+  if (dayOffset === -1) {
+    return getPreviousDateOnly(scheduleDate);
+  }
+
+  if (dayOffset === 0 && eventLocalMinutes <= rawShiftEndMinutes) {
+    return getPreviousDateOnly(scheduleDate);
+  }
+
+  if (dayOffset === 0 && eventLocalMinutes >= shiftStartMinutes) {
+    return scheduleDate;
+  }
+
+  if (dayOffset === 1 && eventLocalMinutes <= rawShiftEndMinutes) {
+    return scheduleDate;
+  }
+
+  return scheduleDate;
+}
+
+function shouldSwapOvernightTimes(checkInTime, checkOutTime, schedule, timezone) {
+  if (!checkInTime || !checkOutTime || !schedule) return false;
+
+  const checkIn = new Date(checkInTime);
+  const checkOut = new Date(checkOutTime);
+  if (checkIn <= checkOut) return false;
+
+  const metrics = getScheduleMetricsForEvent(checkIn, schedule, timezone)
+    || getScheduleMetricsForEvent(checkOut, schedule, timezone);
+  return Boolean(metrics?.isOvernight);
 }
 
 function hasScheduleEnded(schedule, referenceDate, timezone) {
@@ -86,10 +155,15 @@ function hasScheduleEnded(schedule, referenceDate, timezone) {
 module.exports = {
   diffDateOnlyDays,
   getLocalTimeMinutes,
+  getNextDateOnly,
+  getOvernightShiftAnchorDate,
   getPreviousDateOnly,
   getScheduleMetricsForEvent,
   hasScheduleEnded,
+  isOvernightSchedule,
+  isPlausibleCheckIn,
   isPlausibleCheckout,
   parseTimeToMinutes,
+  shouldSwapOvernightTimes,
   toLocalDateOnly,
 };
