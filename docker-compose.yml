@@ -19,6 +19,9 @@ services:
       REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-change-me}
       REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN:-7d}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8081,http://127.0.0.1:8081}
+      # Allow LAN/on-prem origins like http://192.168.x.x:8081 in production.
+      # Set to "false" for public cloud deployments that only use explicit ALLOWED_ORIGINS.
+      CORS_ALLOW_PRIVATE_NETWORK: ${CORS_ALLOW_PRIVATE_NETWORK:-true}
       WAIT_FOR_DB: ${WAIT_FOR_DB:-true}
       DB_WAIT_TIMEOUT: ${DB_WAIT_TIMEOUT:-120}
       DB_WAIT_INTERVAL: ${DB_WAIT_INTERVAL:-3}

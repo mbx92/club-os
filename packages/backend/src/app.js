@@ -16,6 +16,7 @@ const {
   dbConnectionGauge,
   updateTopUrls
 } = require('./utils/metrics');
+const { createCorsOptions } = require('./config/cors');
 
 const app = express();
 const backendPublicPath = path.join(__dirname, '../public');
@@ -32,51 +33,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // CORS configuration - support credentials for SSE streaming
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-
-    // Allow localhost for development
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:5173',
-      'http://127.0.0.1:5174'
-    ];
-
-    // Also allow from environment variable
-    if (process.env.ALLOWED_ORIGINS) {
-      allowedOrigins.push(...process.env.ALLOWED_ORIGINS.split(','));
-    }
-
-    // RBAC-12: previously this reflected ANY origin back (even outside the
-    // allowlist) while `credentials: true` was set — letting any malicious
-    // site make credentialed cross-origin requests on behalf of a logged-in
-    // user. Only echo back origins that are actually on the allowlist.
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
-      callback(null, origin);
-    } else {
-      callback(new Error(`Origin "${origin}" is not allowed by CORS`));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'X-Requested-With',
-    'Accept',
-    'x-client-ip',
-    'x-client-name',
-    'x-tenant-id'
-  ],
-  exposedHeaders: ['Content-Disposition', 'Content-Type', 'Content-Length'],
-  maxAge: 86400 // 24 hours - cache preflight requests
-};
-app.use(cors(corsOptions));
+app.use(cors(createCorsOptions()));
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }

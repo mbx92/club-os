@@ -4,6 +4,14 @@ const logger = require('../../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../../utils/requestHelper');
 const { sequelize } = require('../../../models');
 const { getAdminPassword } = require('../../../utils/passwordGenerator');
+const { isTenantAdmin } = require('../../../utils/rbacUtils');
+
+function assertSameTenant(req, tenantId) {
+  if (!req.user?.isSuperAdmin && req.user?.tenantId !== tenantId) {
+    return 'Forbidden: you can only access your own tenant data';
+  }
+  return null;
+}
 
 async function getTenants(req, res, next) {
   try {
@@ -95,15 +103,11 @@ async function getTenant(req, res, next) {
     tenant.dataValues.userCount = userCount;
     
     
-    // Check if user is authorized to access this tenant
-    // Only superadmin and users with admin role can access tenant data
-    if (req.user && !req.user.isSuperAdmin) {
-      if (req.user.tenantId !== req.params.id) {
-        return res.status(403).json({ message: 'Forbidden: you can only access your own tenant data' });
-      }
-      if (!req.user.role || req.user.role.name !== 'admin') {
-        return res.status(403).json({ message: 'Forbidden: only admins can access tenant data' });
-      }
+    // Any authenticated member of the tenant may read their own tenant record.
+    // Fine-grained write access is enforced on PUT/PATCH/DELETE routes.
+    const tenantAccessError = assertSameTenant(req, req.params.id);
+    if (tenantAccessError) {
+      return res.status(403).json({ message: tenantAccessError });
     }
     
     res.json(tenant);
@@ -253,13 +257,13 @@ async function updateTenant(req, res, next) {
     if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
 
     // Check if user is authorized to update this tenant
-    // Only superadmin and users with admin role can update tenant data
     if (req.user && !req.user.isSuperAdmin) {
-      if (req.user.tenantId !== tenant.id) {
-        return res.status(403).json({ message: 'Forbidden: you can only update your own tenant data' });
+      const tenantAccessError = assertSameTenant(req, tenant.id);
+      if (tenantAccessError) {
+        return res.status(403).json({ message: tenantAccessError.replace('access', 'update') });
       }
-      if (!req.user.role || req.user.role.name !== 'admin') {
-        return res.status(403).json({ message: 'Forbidden: only admins can update tenant data' });
+      if (!isTenantAdmin(req.user)) {
+        return res.status(403).json({ message: 'Forbidden: only tenant admins can update tenant data' });
       }
     }
 
@@ -366,11 +370,12 @@ async function deleteTenant(req, res, next) {
     // Check if user is authorized to delete this tenant
     // Only superadmin and users with admin role can delete tenant data
     if (req.user && !req.user.isSuperAdmin) {
-      if (req.user.tenantId !== tenant.id) {
-        return res.status(403).json({ message: 'Forbidden: you can only delete your own tenant data' });
+      const tenantAccessError = assertSameTenant(req, tenant.id);
+      if (tenantAccessError) {
+        return res.status(403).json({ message: tenantAccessError.replace('access', 'delete') });
       }
-      if (!req.user.role || req.user.role.name !== 'admin') {
-        return res.status(403).json({ message: 'Forbidden: only admins can delete tenant data' });
+      if (!isTenantAdmin(req.user)) {
+        return res.status(403).json({ message: 'Forbidden: only tenant admins can delete tenant data' });
       }
     }
 
@@ -444,10 +449,10 @@ async function updateTenantSettings(req, res, next) {
       
       // Check if user is authorized to update settings
       // Only admin or owner can update tenant settings
-      if (!req.user.role || !['admin', 'owner'].includes(req.user.role.name)) {
+      if (!isTenantAdmin(req.user)) {
         return res.status(403).json({ 
           success: false, 
-          message: 'Forbidden: only admins or owners can update tenant settings' 
+          message: 'Forbidden: only tenant admins can update tenant settings' 
         });
       }
       

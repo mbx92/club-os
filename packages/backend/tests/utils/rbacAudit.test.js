@@ -156,13 +156,14 @@ describe('RBAC — permissionUtils normalization', () => {
 });
 
 describe('RBAC — getEffectiveResources', () => {
-  test('prefers stored role.permissions.resources over defaults', () => {
+  test('merges stored role.permissions.resources with role defaults', () => {
     const user = makeUser({
       role: 'manager',
       permissions: { resources: { Member: ['read'] } },
     });
     const resources = getEffectiveResources(user);
-    expect(resources).toEqual({ Member: ['read'] });
+    expect(resources.Member).toEqual(['read']);
+    expect(resources.Tenant).toContain('read');
   });
 
   test('returns {} for unknown role with no stored permissions', () => {
@@ -220,5 +221,23 @@ describe('RBAC — default role catalog sanity', () => {
       const defaults = getDefaultPermissionsForRole(role);
       expect(defaults.resources['*']).toBeUndefined();
     }
+  });
+
+  test('legacy cashier rules without Tenant still inherit Tenant:read from defaults', () => {
+    const legacyCashier = {
+      role: {
+        name: 'Cashier',
+        permissions: {
+          rules: [
+            { subject: 'Transaction', actions: ['read', 'create', 'update'] },
+            { subject: 'Payment', actions: ['read', 'create'] },
+          ],
+        },
+      },
+    };
+
+    expect(can(legacyCashier, 'read', 'Tenant')).toBe(true);
+    expect(can(legacyCashier, 'read', 'Transaction')).toBe(true);
+    expect(getEffectiveResources(legacyCashier).Tenant).toContain('read');
   });
 });

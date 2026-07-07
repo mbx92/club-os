@@ -9,13 +9,21 @@ const {
 function getEffectiveResources(user) {
   if (!user) return {};
 
+  const defaults = getDefaultPermissionsForRole(user.role?.name);
+  const defaultResources = normalizeResourcePermissions(defaults?.resources || {});
   const storedResources = getStoredResources(user.role?.permissions || {});
-  if (Object.keys(storedResources).length > 0) {
-    return storedResources;
+
+  if (Object.keys(storedResources).length === 0) {
+    return defaultResources;
   }
 
-  const defaults = getDefaultPermissionsForRole(user.role?.name);
-  return normalizeResourcePermissions(defaults?.resources);
+  // Legacy roles may only have partial `rules` stored (e.g. cashier seeded
+  // before Tenant:read existed). Merge defaults underneath so boot-critical
+  // reads like tenant settings / payment methods keep working.
+  return normalizeResourcePermissions({
+    ...defaultResources,
+    ...storedResources,
+  });
 }
 
 function can(user, action, subject) {
