@@ -49,7 +49,7 @@ export const useAuthStore = defineStore('auth', () => {
       firstName: permissionUser.firstName ?? user.value?.firstName,
       lastName: permissionUser.lastName ?? user.value?.lastName,
       isSuperAdmin: permissionUser.isSuperAdmin ?? user.value?.isSuperAdmin,
-      tenantId: permissionUser.tenantId ?? user.value?.tenantId,
+      tenantId: permissionUser.tenantId ?? user.value?.tenantId ?? user.value?.tenant?.id,
       role: normalizeRoleName(permissionUser.role) ?? normalizeRoleName(user.value?.role),
     }
 
@@ -106,6 +106,9 @@ export const useAuthStore = defineStore('auth', () => {
       token.value = savedToken
       refreshToken.value = savedRefreshToken
       user.value = JSON.parse(savedUser)
+      if (!user.value?.tenantId && user.value?.tenant?.id) {
+        user.value.tenantId = user.value.tenant.id
+      }
       if (user.value?.role && typeof user.value.role !== 'string') {
         user.value.role = normalizeRoleName(user.value.role)
         persistUser(user.value)
@@ -155,11 +158,14 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await api.post('/auth/login', credentials)
       
-      if (response.token && response.refreshToken) {
-        // Save tokens and user data
-        token.value = response.token
-        refreshToken.value = response.refreshToken
-        user.value = response.user
+    if (response.token && response.refreshToken) {
+      // Save tokens and user data
+      token.value = response.token
+      refreshToken.value = response.refreshToken
+      user.value = response.user
+      if (!user.value?.tenantId && user.value?.tenant?.id) {
+        user.value.tenantId = user.value.tenant.id
+      }
         
         // Determine storage method based on rememberMe
         const storage = credentials.rememberMe ? localStorage : sessionStorage
@@ -181,6 +187,7 @@ export const useAuthStore = defineStore('auth', () => {
         // Check if permissions included in login response (new backend behavior)
         if (response.permissions) {
           permissions.value = response.permissions
+          mergePermissionUser(response.permissions.user)
           if (isDev) debug.log('[authStore] Permissions included in login response:', permissions.value)
         } else {
           // Fallback: Fetch user permissions from separate endpoint (backward compatibility)

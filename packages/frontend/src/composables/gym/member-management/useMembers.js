@@ -26,9 +26,31 @@ export const useMembers = () => {
       queryParams.append('limit', params.limit || 10)
       queryParams.append('sortBy', params.sortBy || 'createdAt')
       queryParams.append('sortOrder', params.sortOrder || 'DESC')
-      queryParams.append('search', params.search || '')
-      queryParams.append('membershipStatus', params.membershipStatus || 'all')
-      queryParams.append('isActive', params.isActive || 'all')
+
+      if (params.search) {
+        queryParams.append('search', params.search)
+      }
+
+      if (params.membershipStatus && params.membershipStatus !== 'all') {
+        queryParams.append('membershipStatus', params.membershipStatus)
+      }
+
+      // Backend expects `status` (active/inactive/all), not `isActive`.
+      const status = params.status
+        ?? (params.isActive === true || params.isActive === 'true'
+          ? 'active'
+          : params.isActive === false || params.isActive === 'false'
+            ? 'inactive'
+            : params.isActive === 'all' || params.isActive == null || params.isActive === ''
+              ? 'all'
+              : params.isActive)
+      if (status && status !== 'all') {
+        queryParams.append('status', status)
+      }
+
+      if (params.checkInEligible) {
+        queryParams.append('checkInEligible', 'true')
+      }
 
       const response = await api.get(`/gym/members?${queryParams.toString()}`)
       members.value = response.data || []

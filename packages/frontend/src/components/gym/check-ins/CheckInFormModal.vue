@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useCheckins } from '@/composables/gym/checkin-management'
 import { useMembers } from '@/composables/gym/member-management'
 import { IconDoorEnter, IconUser, IconNotes } from '@tabler/icons-vue'
@@ -28,6 +28,7 @@ const searchQuery = ref('')
 const filteredMembers = ref([])
 const showMemberModal = ref(false)
 const selectedMember = ref(null)
+let memberSearchTimeout = null
 
 // Service type options
 const serviceTypeOptions = [
@@ -84,44 +85,37 @@ const validateForm = () => {
   return Object.keys(errors.value).length === 0
 }
 
-// Load members with active services
-const loadMembers = async () => {
+// Search members via API (server-side) so all active members are reachable
+const searchMembers = async (query = '') => {
   loadingMembers.value = true
   try {
-    await fetchMembers({ 
-      page: 1, 
-      limit: 100, 
+    await fetchMembers({
+      page: 1,
+      limit: 30,
       status: 'active',
-      includeActiveServices: true 
+      membershipStatus: 'active',
+      checkInEligible: true,
+      sortBy: query.trim() ? 'firstName' : 'createdAt',
+      sortOrder: query.trim() ? 'ASC' : 'DESC',
+      search: query.trim() || undefined,
     })
-    // Only show members that have at least one active service
-    filteredMembers.value = (members.value || []).filter(m => Array.isArray(m.activeServices) && m.activeServices.length > 0)
+    filteredMembers.value = members.value || []
   } catch (error) {
     console.error('Error loading members:', error)
+    filteredMembers.value = []
   } finally {
     loadingMembers.value = false
   }
 }
 
-// Search members
-const handleMemberSearch = (event) => {
-  const query = event.target.value.toLowerCase()
-  searchQuery.value = query
-  
-  if (!query) {
-    // Reset to only members with active services
-    filteredMembers.value = (members.value || []).filter(m => Array.isArray(m.activeServices) && m.activeServices.length > 0)
-    return
+// Debounced search handler
+const handleMemberSearch = () => {
+  if (memberSearchTimeout) {
+    clearTimeout(memberSearchTimeout)
   }
-
-  const candidates = (members.value || []).filter(m => Array.isArray(m.activeServices) && m.activeServices.length > 0)
-
-  filteredMembers.value = candidates.filter(member => {
-    const fullName = `${member.firstName} ${member.lastName}`.toLowerCase()
-    const email = member.email?.toLowerCase() || ''
-    const phone = member.phone || ''
-    return fullName.includes(query) || email.includes(query) || phone.includes(query)
-  })
+  memberSearchTimeout = setTimeout(() => {
+    searchMembers(searchQuery.value)
+  }, 300)
 }
 
 // Select member
@@ -138,7 +132,7 @@ const clearMemberSelection = () => {
   selectedMember.value = null
   formData.value.memberId = ''
   searchQuery.value = ''
-  filteredMembers.value = (members.value || []).filter(m => Array.isArray(m.activeServices) && m.activeServices.length > 0)
+  filteredMembers.value = []
 }
 
 // Reset form
@@ -192,15 +186,10 @@ const closeModal = () => {
 const memberModal = ref(null)
 
 const openMemberModal = () => {
-  if (members.value.length === 0) {
-    loadMembers()
-  } else {
-    // Already fetched – show only members with active services
-    filteredMembers.value = (members.value || []).filter(m => Array.isArray(m.activeServices) && m.activeServices.length > 0)
-  }
   searchQuery.value = ''
   showMemberModal.value = true
   memberModal.value?.showModal()
+  searchMembers('')
 }
 
 const closeMemberModal = () => {
@@ -403,12 +392,17 @@ defineExpose({ openModal, closeModal, resetForm })
       <div class="form-control mb-4">
         <input
           type="text"
-          placeholder="Search member by name, email, or phone..."
+          placeholder="Ketik nama, email, atau nomor telepon member..."
           class="input input-bordered w-full"
           v-model="searchQuery"
           @input="handleMemberSearch"
           autocomplete="off"
         />
+        <label class="label py-1">
+          <span class="label-text-alt text-base-content/50">
+            Pencarian langsung ke server — semua member aktif dapat ditemukan, tidak dibatasi 100 data terbaru.
+          </span>
+        </label>
       </div>
 
       <!-- Members List -->

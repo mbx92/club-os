@@ -68,39 +68,65 @@ async function getMembers(req, res, next) {
       status = 'all',
       membershipStatus,
       sortBy = 'createdAt',
-      sortOrder = 'DESC'
+      sortOrder = 'DESC',
+      checkInEligible = 'false',
     } = req.query;
 
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
     const offset = (pageNum - 1) * limitNum;
+    const forCheckIn = checkInEligible === 'true' || checkInEligible === true;
 
     const where = isSuperAdmin ? {} : { tenantId };
 
-    // Search by name, email, or phone
+    // Search by name, email, phone, or full name
     if (search) {
+      const trimmedSearch = search.trim();
+      const escapedSearch = trimmedSearch.replace(/'/g, "''");
       where[Op.or] = [
-        { firstName: { [Op.iLike]: `%${search}%` } },
-        { lastName: { [Op.iLike]: `%${search}%` } },
-        { email: { [Op.iLike]: `%${search}%` } },
-        { phone: { [Op.iLike]: `%${search}%` } }
+        { firstName: { [Op.iLike]: `%${trimmedSearch}%` } },
+        { lastName: { [Op.iLike]: `%${trimmedSearch}%` } },
+        { email: { [Op.iLike]: `%${trimmedSearch}%` } },
+        { phone: { [Op.iLike]: `%${trimmedSearch}%` } },
+        sequelize.literal(
+          `CONCAT("Member"."firstName", ' ', "Member"."lastName") ILIKE '%${escapedSearch}%'`
+        ),
       ];
     }
 
     // Filter by active status
     if (status !== 'all') {
       where.isActive = status === 'active';
+    } else if (forCheckIn) {
+      where.isActive = true;
     }
 
     // Filter by membership status
     if (membershipStatus && membershipStatus !== 'all') {
       where.membershipStatus = membershipStatus;
+    } else if (forCheckIn) {
+      where.membershipStatus = 'active';
     }
 
     // Validate sort field
     const allowedSortFields = ['firstName', 'lastName', 'email', 'createdAt', 'updatedAt', 'joinDate'];
     const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
     const order = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    const activeServicesWhere = forCheckIn
+      ? {
+          [Op.and]: [
+            { endDate: { [Op.gte]: sequelize.literal('CURRENT_DATE') } },
+            { status: { [Op.in]: ['active', 'expired'] } },
+            {
+              [Op.or]: [
+                { serviceType: 'membership' },
+                { remainingSessions: { [Op.gt]: 0 } },
+              ],
+            },
+          ],
+        }
+      : { status: 'active' };
 
     const { count, rows: members } = await Member.findAndCountAll({
       where,
@@ -121,10 +147,11 @@ async function getMembers(req, res, next) {
             as: 'servicePlan',
             attributes: ['id', 'name', 'serviceType', 'price', 'duration', 'durationType', 'sessions', 'validityDays', 'isActive']
           }],
-          where: { status: 'active' },
+          where: activeServicesWhere,
           required: false,
+          separate: true,
           order: [['endDate', 'DESC']],
-          limit: 3
+          limit: 5
         }
       ]
     });

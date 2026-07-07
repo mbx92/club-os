@@ -102,6 +102,12 @@
                 >
                   System Role
                 </div>
+                <div
+                  v-else
+                  class="badge badge-xs badge-secondary"
+                >
+                  Custom Role
+                </div>
               </div>
             </div>
 
@@ -201,7 +207,12 @@
                     <component :is="getRoleIcon(role.name)" class="w-5 h-5" :class="getRoleColor(role.name)" />
                     <div>
                       <div class="font-bold capitalize">{{ role.name }}</div>
-                      <div v-if="isSystemRole(role)" class="badge badge-xs badge-primary mt-1">System</div>
+                      <div
+                        class="badge badge-xs mt-1"
+                        :class="isSystemRole(role) ? 'badge-primary' : 'badge-secondary'"
+                      >
+                        {{ isSystemRole(role) ? 'System' : 'Custom' }}
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -888,18 +899,34 @@ const permissionView = ref('summary') // 'summary', 'resources', 'menu'
 const isSuperAdmin = computed(() => authStore.user?.isSuperAdmin === true)
 const isTenantAdmin = computed(() => {
   if (isSuperAdmin.value) return true
-  const roleName = (authStore.user?.role || '').toString().toLowerCase()
+  const role = authStore.user?.role
+  const roleName = (typeof role === 'string' ? role : role?.name || '').toLowerCase()
   return roleName === 'admin' || roleName === 'owner'
 })
 
 // RBAC-01: roles are either shared system defaults (tenantId null) or owned
 // by exactly one tenant. Mirrors the access rules enforced server-side in
 // permissionController.js so the UI never offers an action the API will reject.
-const isSystemRole = (role) => !role?.tenantId
+const resolveCurrentTenantId = () => {
+  const currentUser = authStore.user
+  if (!currentUser) return null
+  return currentUser.tenantId ?? currentUser.tenant?.id ?? null
+}
+
+const sameTenantId = (left, right) => {
+  if (left == null || right == null) return false
+  return String(left) === String(right)
+}
+
+const isSystemRole = (role) => {
+  const tenantId = role?.tenantId
+  return tenantId === null || tenantId === undefined || tenantId === ''
+}
+
 const canManageRole = (role) => {
   if (!role) return false
   if (isSuperAdmin.value) return true
-  return !isSystemRole(role) && role.tenantId === authStore.user?.tenantId
+  return !isSystemRole(role) && sameTenantId(role.tenantId, resolveCurrentTenantId())
 }
 // System roles are shared platform-wide — tenant admins clone them instead of editing in place.
 const canCustomizeSystemRole = (role) => {
@@ -911,6 +938,9 @@ const editButtonTitle = (role) => {
   if (canManageRole(role)) return 'Edit Role'
   if (isSystemRole(role)) {
     return 'System role — hanya Super Admin yang bisa edit langsung. Gunakan Customize untuk salinan tenant.'
+  }
+  if (!resolveCurrentTenantId()) {
+    return 'Tenant tidak terdeteksi — logout/login ulang lalu coba lagi.'
   }
   return 'Role ini milik tenant lain'
 }

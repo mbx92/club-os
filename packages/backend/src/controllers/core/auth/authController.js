@@ -305,6 +305,7 @@ async function login(req, res) {
         email: user.email,
         role: user.role.name,
         isSuperAdmin: user.isSuperAdmin || false,
+        tenantId: user.tenantId || null,
         tenant: user.tenant ? {
           id: user.tenant.id,
           name: user.tenant.name,
