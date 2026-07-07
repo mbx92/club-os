@@ -226,45 +226,43 @@
             <label class="label">
               <span class="label-text font-semibold">Role *</span>
             </label>
-            <div class="dropdown w-full">
+            <div class="rounded-lg border border-base-300 bg-base-100 max-h-52 overflow-y-auto divide-y divide-base-200">
               <button
+                v-for="role in sortedAvailableRoles"
+                :key="role.id"
                 type="button"
-                tabindex="0"
-                class="select select-bordered w-full flex items-center justify-between gap-2 min-h-[3rem] h-auto py-2 text-left"
-                :class="{ 'text-base-content/40': !selectedRole }"
+                class="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-base-200"
+                :class="formData.roleId === role.id ? 'bg-primary/10 ring-1 ring-inset ring-primary/30' : ''"
+                @click="selectRole(role.id)"
               >
-                <span v-if="selectedRole" class="flex items-center gap-2 flex-wrap">
-                  <span class="capitalize">{{ selectedRole.name }}</span>
-                  <span
-                    class="badge badge-xs"
-                    :class="isSystemRole(selectedRole) ? 'badge-primary' : 'badge-secondary'"
-                  >
-                    {{ isSystemRole(selectedRole) ? 'System' : 'Custom' }}
-                  </span>
+                <div class="flex items-center gap-2 min-w-0">
+                  <IconCheck
+                    v-if="formData.roleId === role.id"
+                    class="w-4 h-4 shrink-0 text-primary"
+                  />
+                  <span v-else class="inline-block w-4 shrink-0" />
+                  <span class="capitalize font-medium truncate">{{ role.name }}</span>
+                </div>
+                <span
+                  class="badge badge-xs shrink-0"
+                  :class="isSystemRole(role) ? 'badge-primary' : 'badge-secondary'"
+                >
+                  {{ isSystemRole(role) ? 'System' : 'Custom' }}
                 </span>
-                <span v-else>Select a role</span>
               </button>
-              <ul
-                tabindex="0"
-                class="dropdown-content menu bg-base-100 rounded-box z-[100] w-full p-2 shadow-lg border border-base-300 max-h-60 overflow-y-auto"
+            </div>
+            <div
+              v-if="selectedRole"
+              class="mt-2 flex items-center gap-2 rounded-lg bg-base-200/60 px-3 py-2 text-sm"
+            >
+              <span class="text-base-content/60">Dipilih:</span>
+              <span class="capitalize font-medium">{{ selectedRole.name }}</span>
+              <span
+                class="badge badge-xs"
+                :class="isSystemRole(selectedRole) ? 'badge-primary' : 'badge-secondary'"
               >
-                <li v-for="role in sortedAvailableRoles" :key="role.id">
-                  <button
-                    type="button"
-                    class="flex items-center justify-between gap-2"
-                    :class="{ 'active': formData.roleId === role.id }"
-                    @click="selectRole(role.id)"
-                  >
-                    <span class="capitalize font-medium">{{ role.name }}</span>
-                    <span
-                      class="badge badge-xs shrink-0"
-                      :class="isSystemRole(role) ? 'badge-primary' : 'badge-secondary'"
-                    >
-                      {{ isSystemRole(role) ? 'System' : 'Custom' }}
-                    </span>
-                  </button>
-                </li>
-              </ul>
+                {{ isSystemRole(selectedRole) ? 'System' : 'Custom' }}
+              </span>
             </div>
             <label class="label py-1">
               <span class="label-text-alt text-base-content/50 flex flex-wrap items-center gap-1">
@@ -341,7 +339,8 @@ import {
   IconPlus,
   IconEdit,
   IconTrash,
-  IconInfoCircle
+  IconInfoCircle,
+  IconCheck
 } from '@tabler/icons-vue'
 
 // Composables
