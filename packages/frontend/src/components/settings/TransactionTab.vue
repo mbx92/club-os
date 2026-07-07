@@ -635,32 +635,39 @@
             </table>
           </div>
 
-          <div class="grid grid-cols-1 gap-3 rounded-box border border-base-300 bg-base-200/40 p-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
-            <div class="form-control">
-              <label class="label py-0">
-                <span class="label-text text-xs font-semibold">Key (snake_case)</span>
-              </label>
-              <input
-                v-model="newPaymentMethod.key"
-                type="text"
-                placeholder="shopeepay"
-                class="input input-bordered input-sm"
-              />
+          <div class="rounded-box border border-base-300 bg-base-200/40 p-4">
+            <p class="mb-3 text-xs font-semibold text-base-content/60">Tambah Metode Pembayaran</p>
+            <div class="flex flex-col gap-3 md:flex-row md:items-end">
+              <div class="form-control w-full flex-col md:flex-1">
+                <label class="label py-1">
+                  <span class="label-text text-xs font-semibold">Key (snake_case)</span>
+                </label>
+                <input
+                  v-model="newPaymentMethod.key"
+                  type="text"
+                  placeholder="shopeepay"
+                  class="input input-bordered input-sm w-full"
+                />
+              </div>
+              <div class="form-control w-full flex-col md:flex-1">
+                <label class="label py-1">
+                  <span class="label-text text-xs font-semibold">Label</span>
+                </label>
+                <input
+                  v-model="newPaymentMethod.label"
+                  type="text"
+                  placeholder="ShopeePay"
+                  class="input input-bordered input-sm w-full"
+                />
+              </div>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline w-full shrink-0 md:w-auto"
+                @click="addPaymentMethod"
+              >
+                Tambah Metode
+              </button>
             </div>
-            <div class="form-control">
-              <label class="label py-0">
-                <span class="label-text text-xs font-semibold">Label</span>
-              </label>
-              <input
-                v-model="newPaymentMethod.label"
-                type="text"
-                placeholder="ShopeePay"
-                class="input input-bordered input-sm"
-              />
-            </div>
-            <button type="button" class="btn btn-sm btn-outline" @click="addPaymentMethod">
-              Tambah Metode
-            </button>
           </div>
         </div>
 
