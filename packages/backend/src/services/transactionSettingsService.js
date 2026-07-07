@@ -20,6 +20,20 @@ const { getClientIp, getUserAgent } = require('../utils/requestHelper');
 /**
  * Default transaction settings structure
  */
+const PAYMENT_METHOD_CATALOG = [
+  { key: 'cash', label: 'Tunai', enabled: true, requiresBank: false, isSystem: true },
+  { key: 'credit_card', label: 'Kartu', enabled: true, requiresBank: true, isSystem: true },
+  { key: 'debit_card', label: 'Kartu Debit', enabled: true, requiresBank: true, isSystem: true },
+  { key: 'bank_transfer', label: 'Transfer Bank', enabled: true, requiresBank: true, isSystem: true },
+  { key: 'qris', label: 'QRIS', enabled: true, requiresBank: false, isSystem: true },
+  { key: 'e_wallet', label: 'E-Wallet', enabled: true, requiresBank: false, isSystem: true },
+  { key: 'payment_gateway', label: 'Payment Gateway', enabled: true, requiresBank: false, isSystem: true },
+  { key: 'compliment', label: 'Gratis (Compliment)', enabled: true, requiresBank: false, isSystem: true },
+];
+
+const buildDefaultPaymentMethods = () =>
+  PAYMENT_METHOD_CATALOG.map((method) => ({ ...method }));
+
 const DEFAULT_TRANSACTION_SETTINGS = {
   taxEnable: false,
   taxPercentage: 0,
@@ -42,6 +56,7 @@ const DEFAULT_TRANSACTION_SETTINGS = {
   payment: {
     enabledGateways: [],
     paymentTimeout: 60,
+    paymentMethods: buildDefaultPaymentMethods(),
     midtransConfig: {
       apiKey: '',
       clientKey: '',
@@ -374,9 +389,13 @@ async function getPaymentConfiguration(tenantId) {
   
   // Mask sensitive data
   const paymentConfig = settings.payment || DEFAULT_TRANSACTION_SETTINGS.payment;
+  const paymentMethods = Array.isArray(paymentConfig.paymentMethods) && paymentConfig.paymentMethods.length
+    ? paymentConfig.paymentMethods
+    : buildDefaultPaymentMethods();
   
   return {
     ...paymentConfig,
+    paymentMethods,
     midtransConfig: {
       ...paymentConfig.midtransConfig,
       apiKey: paymentConfig.midtransConfig?.apiKey ? '***MASKED***' : '',
@@ -408,8 +427,40 @@ async function updatePaymentConfiguration(tenantId, paymentConfig) {
     }
   }
 
+  if (paymentConfig.paymentMethods) {
+    validatePaymentMethods(paymentConfig.paymentMethods);
+  }
+
   await updateTransactionSettings(tenantId, { payment: paymentConfig });
   return getPaymentConfiguration(tenantId);
+}
+
+/**
+ * Get enabled payment methods for a tenant
+ *
+ * @param {string} tenantId
+ * @returns {Promise<Array<object>>}
+ */
+async function getPaymentMethodsConfiguration(tenantId) {
+  const settings = await getTransactionSettings(tenantId);
+  const methods = settings.payment?.paymentMethods;
+  return Array.isArray(methods) && methods.length ? methods : buildDefaultPaymentMethods();
+}
+
+/**
+ * Resolve enabled payment method keys for validation
+ *
+ * @param {string} tenantId
+ * @returns {Promise<Set<string>>}
+ */
+async function getEnabledPaymentMethodKeys(tenantId) {
+  const methods = await getPaymentMethodsConfiguration(tenantId);
+  return new Set(
+    methods
+      .filter((method) => method.enabled !== false)
+      .map((method) => String(method.key || '').trim())
+      .filter(Boolean)
+  );
 }
 
 /**
@@ -612,6 +663,10 @@ function validateTransactionSettings(settings) {
     }
   }
 
+  if (settings.payment?.paymentMethods) {
+    validatePaymentMethods(settings.payment.paymentMethods);
+  }
+
   // Validate invoice numbering
   if (settings.invoice?.startingInvoiceNumber !== undefined) {
     const startNum = parseInt(settings.invoice.startingInvoiceNumber);
@@ -621,6 +676,41 @@ function validateTransactionSettings(settings) {
   }
 
   return true;
+}
+
+function validatePaymentMethods(paymentMethods) {
+  if (!Array.isArray(paymentMethods)) {
+    throw createError('VALIDATION_ERROR', 'paymentMethods must be an array', 400);
+  }
+
+  const seen = new Set();
+
+  for (const method of paymentMethods) {
+    const key = String(method?.key || '').trim();
+    const label = String(method?.label || '').trim();
+
+    if (!key) {
+      throw createError('VALIDATION_ERROR', 'Each payment method must have a key', 400);
+    }
+
+    if (!/^[a-z][a-z0-9_]*$/.test(key)) {
+      throw createError(
+        'VALIDATION_ERROR',
+        `Invalid payment method key "${key}". Use lowercase snake_case.`,
+        400
+      );
+    }
+
+    if (!label) {
+      throw createError('VALIDATION_ERROR', `Payment method "${key}" must have a label`, 400);
+    }
+
+    if (seen.has(key)) {
+      throw createError('VALIDATION_ERROR', `Duplicate payment method key "${key}"`, 400);
+    }
+
+    seen.add(key);
+  }
 }
 
 module.exports = {
@@ -640,6 +730,8 @@ module.exports = {
   updateInvoiceConfiguration,
   getPaymentConfiguration,
   updatePaymentConfiguration,
+  getPaymentMethodsConfiguration,
+  getEnabledPaymentMethodKeys,
   getDiscountConfiguration,
   updateDiscountConfiguration,
   getShippingConfiguration,
@@ -649,5 +741,7 @@ module.exports = {
   applyRounding,
   
   // Defaults
-  DEFAULT_TRANSACTION_SETTINGS
+  DEFAULT_TRANSACTION_SETTINGS,
+  PAYMENT_METHOD_CATALOG,
+  buildDefaultPaymentMethods,
 };

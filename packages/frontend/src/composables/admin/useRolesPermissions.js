@@ -49,7 +49,8 @@ export const useRolesPermissions = () => {
       { name: 'RestaurantProduct', label: 'Restaurant Products', module: 'restaurant', actions: CRUD },
       { name: 'RestaurantStock', label: 'Restaurant Stock', module: 'restaurant', actions: CRUD },
       { name: 'RestaurantTable', label: 'Restaurant Tables', module: 'restaurant', actions: CRUD },
-      { name: 'Transaction', label: 'Transactions', module: 'cash-register', actions: CRUD },
+      // 'cancel' (void transaction) is a distinct permission from 'update' — see RBAC-02.
+      { name: 'Transaction', label: 'Transactions', module: 'cash-register', actions: [...CRUD, 'cancel'] },
       { name: 'Voucher', label: 'Vouchers', module: 'vouchers', actions: CRUD },
       { name: 'FinanceDashboard', label: 'Finance Dashboard', module: 'finances', actions: RO },
       { name: 'Income', label: 'Incomes', module: 'finances', actions: CRUD },

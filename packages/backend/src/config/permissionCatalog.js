@@ -23,7 +23,8 @@ const PERMISSION_CATALOG = [
   { subject: 'RestaurantStock', label: 'Restaurant Stock', module: 'restaurant', actions: ['create', 'delete', 'read', 'update'] },
   { subject: 'RestaurantTable', label: 'Restaurant Tables', module: 'restaurant', actions: ['create', 'delete', 'read', 'update'] },
 
-  { subject: 'Transaction', label: 'Transactions', module: 'cash-register', actions: ['create', 'delete', 'read', 'update'] },
+  // 'cancel' (void transaction) is intentionally separate from 'update' — see RBAC-02.
+  { subject: 'Transaction', label: 'Transactions', module: 'cash-register', actions: ['create', 'delete', 'read', 'update', 'cancel'] },
   { subject: 'Voucher', label: 'Vouchers', module: 'vouchers', actions: ['create', 'delete', 'read', 'update'] },
 
   { subject: 'FinanceDashboard', label: 'Finance Dashboard', module: 'finances', actions: ['read'] },

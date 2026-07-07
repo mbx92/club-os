@@ -10,6 +10,7 @@ const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
+const { authorize } = require('../../../middlewares/permissionMiddleware');
 
 // Public routes (no authentication)
 router.post('/notification', paymentController.handleNotification);
@@ -21,18 +22,21 @@ router.use(authenticate);
 router.get('/config', paymentController.getConfig);
 
 // Create payment (Snap Token)
-router.post('/create', paymentController.createPayment);
+router.post('/create', authorize('create', 'Payment'), paymentController.createPayment);
 
 // Create direct charge
-router.post('/charge', paymentController.createCharge);
+router.post('/charge', authorize('create', 'Payment'), paymentController.createCharge);
 
 // Check payment status
-router.get('/status/:transactionNumber', paymentController.checkStatus);
+router.get('/status/:transactionNumber', authorize('read', 'Payment'), paymentController.checkStatus);
 
-// Cancel payment
-router.post('/cancel/:transactionNumber', paymentController.cancelPayment);
+// RBAC-03 / RBAC-02: cancelling/refunding a payment gateway transaction sets
+// the underlying Transaction's status to 'cancelled' directly — the exact
+// same void action gated behind the 'cancel' permission on /transactions/:id/cancel.
+// These routes previously had NO authorize() check at all (any authenticated
+// user, any role, could cancel or refund any transaction in their tenant).
+router.post('/cancel/:transactionNumber', authorize('cancel', 'Transaction'), paymentController.cancelPayment);
 
-// Refund payment
-router.post('/refund/:transactionNumber', paymentController.refundPayment);
+router.post('/refund/:transactionNumber', authorize('cancel', 'Transaction'), paymentController.refundPayment);
 
 module.exports = router;

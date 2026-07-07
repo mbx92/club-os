@@ -3,6 +3,11 @@ const { getMenuAccessForRole } = require('./menuKeys');
 const ALL = ['read', 'create', 'update', 'delete'];
 const READ_ONLY = ['read'];
 const READ_CREATE_UPDATE = ['read', 'create', 'update'];
+// RBAC-02: 'cancel' (void transaction) is intentionally separate from the
+// generic CRUD actions above — only roles that should be able to void a
+// transaction/order get it explicitly, instead of it riding along with a
+// broad 'update' grant meant for things like editing order status/notes.
+const ALL_WITH_CANCEL = [...ALL, 'cancel'];
 
 const DEFAULT_ROLE_PERMISSIONS = {
   admin: {
@@ -48,7 +53,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
       RestaurantTable: ALL,
       RestaurantLocation: ALL,
       RestaurantStock: ALL,
-      Transaction: ALL,
+      Transaction: ALL_WITH_CANCEL,
       ActiveService: ALL,
       PettyCash: ALL,
     },
@@ -70,7 +75,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
       RestaurantTable: ALL,
       RestaurantLocation: ALL,
       RestaurantStock: ALL,
-      Transaction: ALL,
+      Transaction: ALL_WITH_CANCEL,
       Member: READ_CREATE_UPDATE,
       ServicePlan: READ_ONLY,
       Payment: READ_CREATE_UPDATE,

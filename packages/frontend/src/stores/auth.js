@@ -33,6 +33,12 @@ export const useAuthStore = defineStore('auth', () => {
     storage.setItem('permissions', JSON.stringify(nextPermissions))
   }
 
+  const normalizeRoleName = (role) => {
+    if (!role) return null
+    if (typeof role === 'string') return role
+    return role.name || role.label || null
+  }
+
   const mergePermissionUser = (permissionUser) => {
     if (!permissionUser) return
 
@@ -44,7 +50,7 @@ export const useAuthStore = defineStore('auth', () => {
       lastName: permissionUser.lastName ?? user.value?.lastName,
       isSuperAdmin: permissionUser.isSuperAdmin ?? user.value?.isSuperAdmin,
       tenantId: permissionUser.tenantId ?? user.value?.tenantId,
-      role: permissionUser.role ?? user.value?.role,
+      role: normalizeRoleName(permissionUser.role) ?? normalizeRoleName(user.value?.role),
     }
 
     persistUser(user.value)
@@ -100,14 +106,19 @@ export const useAuthStore = defineStore('auth', () => {
       token.value = savedToken
       refreshToken.value = savedRefreshToken
       user.value = JSON.parse(savedUser)
+      if (user.value?.role && typeof user.value.role !== 'string') {
+        user.value.role = normalizeRoleName(user.value.role)
+        persistUser(user.value)
+      }
       api.setToken(savedToken)
       
-      // Load permissions if available
+      // Load permissions and sync subscription before router guard runs
       if (savedPermissions) {
         permissions.value = JSON.parse(savedPermissions)
         if (isDev) debug.log('Permissions loaded from storage:', permissions.value)
+        await syncSubscriptionFromPermissions(permissions.value)
       }
-      
+
       // Fetch tenant settings if not present
       if (user.value?.tenant?.id && !user.value?.tenant?.settings) {
         if (isDev) debug.log('[authStore] Tenant settings not found in storage, fetching...')
@@ -115,14 +126,24 @@ export const useAuthStore = defineStore('auth', () => {
           debug.warn('[authStore] Failed to fetch tenant settings on init:', err)
         })
       }
-      
-      // NOTE: Don't fetch subscription here - it's already loaded from localStorage cache
-      // Subscription store automatically loads from cache on init
-      if (isDev) debug.log('[authStore] Subscription will be loaded from cache by subscription store')
 
-      fetchUserPermissions().catch(err => {
+      try {
+        await fetchUserPermissions()
+      } catch (err) {
         debug.warn('[authStore] Failed to refresh permissions on init, keeping cached permissions:', err)
-      })
+      }
+
+      if (!user.value?.isSuperAdmin) {
+        const { useSubscriptionStore } = await import('@/stores/subscription')
+        const subscriptionStore = useSubscriptionStore()
+        if (!subscriptionStore.hasSubscription && !subscriptionStore.isTrialActive) {
+          try {
+            await subscriptionStore.fetchSubscription(true)
+          } catch (err) {
+            debug.warn('[authStore] Failed to fetch subscription on init:', err)
+          }
+        }
+      }
       
       if (isDev) debug.log('Auth state initialized successfully')
     } else {

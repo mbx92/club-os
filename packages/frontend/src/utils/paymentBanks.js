@@ -8,7 +8,7 @@ export const BANK_SELECTION_PAYMENT_METHODS = ['bank_transfer', 'credit_card', '
 export const buildPaymentBankPayload = (paymentMethod, bankName) => {
   const normalizedBankName = typeof bankName === 'string' ? bankName.trim() : ''
 
-  if (!BANK_SELECTION_PAYMENT_METHODS.includes(paymentMethod) || !normalizedBankName) {
+  if (!normalizedBankName) {
     return {}
   }
 

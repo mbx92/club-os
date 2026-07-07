@@ -31,6 +31,8 @@ const receiptPrinterService = require('../../../services/receiptPrinterService')
 const { normalizePaymentMethod } = require('../../../utils/paymentMethodNormalizer');
 const transactionSettingsService = require('../../../services/transactionSettingsService');
 const logger = require('../../../utils/logger');
+const { can } = require('../../../utils/rbac');
+const { hasFeature } = require('../../../middlewares/featureGateMiddleware');
 
 const getProductVariants = (product) => {
   const rawVariants = Array.isArray(product?.productDetails?.variants)
@@ -973,6 +975,25 @@ const updateOrderStatus = async (req, res, next) => {
     const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'served', 'completed', 'cancelled'];
     if (!validStatuses.includes(status)) {
       throw createError('VALIDATION_ERROR', `Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+    }
+
+    // RBAC-02: this generic status endpoint doubles as the "void order"
+    // action when status === 'cancelled'. Voiding is a distinct, higher-risk
+    // permission from ordinary 'update' (e.g. moving an order to
+    // "preparing"/"ready"), so it requires the explicit 'cancel' grant even
+    // though the route itself only checks for 'update'.
+    if (status === 'cancelled') {
+      if (!can(req.user, 'cancel', 'Transaction')) {
+        throw createError('FORBIDDEN', 'You do not have permission to cancel/void orders');
+      }
+      if (!hasFeature(req, 'refunds')) {
+        return res.status(403).json({
+          success: false,
+          message: "Feature 'refunds' not available in your plan",
+          code: 'FEATURE_NOT_AVAILABLE',
+          requiredFeature: 'refunds',
+        });
+      }
     }
 
     const where = {

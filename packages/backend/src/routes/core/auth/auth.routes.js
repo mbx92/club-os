@@ -1,7 +1,6 @@
 const express = require('express');
 const { register, login, refreshToken, logout } = require('../../../controllers/core/auth/authController');
 const { authenticate } = require('../../../middlewares/authMiddleware');
-const { authorize } = require('../../../middlewares/permissionMiddleware');
 const auditLog = require('../../../middlewares/auditMiddleware');
 const operatorRoutes = require('./operator.routes');
 
@@ -26,10 +25,16 @@ router.post('/login', login, auditLog('USER_LOGIN'));
 /**
  * @route GET /auth/profile
  * @name auth.profile
- * @desc Get user profile
+ * @desc Get the authenticated user's own profile
  * @access Private
+ *
+ * RBAC-10: this only ever returns `req.user` — the caller's own record — so
+ * it must never depend on the generic `User:read` resource permission (which
+ * governs looking up *other* users). Several default roles (cashier,
+ * trainer, kitchen, waiter, staff) have no `User` grant at all and would be
+ * locked out of their own profile if this required `authorize('read', 'User')`.
  */
-router.get('/profile', authenticate, authorize('read', 'User'), auditLog('VIEW_PROFILE'), (req, res) => {
+router.get('/profile', authenticate, auditLog('VIEW_PROFILE'), (req, res) => {
   res.json({ user: req.user });
 });
 

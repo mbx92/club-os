@@ -65,13 +65,13 @@
               required
             >
               <option value="">Select payment method</option>
-              <option value="cash">Tunai</option>
-              <option value="bank_transfer">Transfer Bank</option>
-              <option value="credit_card">Kartu</option>
-              <option value="debit_card">Kartu Debit</option>
-              <option value="qris">QRIS</option>
-              <option value="e_wallet">E-Wallet (OVO, GoPay, Dana)</option>
-              <option value="compliment">Gratis (Compliment)</option>
+              <option
+                v-for="option in paymentOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
             </select>
             <label v-if="errors.paymentMethod" class="label">
               <span class="label-text-alt text-error">{{ errors.paymentMethod }}</span>
@@ -175,6 +175,7 @@
 import { ref, computed, watch } from 'vue'
 import { IconInfoCircle } from '@tabler/icons-vue'
 import { usePayments } from '@/composables/subscription/usePayments'
+import { usePaymentMethods } from '@/composables/shared/usePaymentMethods'
 import { useInvoices } from '@/composables/subscription/useInvoices'
 import { useSubscriptions } from '@/composables/subscription/useSubscriptions'
 import { useNotification } from '@/composables/core/useNotification'
@@ -200,6 +201,7 @@ const { processPayment, formatCurrency } = usePayments()
 const { updateInvoiceStatus, isOverdue, getInvoiceStatusBadgeClass, formatDate } = useInvoices()
 const { activateSubscription } = useSubscriptions()
 const { showSuccess, showError } = useNotification()
+const { paymentOptions, defaultPaymentMethod } = usePaymentMethods()
 
 // Local state
 const modalRef = ref(null)

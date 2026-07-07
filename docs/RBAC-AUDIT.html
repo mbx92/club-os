@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RBAC Audit — Club OS</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #121821;
+    --panel-2: #161d28;
+    --border: #26303d;
+    --text: #dbe4ee;
+    --muted: #8ea0b3;
+    --accent: #4f8cff;
+    --critical: #ff4d5e;
+    --high: #ff9640;
+    --medium: #f0c531;
+    --low: #4fd08a;
+    --info: #7aa7ff;
+    --code-bg: #0d1117;
+    --code-border: #262c36;
+    font-size: 16px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .wrap {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+
+  header.hero {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 32px;
+    margin-bottom: 40px;
+  }
+  header.hero .kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  header.hero h1 {
+    font-size: 2.1rem;
+    margin: 0 0 12px;
+    line-height: 1.2;
+  }
+  header.hero p.meta {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin: 4px 0;
+  }
+  header.hero p.meta strong { color: var(--text); }
+
+  h2 {
+    font-size: 1.5rem;
+    margin-top: 56px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    scroll-margin-top: 16px;
+  }
+  h2:first-of-type { border-top: none; }
+  h3 { font-size: 1.15rem; margin-top: 32px; }
+  h4 { font-size: 1rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;}
+
+  p { color: var(--text); }
+  code {
+    font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    background: rgba(79,140,255,0.12);
+    color: #b9d3ff;
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.55;
+  }
+  pre code {
+    background: none;
+    color: #d3dbe6;
+    padding: 0;
+    font-size: 1em;
+  }
+  .file-tag {
+    display: inline-block;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px 8px;
+    margin: 2px 4px 2px 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 8px;
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+  }
+  .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .badge.critical { background: rgba(255,77,94,0.14); color: var(--critical); }
+  .badge.high     { background: rgba(255,150,64,0.14); color: var(--high); }
+  .badge.medium   { background: rgba(240,197,49,0.14); color: var(--medium); }
+  .badge.low      { background: rgba(79,208,138,0.14); color: var(--low); }
+  .badge.info     { background: rgba(122,167,255,0.14); color: var(--info); }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin: 24px 0 8px;
+  }
+  .summary-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 14px;
+    text-align: center;
+  }
+  .summary-card .num { font-size: 1.8rem; font-weight: 800; }
+  .summary-card .label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+  .summary-card.critical .num { color: var(--critical); }
+  .summary-card.high .num { color: var(--high); }
+  .summary-card.medium .num { color: var(--medium); }
+  .summary-card.low .num { color: var(--low); }
+  .summary-card.info .num { color: var(--info); }
+
+  .callout {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 18px 0;
+    font-size: 0.94rem;
+  }
+  .callout.warn { border-left-color: var(--critical); }
+  .callout.good { border-left-color: var(--low); }
+
+  details.finding {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin: 14px 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  details.finding[open] { border-color: rgba(79,140,255,0.35); }
+  details.finding summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+  details.finding summary::-webkit-details-marker { display: none; }
+  details.finding summary::after {
+    content: "＋";
+    margin-left: auto;
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 1.1rem;
+  }
+  details.finding[open] summary::after { content: "－"; }
+  details.finding .id-tag {
+    font-family: "SF Mono", Menlo, monospace;
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 0.82rem;
+  }
+  details.finding .body {
+    padding: 0 20px 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+
+  ol, ul { padding-left: 1.3em; }
+  li { margin: 6px 0; }
+
+  .toc {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 20px 0 8px;
+  }
+  .toc h4 { margin-top: 0; }
+  .toc ol { columns: 2; column-gap: 32px; }
+  .toc li { font-size: 0.9rem; margin: 4px 0; break-inside: avoid; }
+
+  .checklist li { list-style: none; margin-left: -1.3em; }
+  .checklist li::before { content: "☐"; margin-right: 8px; color: var(--accent); }
+
+  .test-log {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 0.8rem;
+    line-height: 1.7;
+    color: #cfe3d0;
+    overflow-x: auto;
+  }
+  .test-log .pass { color: #4fd08a; }
+  .test-log .muted { color: #6b7686; }
+  .test-log .head { color: #7aa7ff; font-weight: 700; }
+
+  footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+
+  @media (max-width: 720px) {
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .toc ol { columns: 1; }
+  }
+
+  @media print {
+    body { background: #fff; color: #111; }
+    details.finding { break-inside: avoid; border-color: #ccc; }
+    a { color: #111; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">Security &amp; Access-Control Audit</div>
+    <h1>RBAC Audit — Club OS<br/>(Gym + Restaurant SaaS)</h1>
+    <p class="meta"><strong>Date:</strong> 2026-07-07</p>
+    <p class="meta"><strong>Scope:</strong> <code>packages/backend</code> (Express/Sequelize) and <code>packages/frontend</code> (Vue 3 / Pinia / vue-router), with focus on the newly-added <em>Batal Transaksi</em> (void/cancel transaction) feature.</p>
+    <p class="meta"><strong>Method:</strong> full static review of every route file + the RBAC engine, plus a real, executable Jest test suite run directly against the RBAC code (no mocks, no guessing).</p>
+    <p class="meta">Companion document: <code>docs/RBAC-AUDIT.md</code></p>
+  </header>
+
+  <h2 id="summary">1. Executive Summary</h2>
+  <p>The system has a genuinely coherent RBAC design at its core: a single <code>can(user, action, subject)</code> engine on the backend, a route→subject map, and a mirrored <code>menuAccess</code> system on the frontend. That foundation is sound. This audit found <strong>14 findings</strong>, including one <strong>Critical cross-tenant privilege-escalation bug</strong> and a <strong>High-severity gap directly affecting the void/cancel-transaction feature</strong> built in this session.</p>
+
+  <div class="summary-grid">
+    <div class="summary-card critical"><div class="num">1</div><div class="label">Critical</div></div>
+    <div class="summary-card high"><div class="num">2</div><div class="label">High</div></div>
+    <div class="summary-card medium"><div class="num">4</div><div class="label">Medium</div></div>
+    <div class="summary-card low"><div class="num">5</div><div class="label">Low</div></div>
+    <div class="summary-card info"><div class="num">2</div><div class="label">Info</div></div>
+  </div>
+
+  <div class="callout warn">
+    <strong>Top priority:</strong> RBAC-01 — the <code>Roles</code> table is shared globally across every tenant on the platform, and any tenant Admin/Owner can edit or delete any role (including other tenants'), because tenant-admin checks bypass permission checks entirely and none of the role controllers filter by <code>tenantId</code>. Also see RBAC-02, which is specific to the void/cancel feature: it currently relies on the same generic permission as routine order updates, so kitchen/waiter/staff roles can void paid orders by default.
+  </div>
+
+  <h2 id="testing">2. What Was Tested (not just read)</h2>
+  <p>To avoid guessing how Express resolves paths inside nested routers, a real test file was written and executed against the <strong>actual</strong> RBAC engine — no database required:</p>
+  <p><span class="file-tag">packages/backend/tests/utils/rbacAudit.test.js</span></p>
+  <pre><code>npx jest --config '{"testEnvironment":"node","collectCoverage":false}' tests/utils/rbacAudit.test.js</code></pre>
+
+  <div class="test-log">
+<span class="head">PASS  tests/utils/rbacAudit.test.js</span>
+  RBAC — can() core engine
+    <span class="pass">✓</span> super admin bypasses every check
+    <span class="pass">✓</span> role with wildcard resources ("*": ["*"]) gets full access
+    <span class="pass">✓</span> role is denied an action it was not granted
+    <span class="pass">✓</span> role is allowed an action it was explicitly granted
+    <span class="pass">✓</span> falls back to DEFAULT_ROLE_PERMISSIONS when role has no stored resources
+    <span class="pass">✓</span> REGRESSION: cashier/trainer/kitchen/waiter/staff cannot read "User" <span class="muted">[RBAC-10]</span>
+  RBAC — permissionUtils normalization
+    <span class="pass">✓</span> normalizes legacy resource names ("transactions" → "Transaction")
+    <span class="pass">✓</span> hasFullAccess true only for {"*":["*"]}, false for scoped wildcard
+    <span class="pass">✓</span> REGRESSION: "*" resource key ignores its action list, escalates to full access <span class="muted">[RBAC-04]</span>
+    <span class="pass">✓</span> hasResourceAccess honors a per-resource wildcard action
+    <span class="pass">✓</span> resolveRolePermissions derives menuAccess from resources when none stored
+  RBAC — getEffectiveResources
+    <span class="pass">✓</span> prefers stored role.permissions.resources over defaults
+    <span class="pass">✓</span> returns {} for unknown role with no stored permissions
+  RBAC — autoAuthorize route matching
+    <span class="pass">✓</span> REGRESSION: full-path map never matches relative sub-router paths <span class="muted">[RBAC-05]</span>
+    <span class="pass">✓</span> sanity: findRouteMapping works given the full documented path
+  RBAC — default role catalog sanity
+    <span class="pass">✓</span> every non-admin default role is scoped (no accidental "*" wildcard)
+
+<span class="head">Test Suites: 1 passed, 1 total</span>
+<span class="head">Tests:       16 passed, 16 total</span>
+  </div>
+  <p style="margin-top:14px;">Several "passing" tests are <strong>regression tests that intentionally assert today's buggy behavior</strong> — they double as executable proof for this report and are cross-referenced to a Finding ID.</p>
+  <p>Also attempted: the project's own <code>npm test</code>. It currently <strong>cannot run at all</strong> (missing test-DB configuration) — see RBAC-11. The frontend has <strong>no test runner configured</strong> at all — also RBAC-11.</p>
+
+  <h2 id="findings">3. Findings</h2>
+
+  <div class="toc">
+    <h4>Jump to finding</h4>
+    <ol>
+      <li><a href="#f1">RBAC-01 — Global Roles table, cross-tenant escalation</a></li>
+      <li><a href="#f2">RBAC-02 — Void/cancel reuses generic update permission</a></li>
+      <li><a href="#f3">RBAC-03 — Payment cancel/refund missing authorize()</a></li>
+      <li><a href="#f4">RBAC-04 — Wildcard "*" normalization escalation bug</a></li>
+      <li><a href="#f5">RBAC-05 — autoAuthorize never matches (dead protection)</a></li>
+      <li><a href="#f6">RBAC-06 — Frontend route guard covers ~4% of pages</a></li>
+      <li><a href="#f7">RBAC-07 — navigation.js action/subject unused</a></li>
+      <li><a href="#f8">RBAC-08 — No component-level permission gating</a></li>
+      <li><a href="#f9">RBAC-09 — Legacy placeholder routes missing authorize()</a></li>
+      <li><a href="#f10">RBAC-10 — Roles fail their own /auth/profile check</a></li>
+      <li><a href="#f11">RBAC-11 — No RBAC test coverage; suites broken</a></li>
+      <li><a href="#f12">RBAC-12 — CORS reflects any origin</a></li>
+      <li><a href="#f13">RBAC-13 — Weak hardcoded JWT_SECRET fallback</a></li>
+      <li><a href="#f14">RBAC-14 — Menu keys duplicated across 3 files</a></li>
+    </ol>
+  </div>
+
+  <details class="finding" id="f1" open>
+    <summary><span class="badge critical">Critical</span> <span class="id-tag">RBAC-01</span> Roles are global — any tenant Admin/Owner can edit or delete any role, including other tenants' custom roles</summary>
+    <div class="body">
+      <p><strong>Area:</strong> Backend / multi-tenancy</p>
+      <p>
+        <span class="file-tag">src/models/role.js</span>
+        <span class="file-tag">src/migrations/20250923014850-create-role.js</span>
+        <span class="file-tag">src/controllers/core/system/permissionController.js</span>
+        <span class="file-tag">src/routes/core/system/permission.routes.js</span>
+        <span class="file-tag">src/middlewares/permissionMiddleware.js</span>
+      </p>
+      <pre><code>// middlewares/permissionMiddleware.js
+if (req.user.isSuperAdmin) return next();
+if (isTenantAdmin(req.user)) return next();   // admin/owner bypass ALL checks
+
+// models/role.js
+name: { type: DataTypes.STRING, allowNull: false, unique: true }   // globally unique, no tenantId
+
+// controllers/.../permissionController.js
+const role = await Role.findByPk(id);   // no tenantId filter, anywhere</code></pre>
+      <p><strong>Impact:</strong> The <code>Roles</code> table has no <code>tenantId</code>; every tenant's "cashier" user points at the exact same database row. <code>authorize('update','Role')</code> lets through <em>any</em> tenant Admin/Owner, and the controllers never scope by tenant. Concretely:</p>
+      <ul>
+        <li>A tenant's own Admin, using the normal Settings → Roles screen, can call <code>PATCH /permissions/roles/:id/permissions</code> for <strong>any role ID on the platform</strong>, including another tenant's.</li>
+        <li>Granting <code>cashier</code> full <code>{"*":["*"]}</code> access instantly elevates <strong>every cashier on every tenant</strong> — one click, whole-platform blast radius.</li>
+        <li>Deleting/renaming a shared system role breaks login/menus for every tenant using it.</li>
+        <li><code>createRole</code> enforces a globally unique <code>name</code>, so tenants share one namespace of custom role names.</li>
+      </ul>
+      <p><strong>Fix:</strong></p>
+      <ol>
+        <li>Add nullable <code>tenantId</code> to <code>Roles</code> (<code>null</code> = system default, non-null = tenant-owned custom role); change uniqueness to <code>(name, tenantId)</code>.</li>
+        <li>Scope every controller query by <code>tenantId</code> (404, not 403, on cross-tenant access, to avoid leaking existence).</li>
+        <li>Only Super Admin may mutate rows where <code>tenantId IS NULL</code>; tenant Admins may only edit their own tenant's cloned/custom roles.</li>
+        <li>Add an integration test asserting cross-tenant role access returns 404.</li>
+      </ol>
+    </div>
+  </details>
+
+  <details class="finding" id="f2">
+    <summary><span class="badge high">High</span> <span class="id-tag">RBAC-02</span> Voiding a transaction reuses the generic <code>Transaction:update</code> permission</summary>
+    <div class="body">
+      <p><strong>Area:</strong> Backend — directly affects the "Batal Transaksi" feature built this session.</p>
+      <p>
+        <span class="file-tag">routes/gym/transaction/transaction.routes.js:90-94</span>
+        <span class="file-tag">modules/restaurant/routes/order.routes.js:192-194</span>
+        <span class="file-tag">utils/defaultRolePermissions.js</span>
+      </p>
+      <pre><code>// Gym
+router.post('/:id/cancel', authorize('update', 'Transaction'), requireFeature('refunds'), transactionController.cancelTransaction);
+
+// Restaurant — used by the void feature to set status:'cancelled'
+router.put('/:id/status', authorize('update', 'Transaction'), orderController.updateOrderStatus);
+
+// defaultRolePermissions.js — these roles already have Transaction:update
+cashier: { Transaction: ALL }
+staff:   { Transaction: READ_CREATE_UPDATE }
+kitchen: { Transaction: ['read','update'] }
+waiter:  { Transaction: READ_CREATE_UPDATE }</code></pre>
+      <p><strong>Impact:</strong> "Move an order from pending to preparing" and "permanently void a paid transaction" check the exact same permission. By default, <code>waiter</code>, <code>kitchen</code>, and <code>staff</code> — day-to-day operational roles — can already call both void endpoints. The restaurant path also has <strong>no <code>requireFeature('refunds')</code> gate</strong>, unlike Gym. The frontend's <code>VoidTransactionPanel.vue</code> shows the "Batal" button purely based on transaction status, with zero client-side permission check.</p>
+      <p><strong>Fix:</strong></p>
+      <ol>
+        <li>Introduce a distinct <code>cancel</code> action for <code>Transaction</code>; grant it only to admin/owner/manager (+cashier if desired) by default.</li>
+        <li>Enforce it on the Gym cancel route <em>and</em> special-case the restaurant status route when transitioning a completed/paid order to <code>cancelled</code>.</li>
+        <li>Add <code>requireFeature('refunds')</code> to the restaurant cancel path for parity.</li>
+        <li>Hide the "Batal" button client-side with <code>checkPermission('cancel','Transaction')</code> in addition to the status check.</li>
+      </ol>
+    </div>
+  </details>
+
+  <details class="finding" id="f3">
+    <summary><span class="badge high">High</span> <span class="id-tag">RBAC-03</span> Payment gateway cancel/refund endpoints have no <code>authorize()</code> check</summary>
+    <div class="body">
+      <p><strong>Area:</strong> Backend &nbsp; <span class="file-tag">modules/payment-getway/routes/payment.routes.js</span></p>
+      <pre><code>router.use(authenticate);
+...
+router.post('/cancel/:transactionNumber', paymentController.cancelPayment);
+router.post('/refund/:transactionNumber', paymentController.refundPayment);</code></pre>
+      <p><strong>Impact:</strong> Only requires being logged in — no <code>authorize('update','Payment')</code>, unlike every other payment/billing route in the codebase. The controller does scope by <code>req.user.tenantId</code> (not cross-tenant), but <strong>any authenticated user in the tenant — waiter, trainer, even a member —</strong> could cancel or refund a Midtrans payment.</p>
+      <p><strong>Fix:</strong> Add <code>authorize('update', 'Payment')</code> to both routes, and register them in <code>ROUTE_TO_SUBJECT_MAP</code> for consistency.</p>
+    </div>
+  </details>
+
+  <details class="finding" id="f4">
+    <summary><span class="badge medium">Medium</span> <span class="id-tag">RBAC-04</span> <code>normalizeResourcePermissions</code> escalates any <code>"*"</code> grant to full access</summary>
+    <div class="body">
+      <p><strong>Area:</strong> Backend &nbsp; <span class="file-tag">utils/permissionUtils.js:80-83</span> &nbsp; <em>Proven by test.</em></p>
+      <pre><code>if (resource === FULL_ACCESS_RESOURCE) {
+  normalized[resource] = [FULL_ACCESS_ACTION];   // ignores rawActions entirely
+  continue;
+}</code></pre>
+      <p><strong>Impact:</strong> A role configured with <code>resources: { "*": ["read"] }</code> — intended as "read-only access to everything" — silently becomes <code>{ "*": ["*"] }</code> (full CRUD on everything). Confirmed by test:</p>
+      <pre><code>normalizeResourcePermissions({ '*': ['read'] })
+// => { '*': ['*'] }   (should be { '*': ['read'] })</code></pre>
+      <p>No current UI path sets this today, so it's latent — but a landmine for any future "read-only super role" or manually-edited <code>Role.permissions</code> JSON.</p>
+      <p><strong>Fix:</strong> <code>normalized[resource] = normalizeActionList(rawActions);</code> instead of hard-coding the wildcard. Regression test already added.</p>
+    </div>
+  </details>
+
+  <details class="finding" id="f5">
+    <summary><span class="badge medium">Medium</span> <span class="id-tag">RBAC-05</span> <code>autoAuthorize</code> can never match real requests (dead protection)</summary>
+    <div class="body">
+      <p><strong>Area:</strong> Backend &nbsp; <span class="file-tag">middlewares/autoAuthorizeMiddleware.js</span> &nbsp; used in <span class="file-tag">transaction.routes.js</span> <span class="file-tag">staffAttendance.routes.js</span> &nbsp; <em>Proven by test.</em></p>
+      <pre><code>function autoAuthorize(req, res, next) {
+  ...
+  const mapping = findRouteMapping(req.path, req.method);
+  if (!mapping) {
+    // Route not in the map — log in dev, allow through
+    return next();
+  }
+  ...</code></pre>
+      <p><strong>Impact:</strong> <code>ROUTE_TO_SUBJECT_MAP</code> keys are full paths (e.g. <code>/transactions/statistics</code>), but these two route files call <code>router.use(autoAuthorize)</code> from <em>inside</em> a router already mounted at <code>/transactions</code> — Express strips that prefix before the middleware runs, so <code>req.path</code> is really just <code>/statistics</code>. The map lookup can never succeed, and the middleware silently "allows through" every request. Today this is harmless because both files also apply explicit inline <code>authorize()</code> per route — but the middleware's own docstring claims routes are "automatically protected," which is false, inviting a future unprotected route.</p>
+      <p><strong>Fix:</strong> Reconstruct the full path (<code>req.baseUrl + req.path</code>) before matching, and add a startup assertion that mapped routes resolve — or delete <code>autoAuthorize</code> and standardize on the explicit pattern used everywhere else.</p>
+    </div>
+  </details>
+
+  <details class="finding" id="f6">
+    <summary><span class="badge medium">Medium</span> <span class="id-tag">RBAC-06</span> Frontend route guard only checks permissions for ~4% of pages</summary>
+    <div class="body">
+      <p><strong>Area:</strong> Frontend &nbsp; <span class="file-tag">router/index.js:330-345</span></p>
+      <pre><code>if (!isPublic && to.meta?.action && to.meta?.subject) {
+  if (!isSuperAdmin) {
+    if (!checkPermission(to.meta.action, to.meta.subject)) {
+      return { path: '/403', ... }
+    }
+  }
+}</code></pre>
+      <p>Repo-wide scan: <strong>136</strong> total page components, only <strong>6</strong> define both <code>meta.action</code> and <code>meta.subject</code> (including neither of the two new <code>void-transactions.vue</code> pages).</p>
+      <p><strong>Impact:</strong> For the other ~130 pages, direct URL navigation is blocked only by being logged in, subscription/module gating, and whatever the backend API returns. Menu-based hiding prevents a link from being <em>shown</em>, not a URL from being <em>visited</em>. Fine only if every backend endpoint is airtight — RBAC-01/02/03/05 show it currently isn't.</p>
+      <p><strong>Fix:</strong> Add <code>meta.action</code>/<code>meta.subject</code> to every private page (generate from the same data used for <code>menuKey</code>s); at minimum add it to the two void-transaction pages; consider a CI check that fails on private pages missing all of <code>meta.action</code>/<code>subject</code>/<code>public</code>.</p>
+    </div>
+  </details>
+
+  <details class="finding" id="f7">
+    <summary><span class="badge low">Low</span> <span class="id-tag">RBAC-07</span> <code>navigation.js</code> <code>action</code>/<code>subject</code> fields are never actually checked</summary>
+    <div class="body">
+      <p><strong>Area:</strong> Frontend &nbsp; <span class="file-tag">navigation/navigation.js</span> <span class="file-tag">composables/core/useNavigation.js</span></p>
+      <p>Every nav item declares <code>action</code>/<code>subject</code> (including the two added this session), but <code>filterByModuleAccess()</code> only ever checks <code>item.menuKey</code> and subscription access — it never reads <code>item.action</code>/<code>item.subject</code>. <code>checkPermission</code>/<code>canAccess</code> are used in only 3 files total, and never against a nav item.</p>
+      <p><strong>Impact:</strong> A developer can set <code>action</code>/<code>subject</code> believing it gates visibility, when only <code>menuKey</code> matters — exactly the ambiguity that required 3 files to be hand-edited for the void-transaction menu items this session (see RBAC-14).</p>
+      <p><strong>Fix:</strong> Either wire <code>filterByModuleAccess</code> to also call <code>checkPermission(item.action, item.subject)</code>, or delete the fields to remove the ambiguity.</p>
+    </div>
+  </details>
+
+  <details class="finding" id="f8">
+    <summary><span class="badge low">Low</span> <span class="id-tag">RBAC-08</span> No component ever hides a button based on granular permission</summary>
+    <div class="body">
+      <p><strong>Area:</strong> Frontend</p>
+      <p><code>checkPermission</code>/<code>canAccess</code>/<code>hasMenuAccess</code> are used in exactly 3 files total (<code>router/index.js</code>, their own definitions, <code>useNavigation.js</code>). No <code>.vue</code> component imports them to conditionally render a create/edit/delete button.</p>
+      <p><strong>Impact:</strong> Once a page is reachable (nearly unconditional per RBAC-06), every button on it renders regardless of role, e.g. a <code>waiter</code> sees the exact same "Batal" button as a <code>manager</code>. Backend is the only real gate — fine only when the backend is airtight (it isn't always, per RBAC-01/02/03). Also a poor UX: users click things that then 403.</p>
+      <p><strong>Fix:</strong> Add a small reusable <code>&lt;PermissionGate&gt;</code> component or <code>v-permission</code> directive built on <code>checkPermission</code>; use it for destructive actions, starting with <code>VoidTransactionPanel.vue</code>.</p>
+    </div>
+  </details>
+
+  <details class="finding" id="f9">
+    <summary><span class="badge low">Low</span> <span class="id-tag">RBAC-09</span> Legacy placeholder module routes have no <code>authorize()</code> at all</summary>
+    <div class="body">
+      <p><strong>Area:</strong> Backend &nbsp; <span class="file-tag">routes/gym/pos.routes.js</span> <span class="file-tag">routes/gym/restaurant.routes.js</span> (mounted at <code>/modules/pos</code>, <code>/modules/restaurant</code>)</p>
+      <pre><code>router.use(authenticate);
+router.use(requireModule(MODULE_NAME));
+// no authorize() anywhere in either file</code></pre>
+      <p><strong>Impact:</strong> Low today — every route just returns static placeholder JSON ("implementation coming in Fase 2") — but these are real, mounted, reachable routes with no RBAC pattern to copy. If "finished" later without adding <code>authorize()</code>, real endpoints would ship unprotected.</p>
+      <p><strong>Fix:</strong> Delete the dead placeholders (the real, fully-implemented restaurant module already exists elsewhere), or add <code>authorize()</code> now.</p>
+    </div>
+  </details>
+
+  <details class="finding" id="f10">
+    <summary><span class="badge low">Low</span> <span class="id-tag">RBAC-10</span> Several default roles fail their own <code>/auth/profile</code> check</summary>
+    <div class="body">
+      <p><strong>Area:</strong> Backend &nbsp; <span class="file-tag">routes/core/auth/auth.routes.js:32</span> <span class="file-tag">utils/defaultRolePermissions.js</span> &nbsp; <em>Proven by test.</em></p>
+      <pre><code>router.get('/profile', authenticate, authorize('read', 'User'), ...);</code></pre>
+      <p><code>cashier</code>, <code>trainer</code>, <code>kitchen</code>, <code>waiter</code>, and <code>staff</code> have no <code>User</code> entry in <code>defaultRolePermissions.js</code>, so <code>can(user, 'read', 'User')</code> is <code>false</code> for them by default — confirmed by test.</p>
+      <p><strong>Impact:</strong> None currently (the frontend never calls this endpoint), but it's a landmine for the next person who wires it up or any tenant that customizes these roles.</p>
+      <p><strong>Fix:</strong> Give every default role baseline <code>User:['read']</code>, or special-case "read your own user record" so it doesn't depend on the generic <code>User</code> permission.</p>
+    </div>
+  </details>
+
+  <details class="finding" id="f11">
+    <summary><span class="badge low">Low</span> <span class="id-tag">RBAC-11</span> Zero RBAC test coverage; backend suite currently broken; no frontend tests</summary>
+    <div class="body">
+      <p><strong>Area:</strong> Both</p>
+      <ul>
+        <li>No pre-existing test references <code>rbac.js</code>, <code>permissionUtils.js</code>, <code>autoAuthorizeMiddleware.js</code>, or <code>menuKeys.js</code>.</li>
+        <li><code>npm test</code> in <code>packages/backend</code> currently fails for <em>every</em> suite (including pre-existing ones) — <code>NODE_ENV=test</code> has no matching DB dialect/<code>.env.test</code>.</li>
+        <li><code>packages/frontend/package.json</code> has no test script and no vitest/jest dependency at all.</li>
+      </ul>
+      <p><strong>Impact:</strong> Bugs like RBAC-04/05 (confirmed via new tests in this audit) could ship silently.</p>
+      <p><strong>Fix:</strong> Fix the backend test env (<code>.env.test</code> or a DB-optional setup hook), land <code>rbacAudit.test.js</code> permanently, add <code>vitest</code> to the frontend and cover <code>usePermissions.js</code>, wire both into CI.</p>
+    </div>
+  </details>
+
+  <details class="finding" id="f12">
+    <summary><span class="badge info">Info</span> <span class="id-tag">RBAC-12</span> CORS reflects the request origin even when not allow-listed</summary>
+    <div class="body">
+      <p><strong>Area:</strong> Adjacent to RBAC &nbsp; <span class="file-tag">app.js:55-59</span></p>
+      <pre><code>if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+  callback(null, origin);
+} else {
+  callback(null, origin); // Allow all in production too, but with specific origin
+}</code></pre>
+      <p>Both branches reflect the origin — the allow-list check has no effect, and <code>credentials: true</code> is set. Worth tightening: a stolen/XSS'd token becomes easier to use cross-origin.</p>
+    </div>
+  </details>
+
+  <details class="finding" id="f13">
+    <summary><span class="badge info">Info</span> <span class="id-tag">RBAC-13</span> Weak hardcoded <code>JWT_SECRET</code> fallback</summary>
+    <div class="body">
+      <p><strong>Area:</strong> Backend &nbsp; <span class="file-tag">utils/jwt.js:4</span></p>
+      <pre><code>const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';</code></pre>
+      <p>If a deployment forgets to set <code>JWT_SECRET</code>, every token (including role/tenant claims) can be forged with a well-known default. Recommend failing fast at boot instead of silently falling back, at minimum for <code>NODE_ENV=production</code>.</p>
+    </div>
+  </details>
+
+  <details class="finding" id="f14">
+    <summary><span class="badge medium">Medium</span> <span class="id-tag">RBAC-14</span> Menu-key ↔ permission wiring is manually duplicated across 3 files</summary>
+    <div class="body">
+      <p><strong>Area:</strong> Both &nbsp; <span class="file-tag">frontend/navigation/menuKeys.js</span> <span class="file-tag">frontend/navigation/menuKeyUtils.js</span> <span class="file-tag">backend/utils/menuKeys.js</span></p>
+      <p><strong>Impact:</strong> Adding the two <code>void-transactions</code> menu keys this session required hand-editing three separate role→menuKey allow-lists to stay in sync, with no shared source of truth and no test asserting they stay consistent. A missed file silently breaks menu visibility or the <code>SUBJECT_MENU_MAP</code> fallback, and none of the three files import from each other so drift is easy to miss in review.</p>
+      <p><strong>Fix:</strong> Generate the frontend copies from the backend's data at build time, or move both into a shared module. At minimum, add a CI script that diffs the three lists and fails on divergence.</p>
+    </div>
+  </details>
+
+  <h2 id="table">4. Findings Summary Table</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Severity</th><th>Title</th></tr></thead>
+    <tbody>
+      <tr><td>RBAC-01</td><td><span class="badge critical">Critical</span></td><td>Global Roles table — cross-tenant privilege escalation via role editor</td></tr>
+      <tr><td>RBAC-02</td><td><span class="badge high">High</span></td><td>Void/cancel transaction reuses generic Transaction:update</td></tr>
+      <tr><td>RBAC-03</td><td><span class="badge high">High</span></td><td>Payment cancel/refund endpoints missing authorize()</td></tr>
+      <tr><td>RBAC-04</td><td><span class="badge medium">Medium</span></td><td>normalizeResourcePermissions escalates "*" grants to full access</td></tr>
+      <tr><td>RBAC-05</td><td><span class="badge medium">Medium</span></td><td>autoAuthorize middleware never actually matches (dead protection)</td></tr>
+      <tr><td>RBAC-06</td><td><span class="badge medium">Medium</span></td><td>Frontend route guard covers only ~4% of pages</td></tr>
+      <tr><td>RBAC-14</td><td><span class="badge medium">Medium</span></td><td>Menu key/permission data duplicated across 3 files</td></tr>
+      <tr><td>RBAC-07</td><td><span class="badge low">Low</span></td><td>navigation.js action/subject fields unused/misleading</td></tr>
+      <tr><td>RBAC-08</td><td><span class="badge low">Low</span></td><td>No component-level (button) permission gating</td></tr>
+      <tr><td>RBAC-09</td><td><span class="badge low">Low</span></td><td>Legacy placeholder module routes missing authorize()</td></tr>
+      <tr><td>RBAC-10</td><td><span class="badge low">Low</span></td><td>Several roles fail their own /auth/profile check by default</td></tr>
+      <tr><td>RBAC-11</td><td><span class="badge low">Low</span></td><td>No RBAC test coverage; backend test suite currently broken</td></tr>
+      <tr><td>RBAC-12</td><td><span class="badge info">Info</span></td><td>CORS reflects any origin</td></tr>
+      <tr><td>RBAC-13</td><td><span class="badge info">Info</span></td><td>Weak hardcoded JWT_SECRET fallback</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="action-plan">5. Best Practices — How To Fix What Was Found (Action Plan)</h2>
+  <ol>
+    <li><strong>RBAC-01 (Critical)</strong> — Add <code>tenantId</code> to <code>Roles</code>, scope every role controller query by tenant, block tenant admins from editing global/system-default roles.</li>
+    <li><strong>RBAC-02 (High)</strong> — Add a distinct <code>cancel</code> action for <code>Transaction</code>; restrict to admin/owner/manager by default; enforce on both Gym and Restaurant void paths; mirror client-side.</li>
+    <li><strong>RBAC-03 (High)</strong> — Add <code>authorize('update','Payment')</code> to the two payment routes.</li>
+    <li><strong>RBAC-04 (Medium)</strong> — One-line fix in <code>normalizeResourcePermissions</code>; keep the regression test.</li>
+    <li><strong>RBAC-05 (Medium)</strong> — Fix path matching in <code>autoAuthorize</code>, or delete it and its misleading docstring.</li>
+    <li><strong>RBAC-06 (Medium)</strong> — Backfill <code>meta.action</code>/<code>meta.subject</code> on private pages, starting with financially-sensitive ones.</li>
+    <li><strong>RBAC-14 (Medium)</strong> — Generate/derive menu-key lists instead of hand-syncing 3 files; add a CI consistency check.</li>
+    <li><strong>RBAC-07/08 (Low)</strong> — Wire or delete unused <code>action</code>/<code>subject</code> nav fields; add a <code>&lt;PermissionGate&gt;</code> pattern for destructive buttons.</li>
+    <li><strong>RBAC-09/10 (Low)</strong> — Add <code>authorize()</code> to placeholders or delete them; give roles baseline profile-read access.</li>
+    <li><strong>RBAC-11 (Low, unblocks everything above)</strong> — Fix the backend test environment, land the new RBAC test file, add frontend unit tests, wire both into CI.</li>
+    <li><strong>RBAC-12/13 (Info)</strong> — Tighten CORS allow-list enforcement; require <code>JWT_SECRET</code> in production.</li>
+  </ol>
+
+  <h2 id="best-practices">6. Best Practices — How To Implement RBAC Correctly Going Forward</h2>
+
+  <h3>6.1 Backend</h3>
+  <ol>
+    <li><strong>One source of truth for "what can call what."</strong> Either make <code>autoAuthorize</code> real and load-bearing, or delete it and standardize on the explicit <code>authorize(action, subject)</code> pattern already used almost everywhere. Never keep a real and a fake enforcement path side by side.</li>
+    <li><strong>Multi-tenancy is a permission dimension, not an afterthought.</strong> Any per-tenant-customizable model (roles, printer settings, templates...) needs a <code>tenantId</code> column, and every query needs <code>WHERE tenantId = ...</code> — even on "admin" endpoints. <code>isTenantAdmin()</code> should only ever grant access within the acting user's own tenant.</li>
+    <li><strong>Separate "routine write" from "destructive/financial correction."</strong> Model these as distinct actions so role defaults can differ meaningfully — if it needs a manager's sign-off in real life, it needs a distinct permission in code.</li>
+    <li><strong>Fail closed, not open.</strong> Never write a middleware that defaults to "allow" when it can't find a match.</li>
+    <li><strong>No hardcoded secret fallbacks.</strong> Fail fast at boot if <code>JWT_SECRET</code> is unset outside development.</li>
+    <li><strong>Test the permission engine like business logic.</strong> Pure functions don't need a database — unit test them directly.</li>
+    <li><strong>Audit-log every permission/role mutation</strong>, flagging cross-tenant or global-role changes specifically.</li>
+  </ol>
+
+  <h3>6.2 Frontend</h3>
+  <ol>
+    <li><strong>Turn the router guard's UX on everywhere.</strong> Set <code>meta.action</code>/<code>meta.subject</code> on every private page, ideally generated from the same source as <code>menuKey</code>s.</li>
+    <li><strong>One mechanism per concern.</strong> Don't keep two systems that look like they both gate the same thing when only one does.</li>
+    <li><strong>Gate destructive UI at the component level.</strong> Use the existing <code>checkPermission</code> composable via a small reusable wrapper/directive.</li>
+    <li><strong>Keep cached permission data fresh.</strong> Invalidate the cached <code>permissions</code> quickly after a backend role change.</li>
+    <li><strong>Single source of truth for menu keys</strong> — generate the frontend copy from the backend's instead of hand-syncing.</li>
+    <li><strong>Write tests</strong> for <code>usePermissions.js</code> and the router guard's permission branch — cheap, pure, and exactly where this audit found drift.</li>
+  </ol>
+
+  <h3>6.3 Checklist For Every New Protected Feature</h3>
+  <ul class="checklist">
+    <li>Backend route wrapped in <code>authenticate</code> + <code>authorize(action, subject)</code> (use a specific action like <code>cancel</code>/<code>refund</code> for destructive/financial operations).</li>
+    <li>Route added to <code>ROUTE_TO_SUBJECT_MAP</code> for documentation/tooling, even if <code>autoAuthorize</code> isn't relied upon.</li>
+    <li><code>subject</code> added to <code>defaultRolePermissions.js</code> for every role that should have access — and explicitly absent from roles that shouldn't.</li>
+    <li>Menu key added to <code>menuKeys.js</code> (frontend <em>and</em> backend) and <code>SUBJECT_MENU_MAP</code> if applicable — verified with a diff.</li>
+    <li>Frontend page's <code>&lt;route&gt;</code> block sets <code>meta.action</code> + <code>meta.subject</code> matching the backend check.</li>
+    <li>Destructive buttons wrapped in a client-side <code>checkPermission(...)</code> check in addition to the status/business-rule check.</li>
+    <li>Cross-tenant test: a user from Tenant B cannot read/mutate Tenant A's data via this route, even with a matching role.</li>
+    <li>Unit test for new pure permission logic; at least one integration test hitting the route as authorized and unauthorized roles.</li>
+  </ul>
+
+  <footer>
+    Generated as part of an RBAC audit of Club OS. See <code>docs/RBAC-AUDIT.md</code> for the plain-text version, and <code>packages/backend/tests/utils/rbacAudit.test.js</code> for the executable proof behind the ✓/REGRESSION items above.
+  </footer>
+
+</div>
+</body>
+</html>

@@ -97,7 +97,7 @@
                   {{ role.isActive ? 'Active' : 'Inactive' }}
                 </div>
                 <div
-                  v-if="role.name === 'admin'"
+                  v-if="isSystemRole(role)"
                   class="badge badge-xs badge-primary"
                 >
                   System Role
@@ -142,8 +142,20 @@
                 View Details
               </button>
               <button
+                v-if="canCustomizeSystemRole(role)"
+                class="btn btn-sm btn-secondary gap-2"
+                @click="customizeSystemRole(role)"
+                title="Buat salinan role khusus tenant yang bisa diedit"
+              >
+                <IconTemplate class="w-4 h-4" />
+                Customize
+              </button>
+              <button
+                v-else
                 class="btn btn-sm btn-primary gap-2"
                 @click="openEditModal(role)"
+                :disabled="!canManageRole(role)"
+                :title="editButtonTitle(role)"
               >
                 <IconEdit class="w-4 h-4" />
                 Edit
@@ -151,7 +163,8 @@
               <button
                 class="btn btn-sm btn-error btn-ghost gap-2"
                 @click="confirmDelete(role)"
-                :disabled="role.name === 'admin' || role.name === 'manager'"
+                :disabled="isSystemRole(role) || !canManageRole(role)"
+                :title="!canManageRole(role) ? 'Only Super Admin can delete system roles' : ''"
               >
                 <IconTrash class="w-4 h-4" />
               </button>
@@ -188,7 +201,7 @@
                     <component :is="getRoleIcon(role.name)" class="w-5 h-5" :class="getRoleColor(role.name)" />
                     <div>
                       <div class="font-bold capitalize">{{ role.name }}</div>
-                      <div v-if="role.name === 'admin'" class="badge badge-xs badge-primary mt-1">System</div>
+                      <div v-if="isSystemRole(role)" class="badge badge-xs badge-primary mt-1">System</div>
                     </div>
                   </div>
                 </td>
@@ -219,17 +232,27 @@
                       <IconEye class="w-4 h-4" />
                     </button>
                     <button
+                      v-if="canCustomizeSystemRole(role)"
+                      class="btn btn-ghost btn-sm btn-circle"
+                      @click="customizeSystemRole(role)"
+                      title="Customize — buat salinan role khusus tenant"
+                    >
+                      <IconTemplate class="w-4 h-4" />
+                    </button>
+                    <button
+                      v-else
                       class="btn btn-ghost btn-sm btn-circle"
                       @click="openEditModal(role)"
-                      title="Edit Role"
+                      :disabled="!canManageRole(role)"
+                      :title="editButtonTitle(role)"
                     >
                       <IconEdit class="w-4 h-4" />
                     </button>
                     <button
                       class="btn btn-ghost btn-sm btn-circle text-error"
                       @click="confirmDelete(role)"
-                      :disabled="role.name === 'admin' || role.name === 'manager'"
-                      title="Delete Role"
+                      :disabled="isSystemRole(role) || !canManageRole(role)"
+                      :title="canManageRole(role) && !isSystemRole(role) ? 'Delete Role' : 'Only Super Admin can delete system roles'"
                     >
                       <IconTrash class="w-4 h-4" />
                     </button>
@@ -257,7 +280,7 @@
           <h3 class="font-bold text-2xl flex items-center gap-2">
             <IconShieldPlus v-if="!editingRole" class="w-7 h-7 text-primary" />
             <IconShieldCheck v-else class="w-7 h-7 text-primary" />
-            {{ editingRole ? 'Edit Role' : 'Create New Role' }}
+            {{ editingRole ? 'Edit Role' : (customizingFromRole ? `Customize ${customizingFromRole.name} Role` : 'Create New Role') }}
           </h3>
           <button
             @click="closeRoleModal"
@@ -268,8 +291,19 @@
         </div>
         
         <form @submit.prevent="handleSubmit" class="space-y-5">
+          <div
+            v-if="customizingFromRole"
+            class="alert alert-info text-sm"
+          >
+            <IconInfoCircle class="w-5 h-5 shrink-0" />
+            <span>
+              Role <strong class="capitalize">{{ customizingFromRole.name }}</strong> adalah system role bersama.
+              Salinan ini akan disimpan khusus untuk tenant Anda. Assign ulang user ke role baru setelah disimpan.
+            </span>
+          </div>
+
           <!-- Role Templates (Only for new roles) -->
-          <div v-if="!editingRole" class="card bg-base-200">
+          <div v-if="!editingRole && !customizingFromRole" class="card bg-base-200">
             <div class="card-body p-3">
               <h4 class="font-semibold text-sm mb-2 flex items-center gap-2">
                 <IconTemplate class="w-4 h-4" />
@@ -308,7 +342,7 @@
                     placeholder="e.g., trainer"
                     class="input input-bordered input-sm w-full"
                     required
-                    :disabled="editingRole && editingRole.name === 'admin'"
+                    :disabled="editingRole && isSystemRole(editingRole)"
                   />
                   <label class="label py-1">
                     <span class="label-text-alt opacity-60">Lowercase, no spaces</span>
@@ -747,6 +781,15 @@
             Close
           </button>
           <button
+            v-if="canCustomizeSystemRole(viewingRole)"
+            class="btn btn-secondary gap-2"
+            @click="customizeFromView"
+          >
+            <IconTemplate class="w-4 h-4" />
+            Customize Role
+          </button>
+          <button
+            v-else-if="canManageRole(viewingRole)"
             class="btn btn-primary gap-2"
             @click="editFromView"
           >
@@ -841,8 +884,36 @@ const viewMode = ref('cards') // 'cards' or 'list'
 const activeModule = ref('all')
 const permissionView = ref('summary') // 'summary', 'resources', 'menu'
 
-// Check if user is superadmin
-const isSuperAdmin = ref(authStore.user?.isSuperAdmin || false)
+// Must stay reactive — authStore.user can hydrate after this tab mounts.
+const isSuperAdmin = computed(() => authStore.user?.isSuperAdmin === true)
+const isTenantAdmin = computed(() => {
+  if (isSuperAdmin.value) return true
+  const roleName = (authStore.user?.role || '').toString().toLowerCase()
+  return roleName === 'admin' || roleName === 'owner'
+})
+
+// RBAC-01: roles are either shared system defaults (tenantId null) or owned
+// by exactly one tenant. Mirrors the access rules enforced server-side in
+// permissionController.js so the UI never offers an action the API will reject.
+const isSystemRole = (role) => !role?.tenantId
+const canManageRole = (role) => {
+  if (!role) return false
+  if (isSuperAdmin.value) return true
+  return !isSystemRole(role) && role.tenantId === authStore.user?.tenantId
+}
+// System roles are shared platform-wide — tenant admins clone them instead of editing in place.
+const canCustomizeSystemRole = (role) => {
+  if (!role || !isSystemRole(role)) return false
+  if (isSuperAdmin.value) return false
+  return isTenantAdmin.value
+}
+const editButtonTitle = (role) => {
+  if (canManageRole(role)) return 'Edit Role'
+  if (isSystemRole(role)) {
+    return 'System role — hanya Super Admin yang bisa edit langsung. Gunakan Customize untuk salinan tenant.'
+  }
+  return 'Role ini milik tenant lain'
+}
 
 const MODULE_META = {
   all: { id: 'all', label: 'All', icon: IconShield },
@@ -948,6 +1019,7 @@ const formData = ref({
   menuAccess: [],
   isActive: true
 })
+const customizingFromRole = ref(null)
 
 // All available menu keys for the editor
 const allMenuKeys = ALL_MENU_KEYS
@@ -1148,6 +1220,7 @@ const applyTemplate = (template) => {
 // Open create modal
 const openCreateModal = () => {
   editingRole.value = null
+  customizingFromRole.value = null
   formData.value = {
     name: '',
     description: '',
@@ -1160,35 +1233,45 @@ const openCreateModal = () => {
   roleModal.value?.showModal()
 }
 
-// Open edit modal
-const openEditModal = (role) => {
-  editingRole.value = role
-
+const populateFormFromRole = (role, { asCustomCopy = false } = {}) => {
   const perms = role.permissions || {}
-
-  if (import.meta.env.DEV) {
-    console.log('[EditModal] role.permissions:', JSON.stringify(perms, null, 2))
-  }
-
-  let existingPermissions = {}
+  let existingPermissions = resolvePermissionsFromResources(perms.resources, availableResources.value, role)
 
   const roleName = role.name?.toLowerCase()
-
-  existingPermissions = resolvePermissionsFromResources(perms.resources, availableResources.value, role)
-  if (import.meta.env.DEV) console.log('[EditModal] Loaded resources:', existingPermissions)
-
-  // Admin/owner fallback: always show all resources checked in UI
   if ((roleName === 'admin' || roleName === 'owner') && availableResources.value.length > 0) {
     existingPermissions = buildAllResourcePermissions(availableResources.value)
   }
 
   formData.value = {
     name: role.name,
-    description: role.description || '',
+    description: asCustomCopy
+      ? (role.description ? `${role.description} (custom)` : `Custom copy of ${role.name}`)
+      : (role.description || ''),
     permissions: existingPermissions,
     menuAccess: resolveMenuAccessForRole(role),
     isActive: role.isActive
   }
+}
+
+const customizeSystemRole = (role) => {
+  editingRole.value = null
+  customizingFromRole.value = role
+  populateFormFromRole(role, { asCustomCopy: true })
+  activeModule.value = 'all'
+  permissionSearch.value = ''
+  roleModal.value?.showModal()
+}
+
+// Open edit modal
+const openEditModal = (role) => {
+  editingRole.value = role
+  customizingFromRole.value = null
+
+  if (import.meta.env.DEV) {
+    console.log('[EditModal] role.permissions:', JSON.stringify(role.permissions || {}, null, 2))
+  }
+
+  populateFormFromRole(role)
   activeModule.value = 'all'
   permissionSearch.value = ''
   roleModal.value?.showModal()
@@ -1209,10 +1292,18 @@ const editFromView = () => {
   }
 }
 
+const customizeFromView = () => {
+  closePermissionsModal()
+  if (viewingRole.value) {
+    customizeSystemRole(viewingRole.value)
+  }
+}
+
 // Close modals
 const closeRoleModal = () => {
   roleModal.value?.close()
   editingRole.value = null
+  customizingFromRole.value = null
 }
 
 const closePermissionsModal = () => {

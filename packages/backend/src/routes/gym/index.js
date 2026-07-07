@@ -1,8 +1,6 @@
 /**
  * Gym Module Routes
  */
-const posRoutes = require('./pos.routes');
-const restaurantRoutes = require('./restaurant.routes');
 const membersRoutes = require('./member/member.routes');
 const trainerRoutes = require('./trainer/trainer.routes');
 const transactionRoutes = require('./transaction/transaction.routes');
@@ -19,8 +17,6 @@ const shiftRoutes = require('./shift/shift.routes');
 const schedulePeriodRoutes = require('./schedulePeriod/schedulePeriod.routes');
 
 module.exports = {
-  posRoutes,
-  restaurantRoutes,
   membersRoutes,
   trainerRoutes,
   transactionRoutes,

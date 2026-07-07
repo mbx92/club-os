@@ -573,6 +573,97 @@
           </div>
         </div>
 
+        <!-- Payment Methods Section -->
+        <div class="space-y-4">
+          <h3 class="text-lg font-semibold border-b pb-2">Payment Methods</h3>
+
+          <div class="alert alert-info">
+            <IconInfoCircle class="w-5 h-5" />
+            <span>Atur metode pembayaran yang tersedia di POS, billing, dan transaksi. Nonaktifkan metode yang tidak dipakai.</span>
+          </div>
+
+          <div class="overflow-x-auto rounded-box border border-base-300">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Aktif</th>
+                  <th>Key</th>
+                  <th>Label</th>
+                  <th>Perlu Bank</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(method, index) in form.transaction.payment.paymentMethods"
+                  :key="method.key"
+                >
+                  <td>
+                    <input
+                      v-model="method.enabled"
+                      type="checkbox"
+                      class="checkbox checkbox-primary checkbox-sm"
+                    />
+                  </td>
+                  <td class="font-mono text-xs">{{ method.key }}</td>
+                  <td>
+                    <input
+                      v-model="method.label"
+                      type="text"
+                      class="input input-bordered input-sm w-full max-w-xs"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      v-model="method.requiresBank"
+                      type="checkbox"
+                      class="checkbox checkbox-sm"
+                    />
+                  </td>
+                  <td>
+                    <button
+                      v-if="!method.isSystem"
+                      type="button"
+                      class="btn btn-ghost btn-xs text-error"
+                      @click="removePaymentMethod(index)"
+                    >
+                      Hapus
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="grid grid-cols-1 gap-3 rounded-box border border-base-300 bg-base-200/40 p-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+            <div class="form-control">
+              <label class="label py-0">
+                <span class="label-text text-xs font-semibold">Key (snake_case)</span>
+              </label>
+              <input
+                v-model="newPaymentMethod.key"
+                type="text"
+                placeholder="shopeepay"
+                class="input input-bordered input-sm"
+              />
+            </div>
+            <div class="form-control">
+              <label class="label py-0">
+                <span class="label-text text-xs font-semibold">Label</span>
+              </label>
+              <input
+                v-model="newPaymentMethod.label"
+                type="text"
+                placeholder="ShopeePay"
+                class="input input-bordered input-sm"
+              />
+            </div>
+            <button type="button" class="btn btn-sm btn-outline" @click="addPaymentMethod">
+              Tambah Metode
+            </button>
+          </div>
+        </div>
+
         <!-- Actions -->
         <div class="card-actions justify-end pt-4">
           <button
@@ -603,11 +694,12 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useApi } from "@/composables/core/useApi";
 import { useNotification } from "@/composables/core/useNotification";
 import { useTenantSettings } from "@/composables/admin/useTenantSettings";
+import { buildDefaultPaymentMethods } from "@/utils/paymentMethods";
 import { IconCreditCard, IconDeviceFloppy, IconEye, IconInfoCircle } from "@tabler/icons-vue";
 
 const api = useApi();
 const { showSuccess, handleError } = useNotification();
-const { tenantSettings, fetchTenantSettings } = useTenantSettings();
+const { tenantSettings, fetchTenantSettings, patchTenantSettings } = useTenantSettings();
 
 const loading = ref(false);
 const saving = ref(false);
@@ -635,6 +727,7 @@ const defaultForm = () => ({
     payment: {
       enabledGateways: [],
       paymentTimeout: 60,
+      paymentMethods: buildDefaultPaymentMethods(),
       midtransConfig: {
         apiKey: "",
         clientKey: "",
@@ -675,6 +768,83 @@ const defaultForm = () => ({
 
 const form = ref(defaultForm());
 const original = ref(null);
+const newPaymentMethod = ref({ key: "", label: "" });
+
+const mergePaymentMethods = (paymentConfig = {}) => {
+  const defaults = buildDefaultPaymentMethods();
+  const stored = paymentConfig.paymentMethods;
+
+  if (!Array.isArray(stored) || stored.length === 0) {
+    return defaults;
+  }
+
+  const storedKeys = new Set(stored.map((method) => method.key));
+  const merged = stored.map((method) => ({ ...method }));
+
+  for (const fallback of defaults) {
+    if (!storedKeys.has(fallback.key)) {
+      merged.push({ ...fallback, enabled: false });
+    }
+  }
+
+  return merged;
+};
+
+const mergeTransactionSettings = (apiTx = {}) => {
+  const defaultTx = defaultForm().transaction;
+
+  return {
+    ...defaultTx,
+    ...apiTx,
+    currency: { ...defaultTx.currency, ...apiTx.currency },
+    discount: { ...defaultTx.discount, ...apiTx.discount },
+    payment: {
+      ...defaultTx.payment,
+      ...apiTx.payment,
+      paymentMethods: mergePaymentMethods(apiTx.payment),
+      midtransConfig: { ...defaultTx.payment.midtransConfig, ...apiTx.payment?.midtransConfig },
+      stripeConfig: { ...defaultTx.payment.stripeConfig, ...apiTx.payment?.stripeConfig },
+    },
+    invoice: { ...defaultTx.invoice, ...apiTx.invoice },
+    rounding: { ...defaultTx.rounding, ...apiTx.rounding },
+    shipping: { ...defaultTx.shipping, ...apiTx.shipping },
+  };
+};
+
+const addPaymentMethod = () => {
+  const key = newPaymentMethod.value.key.trim().toLowerCase().replace(/\s+/g, "_");
+  const label = newPaymentMethod.value.label.trim();
+
+  if (!key || !/^[a-z][a-z0-9_]*$/.test(key)) {
+    handleError(new Error("Key harus snake_case, contoh: shopeepay"), "Key tidak valid");
+    return;
+  }
+
+  if (!label) {
+    handleError(new Error("Label wajib diisi"), "Label tidak valid");
+    return;
+  }
+
+  const exists = form.value.transaction.payment.paymentMethods.some((method) => method.key === key);
+  if (exists) {
+    handleError(new Error(`Metode "${key}" sudah ada`), "Metode duplikat");
+    return;
+  }
+
+  form.value.transaction.payment.paymentMethods.push({
+    key,
+    label,
+    enabled: true,
+    requiresBank: false,
+    isSystem: false,
+  });
+
+  newPaymentMethod.value = { key: "", label: "" };
+};
+
+const removePaymentMethod = (index) => {
+  form.value.transaction.payment.paymentMethods.splice(index, 1);
+};
 
 const discountOrderOption = ref("PERCENTAGE_FIRST,FIXED_AMOUNT_SECOND");
 
@@ -709,21 +879,7 @@ const loadSettings = async () => {
       const apiTx = tenantSettings.value.settings.transaction;
       
       form.value = {
-        transaction: {
-          ...defaultTx,
-          ...apiTx,
-          currency: { ...defaultTx.currency, ...apiTx.currency },
-          discount: { ...defaultTx.discount, ...apiTx.discount },
-          payment: {
-            ...defaultTx.payment,
-            ...apiTx.payment,
-            midtransConfig: { ...defaultTx.payment.midtransConfig, ...apiTx.payment?.midtransConfig },
-            stripeConfig: { ...defaultTx.payment.stripeConfig, ...apiTx.payment?.stripeConfig },
-          },
-          invoice: { ...defaultTx.invoice, ...apiTx.invoice },
-          rounding: { ...defaultTx.rounding, ...apiTx.rounding },
-          shipping: { ...defaultTx.shipping, ...apiTx.shipping },
-        },
+        transaction: mergeTransactionSettings(apiTx),
       };
       
       // Sync discount order
@@ -745,19 +901,7 @@ const populateForm = (data) => {
     const apiTx = data.settings.transaction;
     
     form.value = {
-      transaction: {
-        ...defaultTx,
-        ...apiTx,
-        currency: { ...defaultTx.currency, ...apiTx.currency },
-        discount: { ...defaultTx.discount, ...apiTx.discount },
-        payment: {
-          ...defaultTx.payment,
-          ...apiTx.payment,
-          midtransConfig: { ...defaultTx.payment.midtransConfig, ...apiTx.payment?.midtransConfig },
-          stripeConfig: { ...defaultTx.payment.stripeConfig, ...apiTx.payment?.stripeConfig },
-        },
-        invoice: { ...defaultTx.invoice, ...apiTx.invoice },          rounding: { ...defaultTx.rounding, ...apiTx.rounding },        shipping: { ...defaultTx.shipping, ...apiTx.shipping },
-      },
+      transaction: mergeTransactionSettings(apiTx),
     };
   } else {
     form.value = defaultForm();
@@ -786,13 +930,9 @@ const handleSubmit = async () => {
 
   saving.value = true;
   try {
-    // API expects settings JSONB under settings.transaction; send patch to /v1/tenants/settings
     const payload = { transaction: form.value.transaction };
-    await api.patch("/tenants/settings", payload);
-    showSuccess("Transaction settings updated successfully");
+    await patchTenantSettings(payload, "Transaction settings updated successfully");
     original.value = JSON.parse(JSON.stringify(form.value));
-    
-    // Refresh tenant settings to update auth store
     await fetchTenantSettings();
   } catch (err) {
     handleError(err, "Failed to update transaction settings");

@@ -52,10 +52,14 @@ const corsOptions = {
       allowedOrigins.push(...process.env.ALLOWED_ORIGINS.split(','));
     }
 
+    // RBAC-12: previously this reflected ANY origin back (even outside the
+    // allowlist) while `credentials: true` was set — letting any malicious
+    // site make credentialed cross-origin requests on behalf of a logged-in
+    // user. Only echo back origins that are actually on the allowlist.
     if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
       callback(null, origin);
     } else {
-      callback(null, origin); // Allow all in production too, but with specific origin
+      callback(new Error(`Origin "${origin}" is not allowed by CORS`));
     }
   },
   credentials: true,

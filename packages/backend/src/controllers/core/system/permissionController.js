@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { User, Role } = require('../../../models');
 const { buildUserPermissions } = require('../../../services/permissionService');
 const { getDefaultPermissionsForRole, getAvailableDefaultRoles } = require('../../../utils/defaultRolePermissions');
@@ -19,6 +20,49 @@ function normalizeRoleResponse(role) {
     ...raw,
     permissions,
   };
+}
+
+/**
+ * RBAC-01 fix — Roles are either shared system defaults (tenantId === null)
+ * or owned by exactly one tenant (tenantId === <tenant uuid>). These helpers
+ * are the single place that decides who may see/mutate a given role so a
+ * tenant Admin/Owner can no longer read or write another tenant's roles, or
+ * mutate the shared system defaults used by every tenant on the platform.
+ */
+function isSystemRole(role) {
+  return !role || role.tenantId === null || role.tenantId === undefined;
+}
+
+function canViewRole(user, role) {
+  if (!role) return false;
+  if (user?.isSuperAdmin) return true;
+  return isSystemRole(role) || role.tenantId === user.tenantId;
+}
+
+function canManageRole(user, role) {
+  if (!role) return false;
+  if (user?.isSuperAdmin) return true;
+  // Tenant Admin/Owner may only mutate roles they own — never the shared
+  // system defaults (admin/manager/cashier/...), never another tenant's.
+  return !isSystemRole(role) && role.tenantId === user.tenantId;
+}
+
+/**
+ * Fetch a role and check access in one place. Returns a 404 (not 403) for
+ * both "doesn't exist" and "exists but you can't touch it" so a tenant
+ * Admin can't use this endpoint to enumerate/confirm other tenants' role IDs.
+ */
+async function findRoleForRequest(req, res, { forWrite }) {
+  const { id } = req.params;
+  const role = await Role.findByPk(id);
+  const allowed = role && (forWrite ? canManageRole(req.user, role) : canViewRole(req.user, role));
+
+  if (!role || !allowed) {
+    res.status(404).json({ success: false, message: 'Role not found' });
+    return null;
+  }
+
+  return role;
 }
 
 function getAllowedRoutesFromResources(resources) {
@@ -116,8 +160,15 @@ const getRoutesMetadata = async (req, res) => {
 
 const getAllRoles = async (req, res) => {
   try {
+    // RBAC-01: non-super-admins only see the shared system defaults plus
+    // their own tenant's custom roles — never another tenant's roles.
+    const where = req.user.isSuperAdmin
+      ? undefined
+      : { [Op.or]: [{ tenantId: null }, { tenantId: req.user.tenantId }] };
+
     const roles = await Role.findAll({
-      attributes: ['id', 'name', 'description', 'permissions', 'isActive'],
+      where,
+      attributes: ['id', 'name', 'description', 'permissions', 'isActive', 'tenantId'],
     });
 
     logger.logSystem('All roles retrieved', {
@@ -163,7 +214,16 @@ const createRole = async (req, res) => {
       });
     }
 
-    const existingRole = await Role.findOne({ where: { name } });
+    // RBAC-01: a tenant Admin/Owner can only ever create a role owned by
+    // their own tenant. Only Super Admin may create/target a shared system
+    // role (tenantId null) or create a role on behalf of another tenant.
+    const tenantId = req.user.isSuperAdmin
+      ? (req.body.tenantId ?? null)
+      : req.user.tenantId;
+
+    const existingRole = await Role.findOne({
+      where: tenantId ? { name, tenantId } : { name, tenantId: null },
+    });
     if (existingRole) {
       return res.status(400).json({
         success: false,
@@ -182,6 +242,7 @@ const createRole = async (req, res) => {
 
     const role = await Role.create({
       name,
+      tenantId,
       description: description || '',
       permissions: normalizedPermissions,
       isActive: true,
@@ -224,19 +285,12 @@ const createRole = async (req, res) => {
 
 const updateRole = async (req, res) => {
   try {
-    const { id } = req.params;
     const { name, description, isActive, permissions, menuAccess, uiFlags } = req.body;
 
-    const role = await Role.findByPk(id);
-    if (!role) {
-      return res.status(404).json({
-        success: false,
-        message: 'Role not found',
-      });
-    }
+    const role = await findRoleForRequest(req, res, { forWrite: true });
+    if (!role) return; // 404 already sent (not found, or not owned by this tenant)
 
-    const systemRoles = ['admin', 'manager', 'user'];
-    if (systemRoles.includes(role.name) && name && name !== role.name) {
+    if (isSystemRole(role) && name && name !== role.name) {
       return res.status(403).json({
         success: false,
         message: 'Cannot rename system roles',
@@ -304,7 +358,6 @@ const updateRole = async (req, res) => {
 
 const updateRolePermissions = async (req, res) => {
   try {
-    const { id } = req.params;
     const payload = req.body?.permissions;
 
     if (!payload || typeof payload !== 'object') {
@@ -314,13 +367,8 @@ const updateRolePermissions = async (req, res) => {
       });
     }
 
-    const role = await Role.findByPk(id);
-    if (!role) {
-      return res.status(404).json({
-        success: false,
-        message: 'Role not found',
-      });
-    }
+    const role = await findRoleForRequest(req, res, { forWrite: true });
+    if (!role) return; // 404 already sent (not found, or not owned by this tenant)
 
     const nextPermissions = buildRolePermissionsPayload(
       {
@@ -375,16 +423,10 @@ const deleteRole = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const role = await Role.findByPk(id);
-    if (!role) {
-      return res.status(404).json({
-        success: false,
-        message: 'Role not found',
-      });
-    }
+    const role = await findRoleForRequest(req, res, { forWrite: true });
+    if (!role) return; // 404 already sent (not found, or not owned by this tenant)
 
-    const systemRoles = ['admin', 'manager', 'user'];
-    if (systemRoles.includes(role.name)) {
+    if (isSystemRole(role)) {
       return res.status(403).json({
         success: false,
         message: 'Cannot delete system roles',
@@ -573,15 +615,8 @@ const getAllSubjectsList = async (req, res) => {
 
 const previewRolePermissions = async (req, res) => {
   try {
-    const { id } = req.params;
-    const role = await Role.findByPk(id);
-
-    if (!role) {
-      return res.status(404).json({
-        success: false,
-        message: 'Role not found',
-      });
-    }
+    const role = await findRoleForRequest(req, res, { forWrite: false });
+    if (!role) return; // 404 already sent (not found, or belongs to another tenant)
 
     const normalizedRole = normalizeRoleResponse(role);
     const permissions = normalizedRole.permissions;

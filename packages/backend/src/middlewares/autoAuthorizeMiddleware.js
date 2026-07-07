@@ -42,6 +42,23 @@ function matchRoute(pattern, requestPath) {
 }
 
 /**
+ * RBAC-05 fix: reconstruct the full request path.
+ *
+ * ROUTE_TO_SUBJECT_MAP keys are written relative to the API root (e.g.
+ * '/gym/staff-attendance/report'), but when `autoAuthorize` is mounted as
+ * `router.use(autoAuthorize)` inside a sub-router (transaction.routes.js,
+ * staffAttendance.routes.js, ...), `req.path` is only the portion *after*
+ * that sub-router's mount point (e.g. '/report'), so it can never match.
+ * `req.baseUrl + req.path` restores the full path, and we then strip the
+ * leading `/api/vN` prefix app.js mounts all routes under so it lines up
+ * with the map's un-prefixed patterns.
+ */
+function getFullRoutePath(req) {
+  const full = `${req.baseUrl || ''}${req.path || ''}` || '/';
+  return full.replace(/^\/api\/v\d+/, '') || '/';
+}
+
+/**
  * Find the route mapping for a given path + method.
  */
 function findRouteMapping(path, method) {
@@ -107,12 +124,13 @@ function autoAuthorize(req, res, next) {
   if (isTenantAdmin(req.user)) return next();
 
   // Find the route mapping
-  const mapping = findRouteMapping(req.path, req.method);
+  const fullPath = getFullRoutePath(req);
+  const mapping = findRouteMapping(fullPath, req.method);
 
   if (!mapping) {
     // Route not in the map — log in dev, allow through
     if (process.env.NODE_ENV !== 'production') {
-      console.warn(`[autoAuthorize] Unmapped route: ${req.method} ${req.path} — consider adding to routePermissions.js`);
+      console.warn(`[autoAuthorize] Unmapped route: ${req.method} ${fullPath} — consider adding to routePermissions.js`);
     }
     return next();
   }
@@ -124,7 +142,7 @@ function autoAuthorize(req, res, next) {
 
   if (!allowed) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn(`[autoAuthorize] 403 Forbidden: ${req.method} ${req.path} — role="${req.user.role?.name}", required=[${actions.join(',')}] on "${subject}"`);
+      console.warn(`[autoAuthorize] 403 Forbidden: ${req.method} ${fullPath} — role="${req.user.role?.name}", required=[${actions.join(',')}] on "${subject}"`);
     }
     return res.status(403).json({ message: 'Forbidden' });
   }
@@ -132,4 +150,4 @@ function autoAuthorize(req, res, next) {
   next();
 }
 
-module.exports = { autoAuthorize, findRouteMapping };
+module.exports = { autoAuthorize, findRouteMapping, getFullRoutePath };

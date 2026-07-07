@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useSubscriptionStore } from '@/stores/subscription'
+import { usePaymentMethods } from '@/composables/shared/usePaymentMethods'
 import { useApi } from '@/composables/core/useApi'
 import { useRestaurantProducts } from '@/composables/restaurant/useRestaurantProducts'
 import { useRestaurantCategories } from '@/composables/restaurant/useRestaurantCategories'
@@ -166,55 +166,7 @@ const extrasModalLoading = ref(false)
 const createCartItemId = () => `cart-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
 const getCartItemIdentity = (item) => item.cartItemId || item.id
-// Subscription-driven payment options
-const subscriptionStore = useSubscriptionStore()
-const PAYMENT_FEATURE_KEY_MAP = {
-  cash: 'cash',
-  bankTransfer: 'bank_transfer',
-  bank_transfer: 'bank_transfer',
-  creditCard: 'credit_card',
-  credit_card: 'credit_card',
-  debitCard: 'debit_card',
-  debit_card: 'debit_card',
-  eWallet: 'ewallet',
-  ewallet: 'ewallet',
-  paymentGateway: 'payment_gateway',
-  qris: 'qris',
-  compliment: 'compliment',
-  card: 'credit_card',
-}
-
-const paymentLabels = {
-  cash: 'Cash',
-  credit_card: 'Kartu',
-  debit_card: 'Kartu Debit',
-  bank_transfer: 'Transfer Bank',
-  ewallet: 'E-Wallet',
-  payment_gateway: 'Payment Gateway',
-  qris: 'QRIS',
-  compliment: 'Compliment'
-}
-
-const paymentOptions = computed(() => {
-  const features = subscriptionStore.features
-  if (features && features.payments && typeof features.payments === 'object') {
-    const opts = Object.entries(features.payments)
-      .filter(([, enabled]) => !!enabled)
-      .map(([key]) => PAYMENT_FEATURE_KEY_MAP[key] || key)
-
-    const seen = new Set(); const uniq = []
-    for (const v of opts) {
-      if (!seen.has(v)) { seen.add(v); uniq.push(v) }
-    }
-    // Always add compliment as an option
-    if (!uniq.includes('compliment')) {
-      uniq.push('compliment')
-    }
-    if (uniq.length) return uniq.map(v => ({ value: v, label: paymentLabels[v] || v }))
-  }
-  // default fallback
-  return [ { value: 'cash', label: 'Tunai' }, { value: 'credit_card', label: 'Kartu' }, { value: 'compliment', label: 'Gratis (Compliment)' } ]
-})
+const { paymentOptions } = usePaymentMethods()
 
 // Product search
 const productSearchQuery = ref('')
@@ -1016,9 +968,6 @@ onMounted(async () => {
                 <div v-if="isCashPayment && changeAmount > 0" class="flex justify-between font-medium text-success">
                   <span>Change</span>
                   <span>{{ formatCurrency(changeAmount) }}</span>
-                </div>
-                <div v-else-if="!isCashPayment && paymentMethod" class="text-xs text-base-content/60">
-                  Non-cash payments always use the exact total: {{ formatCurrency(totals.total) }}
                 </div>
 
                 <div class="form-control">

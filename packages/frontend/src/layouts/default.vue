@@ -80,6 +80,7 @@ import {
   IconFolder,
   IconFileAnalytics,
   IconFileInvoice,
+  IconFileX,
   IconTag,
   IconDotsVertical,
   IconReportMoney,
@@ -164,6 +165,7 @@ const iconMap = {
   "file-analytics": IconFileAnalytics,
   barbell: IconBarbellFilled,
   "file-invoice": IconFileInvoice,
+  "file-x": IconFileX,
   tag: IconTag,
   "dots-vertical": IconDotsVertical,
   "report-money": IconReportMoney,
@@ -198,6 +200,13 @@ const accountLabel = computed(() =>
   || authStore.user?.email
   || 'User'
 );
+
+const userRoleLabel = computed(() => {
+  const role = authStore.user?.role
+  if (!role) return 'user'
+  if (typeof role === 'string') return role
+  return role.name || role.label || 'user'
+});
 
 const initials = computed(() => {
   const s = accountLabel.value;
@@ -624,7 +633,7 @@ const isChildActive = (item) => {
             </div>
             <div class="min-w-0 flex-1 text-left">
               <p class="text-xs font-semibold truncate" :title="accountLabel">{{ accountLabel }}</p>
-              <p class="user-role text-[0.6rem] capitalize truncate">{{ authStore.user?.role || 'user' }}</p>
+              <p class="user-role text-[0.6rem] capitalize truncate">{{ userRoleLabel }}</p>
             </div>
             <div class="flex shrink-0 items-center gap-1.5">
               <button

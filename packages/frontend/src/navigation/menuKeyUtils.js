@@ -38,7 +38,7 @@ const SUBJECT_MENU_MAP = {
   PTSession: ['gym.pt'],
   ServicePlan: ['gym.active-services'],
   ActiveService: ['gym.active-services'],
-  Transaction: ['gym.pos', 'finances.transactions', 'restaurant.pos', 'restaurant.orders', 'restaurant.dashboard', 'restaurant.reports'],
+  Transaction: ['gym.pos', 'gym.void-transactions', 'finances.transactions', 'restaurant.pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.dashboard', 'restaurant.reports'],
   GymReport: ['gym.reports', 'reports.service-reports', 'reports.product-reports', 'reports.staff-reports', 'reports.forecasting'],
   TrainerCommission: ['gym.instructors', 'gym.reports'],
   RestaurantCategory: ['restaurant.categories'],

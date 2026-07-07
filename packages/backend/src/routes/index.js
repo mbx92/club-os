@@ -12,7 +12,7 @@ const databaseRoutes = require('./admin/database.routes');
 // Business module routes
 const { billingRoutes, subscriptionRoutes } = require('./subscription');
 const { voucherRoutes } = require('./voucher');
-const { posRoutes, restaurantRoutes, membersRoutes, trainerRoutes, transactionRoutes, checkInRoutes, servicePlansRouter, activeServicesRouter, serviceManagementRouter, reportRoutes, dashboardRoutes, ptSessionsRoutes, cashRegisterRoutes, staffAttendanceRoutes, employeeScheduleRoutes, employeeScheduleTemplateRoutes, shiftRoutes, schedulePeriodRoutes } = require('./gym');
+const { membersRoutes, trainerRoutes, transactionRoutes, checkInRoutes, servicePlansRouter, activeServicesRouter, serviceManagementRouter, reportRoutes, dashboardRoutes, ptSessionsRoutes, cashRegisterRoutes, staffAttendanceRoutes, employeeScheduleRoutes, employeeScheduleTemplateRoutes, shiftRoutes, schedulePeriodRoutes } = require('./gym');
 const restaurantModuleRoutes = require('../modules/restaurant/routes');
 const metricsRoutes = require('./metricsRoutes');
 
@@ -108,8 +108,10 @@ router.use('/finance/suppliers', supplierRoutes);
 router.use('/finance/shareholders', shareholderRoutes);
 
 // Gym module (feature-gated)
-router.use('/modules/pos', posRoutes);
-router.use('/modules/restaurant', restaurantRoutes); // Legacy gym restaurant routes
+// RBAC-09: legacy '/modules/pos' and '/modules/restaurant' placeholder routes
+// (unauthenticated-by-permission "Fase 2" stubs, fully superseded by
+// '/transactions' and '/restaurant/*') have been removed — see
+// routes/gym/pos.routes.js / restaurant.routes.js history.
 router.use('/gym/members', membersRoutes);
 router.use('/gym/trainers', trainerRoutes);
 router.use('/gym/check-ins', checkInRoutes);

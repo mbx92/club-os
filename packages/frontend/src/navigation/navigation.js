@@ -271,6 +271,14 @@ export const navigation = [
         subject: "Transaction",
       },
       {
+        label: "Batal Transaksi",
+        to: "/gym/void-transactions",
+        icon: "file-x",
+        menuKey: "gym.void-transactions",
+        action: "cancel",
+        subject: "Transaction",
+      },
+      {
         label: "Reports",
         icon: "chart-bar",
         menuKey: "gym.reports",
@@ -513,6 +521,14 @@ export const navigation = [
         menuKey: "restaurant.orders",
         action: "read",
         subject: "Order",
+      },
+      {
+        label: "Batal Transaksi",
+        to: "/restaurant/void-transactions",
+        icon: "file-x",
+        menuKey: "restaurant.void-transactions",
+        action: "cancel",
+        subject: "Transaction",
       },
       // {
       //   label: "Queue Management",

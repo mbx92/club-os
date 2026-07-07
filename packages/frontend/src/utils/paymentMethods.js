@@ -110,3 +110,30 @@ export const getPaymentBadgeClass = (method) => {
 export const getPaymentBgClass = (method) => {
   return BG_CLASSES[method] || 'bg-base-content/30'
 }
+
+/** Master catalog — system-defined payment methods */
+export const DEFAULT_PAYMENT_METHOD_CATALOG = [
+  { key: 'cash', label: 'Tunai', enabled: true, requiresBank: false, isSystem: true },
+  { key: 'credit_card', label: 'Kartu', enabled: true, requiresBank: true, isSystem: true },
+  { key: 'debit_card', label: 'Kartu Debit', enabled: true, requiresBank: true, isSystem: true },
+  { key: 'bank_transfer', label: 'Transfer Bank', enabled: true, requiresBank: true, isSystem: true },
+  { key: 'qris', label: 'QRIS', enabled: true, requiresBank: false, isSystem: true },
+  { key: 'e_wallet', label: 'E-Wallet', enabled: true, requiresBank: false, isSystem: true },
+  { key: 'payment_gateway', label: 'Payment Gateway', enabled: true, requiresBank: false, isSystem: true },
+  { key: 'compliment', label: 'Gratis (Compliment)', enabled: true, requiresBank: false, isSystem: true },
+]
+
+export const normalizePaymentMethodKey = (key) => {
+  if (!key) return ''
+  if (key === 'ewallet') return 'e_wallet'
+  return key
+}
+
+export const buildDefaultPaymentMethods = () =>
+  DEFAULT_PAYMENT_METHOD_CATALOG.map((method) => ({ ...method }))
+
+export const resolvePaymentMethodLabel = (methods, key, locale = 'id') => {
+  const normalized = normalizePaymentMethodKey(key)
+  const found = (methods || []).find((m) => normalizePaymentMethodKey(m.key) === normalized)
+  return found?.label || getPaymentLabel(normalized, locale)
+}

@@ -58,7 +58,7 @@ const showOpenModal = ref(false)
 const openForm = ref({
   shiftId: null,
   shiftName: '',
-  openingBalance: '',
+  openingBalance: 0,
   openingNotes: ''
 })
 const customShiftName = ref(false)
@@ -257,7 +257,7 @@ const closeResultAndReset = () => {
   showResultModal.value = false
   closeResult.value = null
   carriedOverOrders.value = []
-  openForm.value = { shiftId: null, shiftName: activeShifts.value[0]?.name || '', openingBalance: 500000, openingNotes: '' }
+  openForm.value = { shiftId: null, shiftName: activeShifts.value[0]?.name || '', openingBalance: 0, openingNotes: '' }
 }
 
 const startPolling = () => {

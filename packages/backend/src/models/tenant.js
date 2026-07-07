@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       Tenant.hasMany(models.Member, { foreignKey: 'tenantId', as: 'members' });
       Tenant.hasMany(models.Payment, { foreignKey: 'tenantId', as: 'payments' });
       Tenant.hasMany(models.CheckIn, { foreignKey: 'tenantId', as: 'checkIns' });
+      Tenant.hasMany(models.Role, { foreignKey: 'tenantId', as: 'roles' });
       
       // Add associations for billing system
       Tenant.hasMany(models.Subscription, { foreignKey: 'tenantId', as: 'subscriptions' });

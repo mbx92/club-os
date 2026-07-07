@@ -345,9 +345,9 @@ body {
   color: #374151;
 }
 
-/* Table row action buttons — any icon-only .btn as perfect circle */
-.table tbody td .btn.btn-xs:has(> svg),
-.table tbody td .btn.btn-sm:has(> svg) {
+/* Table row action buttons — icon-only .btn as perfect circle */
+.table tbody td .btn.btn-xs:has(> svg):not(.btn-labeled),
+.table tbody td .btn.btn-sm:has(> svg):not(.btn-labeled) {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -363,13 +363,35 @@ body {
   max-height: 1.75rem !important;
 }
 
-.table tbody td .btn.btn-sm:has(> svg) {
+.table tbody td .btn.btn-sm:has(> svg):not(.btn-labeled) {
   width: 2rem !important;
   height: 2rem !important;
   min-width: 2rem !important;
   min-height: 2rem !important;
   max-width: 2rem !important;
   max-height: 2rem !important;
+}
+
+/* Compact labeled action buttons in table rows (text + optional icon) */
+.table tbody td .btn.btn-labeled {
+  width: auto !important;
+  height: 1.75rem !important;
+  min-width: unset !important;
+  min-height: 1.75rem !important;
+  max-width: none !important;
+  max-height: 1.75rem !important;
+  aspect-ratio: auto;
+  padding: 0 0.5rem !important;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: 0.375rem !important;
+  gap: 0.25rem;
+}
+
+.table tbody td .btn.btn-labeled svg {
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 html.auth-shell-root,

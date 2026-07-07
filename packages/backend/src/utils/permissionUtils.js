@@ -78,7 +78,14 @@ function normalizeResourcePermissions(resources = {}) {
     if (!resource) continue;
 
     if (resource === FULL_ACCESS_RESOURCE) {
-      normalized[resource] = [FULL_ACCESS_ACTION];
+      // RBAC-04 fix: don't silently upgrade a partial wildcard grant (e.g.
+      // { '*': ['read'] }, meaning "read access to every resource") into
+      // full { '*': ['*'] } CRUD access. Only actually-requested actions —
+      // including a literal '*' if that's what was granted — survive here.
+      const actions = normalizeActionList(rawActions, { expandFullAccess: false });
+      if (actions.length > 0) {
+        normalized[resource] = actions;
+      }
       continue;
     }
 
@@ -189,6 +196,12 @@ function hasResourceAccess(resources = {}, action, resource) {
   const normalized = normalizeResourcePermissions(resources);
 
   if (hasFullAccess(normalized)) return true;
+
+  // A partial wildcard grant, e.g. { '*': ['read'] }, grants that specific
+  // action across every resource without escalating to full CRUD access
+  // (see RBAC-04 fix in normalizeResourcePermissions above).
+  const wildcardActions = normalized[FULL_ACCESS_RESOURCE] || [];
+  if (wildcardActions.includes(action)) return true;
 
   const actions = normalized[resource] || [];
   return actions.includes(FULL_ACCESS_ACTION) || actions.includes(action);

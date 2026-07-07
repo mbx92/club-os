@@ -17,10 +17,12 @@ import SubscriptionRequiredModal from '@/components/shared/SubscriptionRequiredM
 import { useAuthStore } from '@/stores/auth'
 import { useSubscriptionStore } from '@/stores/subscription'
 import { useSubscriptionMonitor } from '@/composables/subscription/useSubscriptionMonitor'
+import { usePaymentMethods } from '@/composables/shared/usePaymentMethods'
 import { api } from '@/plugins/api'
 
 const authStore = useAuthStore()
 const subscriptionStore = useSubscriptionStore()
+const { loadPaymentMethods } = usePaymentMethods()
 
 // Initialize subscription store reference in API client
 api.setSubscriptionStore(subscriptionStore)
@@ -37,6 +39,7 @@ const { startMonitoring } = useSubscriptionMonitor({
 onMounted(async () => {
   if (authStore.isAuthenticated) {
     await subscriptionStore.fetchSubscription()
+    await loadPaymentMethods()
     
     // Start monitoring after initial fetch
     startMonitoring()

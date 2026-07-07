@@ -39,6 +39,7 @@ export function useRestaurantOrders() {
       if (params.date) queryParams.append('date', params.date)
       if (params.startDate) queryParams.append('startDate', params.startDate)
       if (params.endDate) queryParams.append('endDate', params.endDate)
+      if (params.search) queryParams.append('search', params.search)
 
       const queryString = queryParams.toString()
       const url = `/restaurant/orders${queryString ? `?${queryString}` : ''}`

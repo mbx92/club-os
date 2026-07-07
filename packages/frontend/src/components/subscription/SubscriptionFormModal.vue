@@ -123,10 +123,13 @@
             required
           >
             <option value="">-- Select Payment Method --</option>
-            <option value="cash">Cash</option>
-            <option value="bank_transfer">Bank Transfer</option>
-            <option value="credit_card">Kartu</option>
-            <option value="e_wallet">E-Wallet</option>
+            <option
+              v-for="option in paymentOptions"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
           </select>
         </div>
 
@@ -180,6 +183,7 @@ import {
 } from '@tabler/icons-vue'
 import { useSubscriptionPlans } from '@/composables/subscription/useSubscriptionPlans'
 import { useTenants } from '@/composables/admin/useTenants'
+import { usePaymentMethods } from '@/composables/shared/usePaymentMethods'
 
 const props = defineProps({
   tenant: {
@@ -210,6 +214,8 @@ const {
   tenants,
   fetchTenants
 } = useTenants()
+
+const { paymentOptions } = usePaymentMethods()
 
 // Local state
 const modal = ref(null)

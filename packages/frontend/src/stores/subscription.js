@@ -317,16 +317,40 @@ export const useSubscriptionStore = defineStore('subscription', () => {
     clearStorage()
   }
   
-  // Set subscription data directly (e.g., from login response)
+  // Set subscription data directly (e.g., from login response or permissions payload)
   function setData(data) {
     if (!data) {
       debug.warn('[SubscriptionStore] setData called with no data')
       return
     }
-    
-    subscription.value = data.subscription || data.plan || null
-    features.value = data.features || null
-    isTrialActive.value = data.isTrialActive || false
+
+    // Permissions payload format from /permissions/user or login response
+    if (data.status !== undefined && data.subscription === undefined && data.plan === undefined) {
+      const isTrial = data.isInTrial === true || data.status === 'trial'
+      const isActive = data.status === 'active' || isTrial
+
+      if (isActive) {
+        subscription.value = {
+          status: isTrial ? 'trial' : 'active',
+          plan: { name: data.planName || (isTrial ? 'Trial' : 'Unknown') },
+        }
+        features.value = {
+          modules: data.modules || {},
+          limits: data.limits || {},
+          ...(data.features && typeof data.features === 'object' ? data.features : {}),
+        }
+        isTrialActive.value = isTrial
+      } else {
+        subscription.value = null
+        features.value = null
+        isTrialActive.value = false
+      }
+    } else {
+      // /subscription/current API format
+      subscription.value = data.subscription || data.plan || null
+      features.value = data.features || null
+      isTrialActive.value = data.isTrialActive || false
+    }
     
     // Save to localStorage
     saveToStorage({
@@ -343,6 +367,21 @@ export const useSubscriptionStore = defineStore('subscription', () => {
         features: features.value
       })
     }
+  }
+
+  async function ensureSubscriptionLoaded() {
+    if (loading.value) {
+      while (loading.value) {
+        await new Promise(resolve => setTimeout(resolve, 50))
+      }
+      return
+    }
+
+    if (hasSubscription.value || isTrialActive.value) {
+      return
+    }
+
+    await fetchSubscription(true)
   }
   
   // Watch for changes and persist to localStorage
@@ -380,6 +419,7 @@ export const useSubscriptionStore = defineStore('subscription', () => {
     getLimit,
     
     // Actions
+    ensureSubscriptionLoaded,
     fetchSubscription,
     setData,
     showUpgradeModal,

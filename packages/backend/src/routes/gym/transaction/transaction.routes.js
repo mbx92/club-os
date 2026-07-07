@@ -86,9 +86,15 @@ router.post('/:id/installment',
  * @route   POST /api/transactions/:id/cancel
  * @desc    Cancel transaction due to wrong input (void transaction)
  * @access  Private (requires 'refunds' feature)
+ *
+ * RBAC-02: voiding/cancelling a transaction is a distinct, higher-risk
+ * action from a generic 'update' — it reverses revenue and (for
+ * subscriptions/services) cancels linked resources. Requiring the explicit
+ * 'cancel' permission means a role can be granted normal Transaction:update
+ * (e.g. editing notes/status) without also being able to void transactions.
  */
 router.post('/:id/cancel',
-  authorize('update', 'Transaction'),
+  authorize('cancel', 'Transaction'),
   requireFeature('refunds'),
   transactionController.cancelTransaction
 );
@@ -99,7 +105,7 @@ router.post('/:id/cancel',
  * @access  Private (requires 'refunds' feature)
  */
 router.post('/:id/refund',
-  authorize('update', 'Transaction'),
+  authorize('cancel', 'Transaction'),
   requireFeature('refunds'),
   transactionController.refundTransaction
 );
@@ -110,7 +116,7 @@ router.post('/:id/refund',
  * @access  Private (requires 'refunds' feature)
  */
 router.post('/:id/refund-items',
-  authorize('update', 'Transaction'),
+  authorize('cancel', 'Transaction'),
   requireFeature('refunds'),
   transactionController.refundItems
 );

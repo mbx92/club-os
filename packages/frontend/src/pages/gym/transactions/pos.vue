@@ -464,23 +464,19 @@ meta:
                     <span v-else-if="isCashPayment && paymentAmount > 0 && paymentAmount < total" class="label-text-alt text-warning">
                       Amount less than total ({{ formatCurrency(total) }})
                     </span>
-                    <span v-else-if="!isCashPayment && selectedPaymentMethod" class="label-text-alt text-base-content/60">
-                      Non-cash payments always use the exact total: {{ formatCurrency(total) }}
-                    </span>
-                    <span v-else class="label-text-alt text-base-content/60">
+                    <span v-else-if="isCashPayment" class="label-text-alt text-base-content/60">
                       Expected total: {{ formatCurrency(total) }}
                     </span>
                   </label>
                 </div>
 
-                <!-- Bank Name (credit_card / debit_card) -->
-                <div v-if="BANK_SELECTION_PAYMENT_METHODS.includes(selectedPaymentMethod)" class="flex-col form-control">
+                <div v-if="selectedMethodRequiresBank" class="flex-col form-control">
                   <label class="label">
                     <span class="label-text">Nama Bank <span class="text-error">*</span></span>
                   </label>
                   <select
                     class="w-full select select-bordered select-sm"
-                    :class="{ 'select-error': selectedPaymentMethod && BANK_SELECTION_PAYMENT_METHODS.includes(selectedPaymentMethod) && !paymentBankName }"
+                    :class="{ 'select-error': selectedMethodRequiresBank && !paymentBankName }"
                     v-model="paymentBankName"
                   >
                     <option value="">-- Pilih Bank --</option>
@@ -492,7 +488,7 @@ meta:
                       {{ bank.label }}
                     </option>
                   </select>
-                  <label v-if="selectedPaymentMethod && BANK_SELECTION_PAYMENT_METHODS.includes(selectedPaymentMethod) && !paymentBankName" class="label">
+                  <label v-if="selectedMethodRequiresBank && !paymentBankName" class="label">
                     <span class="label-text-alt text-error">Pilih bank/kartu terlebih dahulu</span>
                   </label>
                 </div>
@@ -902,10 +898,10 @@ import { useServicePlans } from '@/composables/gym/service-management'
 import { useMembers } from '@/composables/gym/member-management'
 import { useVouchers } from '@/composables/gym/voucher-management'
 import { useCurrency } from '@/composables/core/useCurrency'
-import { useSubscriptionStore } from '@/stores/subscription'
+import { usePaymentMethods } from '@/composables/shared/usePaymentMethods'
 import { useAuthStore } from '@/stores/auth'
 import { useNotification } from '@/composables/core/useNotification'
-import { BANK_OPTIONS, BANK_SELECTION_PAYMENT_METHODS, buildPaymentBankPayload } from '@/utils/paymentBanks'
+import { BANK_OPTIONS, buildPaymentBankPayload } from '@/utils/paymentBanks'
 import CurrencyInput from '@/components/shared/CurrencyInput.vue'
 import ToastNotification from '@/components/shared/ToastNotification.vue'
 import RestaurantProcessingModal from '@/components/restaurant/shared/RestaurantProcessingModal.vue'
@@ -934,7 +930,11 @@ const { plans, loading: plansLoading, fetchPlans } = useServicePlans()
 const { members, loading: membersLoading, fetchMembers, createMember } = useMembers()
 const { vouchers: availableVouchers, loading: vouchersLoading, fetchVouchers, validateVoucher } = useVouchers()
 const { formatCurrency } = useCurrency()
-const subscriptionStore = useSubscriptionStore()
+const { availableMethods: availablePaymentMethods, getMethodLabel, defaultPaymentMethod, loadPaymentMethods, methodRequiresBank } = usePaymentMethods()
+
+const selectedMethodRequiresBank = computed(() =>
+  methodRequiresBank(selectedPaymentMethod.value)
+)
 const authStore = useAuthStore()
 const { showNotification } = useNotification()
 
@@ -1278,55 +1278,6 @@ const total = computed(() => {
 
 const isCashPayment = computed(() => selectedPaymentMethod.value === 'cash')
 
-const PAYMENT_METHODS_ENUM = ['cash', 'credit_card', 'debit_card', 'bank_transfer', 'qris', 'e_wallet', 'compliment']
-
-// Map subscription feature keys to internal payment method values used across the app
-const PAYMENT_FEATURE_KEY_MAP = {
-  cash: 'cash',
-  bankTransfer: 'bank_transfer',
-  bank_transfer: 'bank_transfer',
-  creditCard: 'credit_card',
-  credit_card: 'credit_card',
-  debitCard: 'debit_card',
-  debit_card: 'debit_card',
-  eWallet: 'e_wallet',
-  e_wallet: 'e_wallet',
-  ewallet: 'e_wallet',
-  paymentGateway: 'payment_gateway',
-  qris: 'qris',
-  compliment: 'compliment',
-  card: 'credit_card',
-}
-
-const availablePaymentMethods = computed(() => {
-  const features = subscriptionStore.features
-  if (features && features.payments && typeof features.payments === 'object') {
-    const opts = Object.entries(features.payments)
-      .filter(([, enabled]) => !!enabled)
-      .map(([key]) => PAYMENT_FEATURE_KEY_MAP[key] || key)
-
-    // Deduplicate while preserving order
-    const seen = new Set()
-    const uniq = []
-    for (const v of opts) {
-      if (!seen.has(v)) {
-        seen.add(v)
-        uniq.push(v)
-      }
-    }
-    
-    // Always add compliment as an option
-    if (!uniq.includes('compliment')) {
-      uniq.push('compliment')
-    }
-    
-    if (uniq.length > 0) return uniq
-  }
-
-  // Fallback to default enum if subscription features not available
-  return PAYMENT_METHODS_ENUM
-})
-
 const syncPaymentAmountToTotal = () => {
   if (!selectedPaymentMethod.value) {
     paymentAmount.value = 0
@@ -1338,7 +1289,7 @@ const syncPaymentAmountToTotal = () => {
 
 const canCheckout = computed(() => {
   const customerReady = customerType.value === 'walk-in' ? true : !!selectedMember.value
-  const needsBankSelection = BANK_SELECTION_PAYMENT_METHODS.includes(selectedPaymentMethod.value)
+  const needsBankSelection = selectedMethodRequiresBank.value
   const paymentMatchesTotal = isCashPayment.value
     ? paymentAmount.value >= total.value
     : Math.abs(paymentAmount.value - total.value) < 1
@@ -1356,7 +1307,7 @@ const checkoutDisabledReason = computed(() => {
   if (cart.value.length === 0) return 'Add items to cart'
   if (customerType.value === 'member' && !selectedMember.value) return 'Select a member'
   if (!selectedPaymentMethod.value) return 'Select payment method'
-  if (BANK_SELECTION_PAYMENT_METHODS.includes(selectedPaymentMethod.value) && !paymentBankName.value) return 'Pilih bank/kartu'
+  if (selectedMethodRequiresBank.value && !paymentBankName.value) return 'Pilih bank/kartu'
   if (paymentAmount.value <= 0) return 'Enter payment amount'
   if (isCashPayment.value && paymentAmount.value < total.value) return `Payment amount must be at least ${formatCurrency(total.value)}`
   if (!isCashPayment.value && Math.abs(paymentAmount.value - total.value) >= 1) return `Payment amount must match total ${formatCurrency(total.value)}`
@@ -1380,18 +1331,7 @@ const formatDuration = (plan) => {
   return '-'
 }
 
-const formatPaymentLabel = (method) => {
-  const labels = {
-    cash: 'Tunai',
-    credit_card: 'Kartu',
-    debit_card: 'Kartu Debit',
-    bank_transfer: 'Transfer Bank',
-    qris: 'QRIS',
-    e_wallet: 'E-Wallet (OVO, GoPay, Dana)',
-    compliment: 'Gratis (Compliment)',
-  }
-  return labels[method] || String(method).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
+const formatPaymentLabel = (method) => getMethodLabel(method)
 
 const searchMembers = async () => {
   if (memberSearchTimeout) {
@@ -1833,7 +1773,7 @@ watch(selectedPaymentMethod, (newMethod) => {
     return
   }
 
-  if (!BANK_SELECTION_PAYMENT_METHODS.includes(newMethod)) {
+  if (!selectedMethodRequiresBank.value) {
     paymentBankName.value = ''
   }
 
@@ -1842,6 +1782,8 @@ watch(selectedPaymentMethod, (newMethod) => {
 
 // Lifecycle
 onMounted(async () => {
+  await loadPaymentMethods()
+
   // Load service plans
   await fetchPlans({
     isActive: 'true',

@@ -3,11 +3,11 @@ import { ref, watch, computed } from 'vue'
 import { IconReceipt, IconLoader2, IconArrowsRightLeft } from '@tabler/icons-vue'
 import POSVoucherInput from '@/components/restaurant/pos/POSVoucherInput.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useSubscriptionStore } from '@/stores/subscription'
+import { usePaymentMethods } from '@/composables/shared/usePaymentMethods'
 import { useVouchers } from '@/composables/gym/voucher-management'
 import { useTransactionSettings } from '@/composables/shared/useTransactionSettings'
 import CurrencyInput from '@/components/shared/CurrencyInput.vue'
-import { BANK_OPTIONS, BANK_SELECTION_PAYMENT_METHODS, buildPaymentBankPayload } from '@/utils/paymentBanks'
+import { BANK_OPTIONS, buildPaymentBankPayload } from '@/utils/paymentBanks'
 
 const props = defineProps({
   show: {
@@ -88,68 +88,11 @@ const selectVoucherFromDropdown = async (voucher) => {
   }
 }
 
-// Subscription-based payment options
-const subscriptionStore = useSubscriptionStore()
-const paymentFeatures = computed(() => {
-  // features may be null initially; fallback to minimal cash-only
-  return subscriptionStore.features?.payments || { cash: true }
-})
+const { paymentOptions, defaultPaymentMethod, methodRequiresBank } = usePaymentMethods()
 
-// Map subscription feature keys (camelCase or snake_case) to internal values
-const paymentKeyToValue = {
-  cash: 'cash',
-  creditCard: 'credit_card',
-  credit_card: 'credit_card',
-  debitCard: 'debit_card',
-  debit_card: 'debit_card',
-  bankTransfer: 'bank_transfer',
-  bank_transfer: 'bank_transfer',
-  eWallet: 'e_wallet',
-  ewallet: 'e_wallet',
-  e_wallet: 'e_wallet',
-  qris: 'qris',
-  paymentGateway: 'payment_gateway',
-  payment_gateway: 'payment_gateway',
-  compliment: 'compliment',
-  card: 'credit_card',
-  transfer: 'bank_transfer',
-}
-
-// Human-friendly labels for known payment keys
-const paymentLabels = {
-  cash: 'Tunai',
-  credit_card: 'Kartu',
-  debit_card: 'Kartu Debit',
-  bank_transfer: 'Transfer Bank',
-  qris: 'QRIS',
-  e_wallet: 'E-Wallet (OVO, GoPay, Dana)',
-  payment_gateway: 'Payment Gateway',
-  compliment: 'Gratis (Compliment)',
-}
-
-const paymentOptions = computed(() => {
-  const opts = Object.entries(paymentFeatures.value || {})
-    .filter(([, enabled]) => !!enabled)
-    .map(([key]) => {
-      const mapped = paymentKeyToValue[key] || key
-      return { value: mapped, label: paymentLabels[mapped] || mapped }
-    })
-
-  // Deduplicate by value
-  const seen = new Set()
-  const filtered = opts.filter(o => {
-    if (seen.has(o.value)) return false
-    seen.add(o.value)
-    return true
-  })
-
-  // Always add compliment as an option
-  if (!filtered.some(o => o.value === 'compliment')) {
-    filtered.push({ value: 'compliment', label: 'Gratis (Compliment)' })
-  }
-
-  return filtered
-})
+const selectedMethodRequiresBank = computed(() =>
+  methodRequiresBank(paymentMethod.value)
+)
 
 // Voucher discount and totals computed locally
 const subtotal = computed(() => {
@@ -280,7 +223,7 @@ const syncPaidAmountToTotal = () => {
 }
 
 const requiresBankSelection = computed(() => {
-  return BANK_SELECTION_PAYMENT_METHODS.includes(paymentMethod.value)
+  return selectedMethodRequiresBank.value
 })
 
 const isValid = computed(() => {
@@ -292,8 +235,7 @@ const isValid = computed(() => {
 watch(() => props.show, (newVal) => {
   if (newVal && props.order) {
     // choose default payment method: prefer cash if available, otherwise first enabled option
-    const defaultMethod = paymentOptions.value.find(p => p.value === 'cash') ? 'cash' : (paymentOptions.value[0]?.value || 'cash')
-    paymentMethod.value = defaultMethod
+    paymentMethod.value = defaultPaymentMethod.value
     bankName.value = ''
     paymentNotes.value = ''
     notes.value = ''
@@ -315,6 +257,9 @@ watch(
 watch(
   () => paymentMethod.value,
   () => {
+    if (!selectedMethodRequiresBank.value) {
+      bankName.value = ''
+    }
     syncPaidAmountToTotal()
   }
 )
@@ -578,8 +523,7 @@ const quickAmounts = computed(() => {
           </div>
         </div>
 
-        <!-- Bank Name (bank_transfer / credit_card / debit_card) -->
-        <div v-if="BANK_SELECTION_PAYMENT_METHODS.includes(paymentMethod)" class="form-control">
+        <div v-if="requiresBankSelection" class="form-control">
           <label class="label">
             <span class="font-semibold label-text">Nama Bank <span class="text-error">*</span></span>
           </label>

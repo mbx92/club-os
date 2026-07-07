@@ -210,14 +210,10 @@ router.beforeEach(async (to, from) => {
   const isAllowedRoute = allowedWithoutSubscription.some(route => to.path.startsWith(route))
 
   if (!isPublic && auth.user && !isAllowedRoute && !isSuperAdmin) {
-    // Wait for subscription to load if not yet loaded
-    if (!subscriptionStore.subscription && !subscriptionStore.loading && !subscriptionStore.error) {
-      debug.log('[Router Guard] Waiting for subscription to load...')
-      try {
-        await subscriptionStore.fetchSubscription()
-      } catch (err) {
-        debug.warn('[Router Guard] Failed to fetch subscription:', err)
-      }
+    try {
+      await subscriptionStore.ensureSubscriptionLoaded()
+    } catch (err) {
+      debug.warn('[Router Guard] Failed to ensure subscription loaded:', err)
     }
 
     // Check if user has subscription

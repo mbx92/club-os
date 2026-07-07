@@ -1,10 +1,10 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useServicePlans } from '@/composables/gym/service-management'
 import { useTransactions } from '@/composables/gym/transactions'
 import { useCurrency } from '@/composables/core/useCurrency'
-import { useSubscriptionStore } from '@/stores/subscription'
-import { BANK_OPTIONS, BANK_SELECTION_PAYMENT_METHODS, buildPaymentBankPayload } from '@/utils/paymentBanks'
+import { usePaymentMethods } from '@/composables/shared/usePaymentMethods'
+import { BANK_OPTIONS, buildPaymentBankPayload } from '@/utils/paymentBanks'
 import {
   IconShoppingBag,
   IconCash,
@@ -19,9 +19,11 @@ const emit = defineEmits(['close', 'saved'])
 const { fetchPlans } = useServicePlans()
 const { createAddonTransaction, loading } = useTransactions()
 const { formatCurrency } = useCurrency()
-const subscriptionStore = useSubscriptionStore()
+const { availableMethods: availablePaymentMethods, getMethodLabel, methodRequiresBank } = usePaymentMethods()
 
-const modal = ref(null)
+const selectedMethodRequiresBank = computed(() =>
+  methodRequiresBank(selectedPaymentMethod.value)
+)
 
 // Data from parent (filled via openModal)
 const member = ref(null) // { id, firstName, lastName } — null for walk-in
@@ -33,51 +35,9 @@ const plansLoading = ref(false)
 // Cart: map of planId -> { plan, qty }
 const cart = ref({})
 
-// Payment methods — synced with POS
-const PAYMENT_METHODS_ENUM = ['cash', 'credit_card', 'debit_card', 'bank_transfer', 'qris', 'e_wallet', 'compliment']
+const formatPaymentLabel = (method) => getMethodLabel(method)
 
-const PAYMENT_FEATURE_KEY_MAP = {
-  cash: 'cash',
-  bankTransfer: 'bank_transfer', bank_transfer: 'bank_transfer',
-  creditCard: 'credit_card', credit_card: 'credit_card',
-  debitCard: 'debit_card', debit_card: 'debit_card',
-  eWallet: 'e_wallet', e_wallet: 'e_wallet', ewallet: 'e_wallet',
-  paymentGateway: 'payment_gateway',
-  qris: 'qris',
-  compliment: 'compliment',
-  card: 'credit_card',
-}
-
-const availablePaymentMethods = computed(() => {
-  const features = subscriptionStore.features
-  if (features?.payments && typeof features.payments === 'object') {
-    const opts = Object.entries(features.payments)
-      .filter(([, enabled]) => !!enabled)
-      .map(([key]) => PAYMENT_FEATURE_KEY_MAP[key] || key)
-    const seen = new Set()
-    const uniq = []
-    for (const v of opts) {
-      if (!seen.has(v)) { seen.add(v); uniq.push(v) }
-    }
-    if (!uniq.includes('compliment')) uniq.push('compliment')
-    if (uniq.length > 0) return uniq
-  }
-  return PAYMENT_METHODS_ENUM
-})
-
-const formatPaymentLabel = (method) => {
-  const labels = {
-    cash: 'Tunai',
-    credit_card: 'Kartu',
-    debit_card: 'Kartu Debit',
-    bank_transfer: 'Transfer Bank',
-    qris: 'QRIS',
-    e_wallet: 'E-Wallet (OVO, GoPay, Dana)',
-    compliment: 'Gratis (Compliment)',
-  }
-  return labels[method] || String(method).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
-
+const modal = ref(null)
 const selectedPaymentMethod = ref('cash')
 const paymentBankName = ref('')
 const paymentNotes = ref('')
@@ -96,7 +56,10 @@ const total = computed(() =>
 const hasItems = computed(() => cartItems.value.length > 0)
 
 const canSubmit = computed(() =>
-  hasItems.value && selectedPaymentMethod.value && !loading.value
+  hasItems.value &&
+  selectedPaymentMethod.value &&
+  !loading.value &&
+  (!selectedMethodRequiresBank.value || !!paymentBankName.value)
 )
 
 const memberName = computed(() => {
@@ -141,6 +104,12 @@ const resetCart = () => {
   paymentNotes.value = ''
   error.value = null
 }
+
+watch(selectedPaymentMethod, () => {
+  if (!selectedMethodRequiresBank.value) {
+    paymentBankName.value = ''
+  }
+})
 
 const handleSubmit = async () => {
   if (!canSubmit.value) return
@@ -289,7 +258,7 @@ defineExpose({ openModal })
       </div>
 
       <!-- Bank detail (credit_card / debit_card) -->
-      <div v-if="BANK_SELECTION_PAYMENT_METHODS.includes(selectedPaymentMethod)" class="form-control mb-2">
+      <div v-if="selectedMethodRequiresBank" class="form-control mb-2">
         <label class="label py-1">
           <span class="label-text">Nama Bank</span>
         </label>

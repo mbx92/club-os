@@ -120,8 +120,17 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/gym/reports/trainer-commissions': { subject: 'TrainerCommission', actions: ['read'] },
   
   // Staff Attendance
+  '/gym/staff-attendance': {
+    GET: { subject: 'StaffAttendance', actions: ['read'] },
+    POST: { subject: 'StaffAttendance', actions: ['create'] }
+  },
   '/gym/staff-attendance/report': { subject: 'StaffAttendance', actions: ['read'] },
+  '/gym/staff-attendance/report/export': { subject: 'StaffAttendance', actions: ['read'] },
+  '/gym/staff-attendance/sync': { subject: 'StaffAttendance', actions: ['create'] },
   '/gym/staff-attendance/reprocess': { subject: 'StaffAttendance', actions: ['create'] },
+  '/gym/staff-attendance/fix-checkin': { subject: 'StaffAttendance', actions: ['update'] },
+  '/gym/staff-attendance/fix-overnight': { subject: 'StaffAttendance', actions: ['update'] },
+  '/gym/staff-attendance/regenerate-from-logs': { subject: 'StaffAttendance', actions: ['update'] },
   '/gym/staff-attendance/:id': { subject: 'StaffAttendance', actions: ['update'] },
   
   // Employee Schedules
@@ -248,6 +257,13 @@ const ROUTE_TO_SUBJECT_MAP = {
   },
   '/billing/payments/:id': { subject: 'Payment', actions: ['read'] },
   '/billing/payments/:id/refund': { subject: 'Payment', actions: ['update'] },
+
+  // Midtrans payment gateway (RBAC-03)
+  '/payment/midtrans/create': { subject: 'Payment', actions: ['create'] },
+  '/payment/midtrans/charge': { subject: 'Payment', actions: ['create'] },
+  '/payment/midtrans/status/:transactionNumber': { subject: 'Payment', actions: ['read'] },
+  '/payment/midtrans/cancel/:transactionNumber': { subject: 'Transaction', actions: ['cancel'] },
+  '/payment/midtrans/refund/:transactionNumber': { subject: 'Transaction', actions: ['cancel'] },
   
   // ═══════════════════════════════════════════════════════════════════════════
   // SUBSCRIPTION MANAGEMENT (SaaS)
@@ -283,11 +299,18 @@ const ROUTE_TO_SUBJECT_MAP = {
     GET: { subject: 'Transaction', actions: ['read'] },
     POST: { subject: 'Transaction', actions: ['create'] }
   },
+  '/transactions/statistics': { subject: 'Transaction', actions: ['read'] },
   '/transactions/:id': { subject: 'Transaction', actions: ['read'] },
+  '/transactions/:id/status': { subject: 'Transaction', actions: ['update'] },
+  '/transactions/:id/installment': { subject: 'Transaction', actions: ['update'] },
+  // RBAC-02: void/refund require the dedicated 'cancel' action, not 'update'.
+  '/transactions/:id/cancel': { subject: 'Transaction', actions: ['cancel'] },
+  '/transactions/:id/refund': { subject: 'Transaction', actions: ['cancel'] },
+  '/transactions/:id/refund-items': { subject: 'Transaction', actions: ['cancel'] },
+  '/transactions/:id/pre-print': { subject: 'Transaction', actions: ['read'] },
+  '/transactions/:id/split-bill': { subject: 'Transaction', actions: ['update'] },
   '/transactions/combined': { subject: 'Transaction', actions: ['create'] },
   
-  '/modules/pos/sessions': { subject: 'CashRegisterSession', actions: ['read'] },
-  '/modules/pos/transactions': { subject: 'Transaction', actions: ['create'] },
   
   '/transaction-settings/shipping': {
     GET: { subject: 'Settings', actions: ['read'] },
