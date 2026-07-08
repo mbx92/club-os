@@ -1,7 +1,9 @@
 <route lang="yaml">
 meta:
-  title: Orders
+  title: Order Detail
   layout: default
+  action: read
+  subject: Transaction
 </route>
 
 <script setup>

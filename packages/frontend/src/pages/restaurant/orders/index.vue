@@ -2,6 +2,8 @@
 meta:
   title: Orders
   layout: default
+  action: read
+  subject: Transaction
 </route>
 
 <script setup>

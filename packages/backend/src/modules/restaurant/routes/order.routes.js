@@ -13,7 +13,7 @@ const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
 const { authenticate, authenticateSSE } = require('../../../middlewares/authMiddleware');
-const { authorize } = require('../../../middlewares/permissionMiddleware');
+const { authorize, authorizeAny } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 
 // ===== PUBLIC ROUTES (no auth required) =====
@@ -221,10 +221,10 @@ router.put('/:id/move-table',
 /**
  * @route POST /api/v1/restaurant/orders/:id/items
  * @desc Add items to existing order
- * @access Private - requires 'update' permission on 'Transaction'
+ * @access Private - requires 'create' or 'update' permission on 'Transaction'
  */
 router.post('/:id/items',
-  authorize('update', 'Transaction'),
+  authorizeAny(['create', 'update'], 'Transaction'),
   orderController.addOrderItems
 );
 

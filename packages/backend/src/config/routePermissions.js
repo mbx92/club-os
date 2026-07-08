@@ -137,6 +137,13 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/gym/staff-attendance/fix-overnight': { subject: 'StaffAttendance', actions: ['update'] },
   '/gym/staff-attendance/regenerate-from-logs': { subject: 'StaffAttendance', actions: ['update'] },
   '/gym/staff-attendance/:id': { subject: 'StaffAttendance', actions: ['update'] },
+
+  // Frontend SPA routes — Restaurant (enforced via Vue route meta; listed here for permission catalog sync)
+  '/restaurant/pos/floor-plan-pos': { subject: 'Transaction', actions: ['create', 'read'] },
+  '/restaurant/pos': { subject: 'Transaction', actions: ['create', 'read'] },
+  '/restaurant/orders': { subject: 'Transaction', actions: ['read', 'update'] },
+  '/restaurant/void-transactions': { subject: 'Transaction', actions: ['cancel'] },
+  '/restaurant/tables/floor-plan': { subject: 'RestaurantTable', actions: ['read', 'update'] },
   
   // Employee Schedules
   '/gym/employee-schedules/assign-shifts': { subject: 'EmployeeSchedule', actions: ['create'] },
@@ -350,7 +357,9 @@ const ROUTE_TO_SUBJECT_MAP = {
     DELETE: { subject: 'Transaction', actions: ['delete'] }
   },
   '/modules/restaurant/orders/:id/status': { subject: 'Transaction', actions: ['update'] },
-  '/modules/restaurant/orders/:id/items': { subject: 'Transaction', actions: ['update'] },
+  '/modules/restaurant/orders/:id/items': {
+    POST: { subject: 'Transaction', actions: ['create', 'update'] },
+  },
   '/modules/restaurant/orders/:id/payment': { subject: 'Transaction', actions: ['create'] },
   '/modules/restaurant/orders/:id/split': { subject: 'Transaction', actions: ['create'] },
   '/modules/restaurant/orders/:id/merge': { subject: 'Transaction', actions: ['create'] },

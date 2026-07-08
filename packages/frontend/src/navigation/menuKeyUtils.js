@@ -11,6 +11,7 @@ const LEGACY_MENU_KEY_MAP = {
   roles: 'settings',
   logs: 'settings',
   psychology: null,
+  'restaurant.pos': 'restaurant.floor-plan-pos',
 }
 
 /** Flatten ALL_MENU_KEYS tree into a flat array of all valid keys */
@@ -38,7 +39,7 @@ const SUBJECT_MENU_MAP = {
   PTSession: ['gym.pt'],
   ServicePlan: ['gym.active-services'],
   ActiveService: ['gym.active-services'],
-  Transaction: ['gym.pos', 'gym.void-transactions', 'finances.transactions', 'restaurant.pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.dashboard', 'restaurant.reports'],
+  Transaction: ['gym.pos', 'gym.void-transactions', 'finances.transactions', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.dashboard', 'restaurant.reports'],
   GymReport: ['gym.reports', 'reports.service-reports', 'reports.product-reports', 'reports.staff-reports', 'reports.forecasting'],
   TrainerCommission: ['gym.instructors', 'gym.reports'],
   RestaurantCategory: ['restaurant.categories'],
@@ -100,6 +101,11 @@ export function normalizeMenuAccess(keys) {
     if (mapped && VALID_MENU_KEYS.has(mapped)) {
       result.add(mapped)
     }
+  }
+
+  // Legacy POS key maps to Kasir POS page — grant canonical key for sidebar visibility
+  if (result.has('restaurant.pos')) {
+    result.add('restaurant.floor-plan-pos')
   }
 
   return [...result]

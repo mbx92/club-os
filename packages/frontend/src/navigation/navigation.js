@@ -503,9 +503,9 @@ export const navigation = [
         label: "Kasir POS",
         to: "/restaurant/pos/floor-plan-pos",
         icon: "cash-register",
-        menuKey: "restaurant.pos",
+        menuKey: "restaurant.floor-plan-pos",
         action: "create",
-        subject: "Order",
+        subject: "Transaction",
       },
       // {
       //   label: "POS",
@@ -520,7 +520,7 @@ export const navigation = [
         icon: "receipt",
         menuKey: "restaurant.orders",
         action: "read",
-        subject: "Order",
+        subject: "Transaction",
       },
       {
         label: "Batal Transaksi",

@@ -55,4 +55,35 @@ function authorize(action, subject) {
   };
 }
 
-module.exports = { authorize };
+/**
+ * Allow if the user has any of the listed actions on the subject.
+ * Use for POS flows where "create transaction" should cover adding line items.
+ */
+function authorizeAny(actions, subject) {
+  const actionList = Array.isArray(actions) ? actions : [actions];
+  return (req, res, next) => {
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
+
+    if (req.user.isSuperAdmin || isTenantAdmin(req.user)) {
+      return next();
+    }
+
+    const allowed = actionList.some(action => can(req.user, action, subject));
+    if (allowed) return next();
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(
+        `[permission] 403 Forbidden: ${req.method} ${req.originalUrl} — user role="${req.user.role?.name}", ` +
+        `required one of [${actionList.join(', ')}] on "${subject}"`
+      );
+    }
+    return res.status(403).json({
+      message: 'Forbidden',
+      code: 'PERMISSION_DENIED',
+      required: { actions: actionList, subject },
+      role: req.user.role ? { id: req.user.role.id, name: req.user.role.name } : null,
+    });
+  };
+}
+
+module.exports = { authorize, authorizeAny };

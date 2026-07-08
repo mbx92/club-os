@@ -41,7 +41,6 @@ module.exports = {
             
             // Restaurant Tables
             { subject: 'RestaurantTable', actions: ['read', 'update'], conditions: { tenantId: '$tenantId' } },
-            { subject: 'Order', actions: ['read', 'create', 'update'], conditions: { tenantId: '$tenantId' } },
             
             // Locations
             { subject: 'RestaurantLocation', actions: ['read'], conditions: { tenantId: '$tenantId' } },
@@ -65,7 +64,7 @@ module.exports = {
             'dashboard',
             'cash-register', 'cash-register.shift', 'cash-register.dashboard', 'cash-register.history', 'cash-register.daily-report', 'cash-register.daily-summary',
             'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos',
-            'restaurant', 'restaurant.dashboard', 'restaurant.products', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.orders',
+            'restaurant', 'restaurant.dashboard', 'restaurant.products', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.floor-plan-pos', 'restaurant.orders',
             'vouchers',
             'back-office', 'back-office.attendance', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
             'finances', 'finances.expenses', 'finances.petty-cash',

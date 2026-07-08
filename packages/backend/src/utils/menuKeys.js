@@ -14,7 +14,7 @@ const ADMIN_MENU_ACCESS = [
   'dashboard',
   'cash-register', 'cash-register.shift', 'cash-register.dashboard', 'cash-register.history', 'cash-register.daily-report', 'cash-register.daily-summary',
   'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos', 'gym.void-transactions', 'gym.reports',
-  'restaurant', 'restaurant.dashboard', 'restaurant.categories', 'restaurant.products', 'restaurant.locations', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.stock', 'restaurant.reports',
+  'restaurant', 'restaurant.dashboard', 'restaurant.categories', 'restaurant.products', 'restaurant.locations', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.stock', 'restaurant.reports',
   'vouchers',
   'back-office', 'back-office.attendance', 'back-office.attendance-report', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
   'finances', 'finances.dashboard', 'finances.incomes', 'finances.income-categories', 'finances.expenses', 'finances.expense-categories', 'finances.cash-flow', 'finances.petty-cash', 'finances.vault', 'finances.analytics', 'finances.transactions', 'finances.shareholders', 'finances.reports',
@@ -27,7 +27,7 @@ const MANAGER_MENU_ACCESS = [
   'dashboard',
   'cash-register', 'cash-register.shift', 'cash-register.dashboard', 'cash-register.history', 'cash-register.daily-report', 'cash-register.daily-summary',
   'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos', 'gym.void-transactions', 'gym.reports',
-  'restaurant', 'restaurant.dashboard', 'restaurant.categories', 'restaurant.products', 'restaurant.locations', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.stock', 'restaurant.reports',
+  'restaurant', 'restaurant.dashboard', 'restaurant.categories', 'restaurant.products', 'restaurant.locations', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.stock', 'restaurant.reports',
   'vouchers',
   'back-office', 'back-office.attendance', 'back-office.attendance-report', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
   'finances', 'finances.dashboard', 'finances.incomes', 'finances.income-categories', 'finances.expenses', 'finances.expense-categories', 'finances.cash-flow', 'finances.petty-cash', 'finances.vault', 'finances.analytics', 'finances.transactions', 'finances.shareholders', 'finances.reports',
@@ -39,7 +39,7 @@ const CASHIER_MENU_ACCESS = [
   'dashboard',
   'cash-register', 'cash-register.shift', 'cash-register.dashboard', 'cash-register.history', 'cash-register.daily-report', 'cash-register.daily-summary',
   'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos', 'gym.void-transactions',
-  'restaurant', 'restaurant.dashboard', 'restaurant.products', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.orders', 'restaurant.void-transactions',
+  'restaurant', 'restaurant.dashboard', 'restaurant.products', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions',
   'vouchers',
   'back-office', 'back-office.attendance', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
   'finances', 'finances.expenses', 'finances.petty-cash',
@@ -79,7 +79,7 @@ const SUBJECT_MENU_MAP = {
   PTSession: ['gym.pt'],
   ServicePlan: ['gym.active-services'],
   ActiveService: ['gym.active-services'],
-  Transaction: ['gym.pos', 'gym.void-transactions', 'finances.transactions', 'restaurant.pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.dashboard', 'restaurant.reports'],
+  Transaction: ['gym.pos', 'gym.void-transactions', 'finances.transactions', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.dashboard', 'restaurant.reports'],
   GymReport: ['gym.reports', 'reports.service-reports', 'reports.product-reports', 'reports.staff-reports', 'reports.forecasting'],
   TrainerCommission: ['gym.instructors', 'gym.reports'],
   RestaurantCategory: ['restaurant.categories'],
@@ -131,6 +131,7 @@ const LEGACY_MENU_KEY_MAP = {
   roles: 'settings',
   logs: 'settings',
   psychology: null,
+  'restaurant.pos': 'restaurant.floor-plan-pos',
 };
 
 const VALID_MENU_KEYS = new Set(ADMIN_MENU_ACCESS);
@@ -163,6 +164,11 @@ function normalizeMenuAccess(keys, roleName) {
     if (mapped && VALID_MENU_KEYS.has(mapped)) {
       result.add(mapped);
     }
+  }
+
+  // Legacy POS key maps to Kasir POS page — grant canonical key for sidebar visibility
+  if (result.has('restaurant.pos')) {
+    result.add('restaurant.floor-plan-pos');
   }
 
   return expandLegacyParentOnlyKeys([...result], roleName);
@@ -229,6 +235,15 @@ function deriveMenuAccessFromResources(resources, roleName) {
  * Prevents 403 when menu access is granted but the matching resource
  * checkbox was never saved (common after new subjects are added to the catalog).
  */
+const MENU_KEY_MIN_ACTIONS = {
+  'gym.pos': { Transaction: ['read', 'create', 'update'] },
+  'restaurant.floor-plan-pos': { Transaction: ['read', 'create', 'update'] },
+  'restaurant.pos': { Transaction: ['read', 'create', 'update'] },
+  'restaurant.orders': { Transaction: ['read', 'create', 'update'] },
+  'restaurant.void-transactions': { Transaction: ['read', 'cancel'] },
+  'gym.void-transactions': { Transaction: ['read', 'cancel'] },
+};
+
 function deriveMinimumResourcesFromMenuAccess(menuAccess = []) {
   if (!Array.isArray(menuAccess) || menuAccess.length === 0) return {};
 
@@ -238,6 +253,13 @@ function deriveMinimumResourcesFromMenuAccess(menuAccess = []) {
   for (const [subject, menuKeys] of Object.entries(SUBJECT_MENU_MAP)) {
     if (menuKeys.some(key => keys.has(key))) {
       resources[subject] = ['read'];
+    }
+  }
+
+  for (const [menuKey, grants] of Object.entries(MENU_KEY_MIN_ACTIONS)) {
+    if (!keys.has(menuKey)) continue;
+    for (const [subject, actions] of Object.entries(grants)) {
+      resources[subject] = [...new Set([...(resources[subject] || []), ...actions])];
     }
   }
 
