@@ -23,6 +23,11 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/admin/database/info': { subject: 'DatabaseBackup', actions: ['read'] },
   '/admin/database/download/:filename': { subject: 'DatabaseBackup', actions: ['read'] },
   '/admin/database/backups/:filename': { subject: 'DatabaseBackup', actions: ['delete'] },
+  '/admin/database/google-drive/oauth/status': { subject: 'DatabaseBackup', actions: ['read'] },
+  '/admin/database/google-drive/oauth/authorize-url': { subject: 'DatabaseBackup', actions: ['update'] },
+  '/admin/database/google-drive/oauth/disconnect': { subject: 'DatabaseBackup', actions: ['update'] },
+  '/admin/database/google-drive/oauth/test': { subject: 'DatabaseBackup', actions: ['read'] },
+  '/admin/database/google-drive/oauth/callback': { subject: 'DatabaseBackup', actions: ['read'] },
   
   // Scheduler Management
   '/admin/scheduler/status': { subject: 'Scheduler', actions: ['read'] },

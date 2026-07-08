@@ -31,6 +31,27 @@ function parseFolderId(value) {
   return idMatch ? idMatch[1] : null;
 }
 
+function resolveServiceAccountKeyFilePath(rawPath) {
+  if (!rawPath) return null;
+
+  const normalized = String(rawPath).trim();
+  const basename = path.basename(normalized);
+  const candidates = [
+    path.resolve(process.cwd(), normalized),
+    path.resolve(process.cwd(), 'packages/backend', normalized),
+    path.resolve(process.cwd(), 'packages/backend/src/secrets', basename),
+    path.resolve(__dirname, '../src/secrets', basename),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return path.resolve(process.cwd(), normalized);
+}
+
 function getServiceAccountConfig() {
   if (process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON) {
     const parsed = JSON.parse(process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON);
@@ -42,7 +63,11 @@ function getServiceAccountConfig() {
   }
 
   if (process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_FILE) {
-    const filePath = path.resolve(process.cwd(), process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_FILE);
+    const filePath = resolveServiceAccountKeyFilePath(process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_FILE);
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+
     const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     return {
       clientEmail: parsed.client_email,
@@ -86,7 +111,7 @@ function getGoogleDriveConfig() {
   );
 
   const oauthRefreshToken = getOAuthRefreshTokenConfig();
-  const serviceAccount = getServiceAccountConfig();
+  const serviceAccount = oauthRefreshToken ? null : getServiceAccountConfig();
 
   return {
     enabled: parseBoolean(process.env.GOOGLE_DRIVE_BACKUP_ENABLED),
@@ -95,6 +120,23 @@ function getGoogleDriveConfig() {
     authType: oauthRefreshToken ? 'oauth_refresh_token' : (serviceAccount ? 'service_account' : null),
     oauthRefreshToken,
     serviceAccount,
+  };
+}
+
+function buildOAuthConfigFromParts(oauth = {}) {
+  const clientId = String(oauth.clientId || '').trim();
+  const clientSecret = String(oauth.clientSecret || '').trim();
+  const refreshToken = String(oauth.refreshToken || '').trim();
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    return null;
+  }
+
+  return {
+    clientId,
+    clientSecret,
+    refreshToken,
+    tokenUri: process.env.GOOGLE_DRIVE_OAUTH_TOKEN_URI || GOOGLE_TOKEN_URI,
   };
 }
 
@@ -108,6 +150,15 @@ function resolveGoogleDriveConfig(overrides = null) {
     baseConfig.folderId
   );
 
+  const tenantOAuthRecord = configOverrides.oauth || null;
+  const tenantOAuth = buildOAuthConfigFromParts(tenantOAuthRecord);
+  const hasTenantOAuthPartial = Boolean(
+    tenantOAuthRecord?.clientId && tenantOAuthRecord?.clientSecret
+  );
+  const oauthRefreshToken = tenantOAuth
+    || (!hasTenantOAuthPartial ? baseConfig.oauthRefreshToken : null);
+  const serviceAccount = oauthRefreshToken ? null : baseConfig.serviceAccount;
+
   return {
     enabled: hasOwnProperty(configOverrides, 'enabled')
       ? Boolean(configOverrides.enabled)
@@ -116,9 +167,9 @@ function resolveGoogleDriveConfig(overrides = null) {
       ? Boolean(configOverrides.required)
       : baseConfig.required,
     folderId: resolvedFolderId,
-    authType: baseConfig.authType,
-    oauthRefreshToken: baseConfig.oauthRefreshToken,
-    serviceAccount: baseConfig.serviceAccount,
+    authType: oauthRefreshToken ? 'oauth_refresh_token' : (serviceAccount ? 'service_account' : null),
+    oauthRefreshToken,
+    serviceAccount,
     source: configOverrides.source || (overrides ? 'tenant_settings' : 'env'),
   };
 }

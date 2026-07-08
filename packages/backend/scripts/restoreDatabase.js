@@ -13,6 +13,7 @@ const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
+const { ensureBackupStorageDir } = require('../src/utils/backupStorage');
 const readline = require('readline');
 
 // Load environment variables
@@ -37,7 +38,7 @@ const dbConfig = {
   dialect: process.env.DB_DIALECT
 };
 
-const backupsDir = path.join(process.cwd(), 'backups');
+const backupsDir = ensureBackupStorageDir();
 
 /**
  * Prompt user for confirmation

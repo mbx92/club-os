@@ -6,6 +6,10 @@ COPY package.json package-lock.json ./
 COPY packages/backend/package.json packages/backend/package-lock.json ./packages/backend/
 COPY packages/frontend/package.json packages/frontend/package-lock.json ./packages/frontend/
 
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends postgresql-client default-mysql-client ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 RUN npm ci --include=dev
 
 COPY . .
@@ -14,7 +18,7 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 RUN chmod +x /app/docker-entrypoint.sh \
-  && mkdir -p /app/packages/backend/public /app/packages/backend/uploads /app/packages/backend/logs
+  && mkdir -p /app/backups /app/packages/backend/public /app/packages/backend/uploads /app/packages/backend/logs
 
 EXPOSE 3000
 

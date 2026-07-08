@@ -14,6 +14,7 @@ const path = require('path');
 const dotenv = require('dotenv');
 const { maybeUploadBackupToGoogleDrive } = require('./googleDriveBackup');
 const { maybeUploadBackupToS3 } = require('./s3Backup');
+const { ensureBackupStorageDir } = require('../src/utils/backupStorage');
 
 // Load environment variables
 const env = process.argv[2] || process.env.NODE_ENV || 'development';
@@ -36,10 +37,7 @@ const dbConfig = {
 };
 
 // Create backups directory if not exists
-const backupsDir = path.join(process.cwd(), 'backups');
-if (!fs.existsSync(backupsDir)) {
-  fs.mkdirSync(backupsDir, { recursive: true });
-}
+const backupsDir = ensureBackupStorageDir();
 
 /**
  * Generate backup filename with timestamp

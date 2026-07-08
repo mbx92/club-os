@@ -12,6 +12,7 @@ cd /app
 : "${SEED_ON_START:=false}"
 
 mkdir -p packages/backend/public packages/backend/uploads packages/backend/logs
+mkdir -p "${BACKUP_STORAGE_DIR:-/app/backups}"
 
 if [ "${WAIT_FOR_DB}" = "true" ]; then
   echo "Waiting for PostgreSQL to become available..."

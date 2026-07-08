@@ -11,9 +11,10 @@ const { createSequelizeBackup } = require('../../../scripts/backupDatabaseSequel
 const { createError } = require('../../utils/errorCodes');
 const logger = require('../../utils/logger');
 const { resolveBackupOptionsForTenantId } = require('../../utils/backupGoogleDriveConfig');
+const { ensureBackupStorageDir } = require('../../utils/backupStorage');
 const productionImportService = require('../../services/productionImportService');
 
-const backupsDir = path.join(process.cwd(), 'backups');
+const backupsDir = ensureBackupStorageDir();
 const SUPPORTED_CLOUD_PROVIDERS = ['google_drive', 'minio'];
 
 function createDisabledCloudConfig() {
@@ -205,7 +206,8 @@ async function createDatabaseBackup(req, res, next) {
         format: result.format || 'sql',
         note: result.note || null,
         downloadUrl: `/api/v1/admin/database/download/${result.filename}`,
-        storedLocally: true,
+        storedLocally: result.storedLocally !== false,
+        localFileDeleted: Boolean(result.localFileDeleted),
         googleDrive: result.googleDrive || null,
         minio: result.minio || null,
         settingsSourceTenantId: backupOptions.targetTenantId,

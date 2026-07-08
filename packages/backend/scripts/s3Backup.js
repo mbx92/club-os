@@ -1,4 +1,5 @@
 const fs = require('fs');
+const crypto = require('crypto');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { getMimeType } = require('./googleDriveBackup');
 
@@ -110,11 +111,17 @@ function sanitizeMetadataValue(value) {
     .replace(/[^a-zA-Z0-9!_.*'() -]/g, '_');
 }
 
+function buildContentMd5(buffer) {
+  return crypto.createHash('md5').update(buffer).digest('base64');
+}
+
 function createS3Client(config) {
   return new S3Client({
     region: config.region || 'us-east-1',
     endpoint: config.endpoint,
     forcePathStyle: config.forcePathStyle,
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
     credentials: {
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,
@@ -125,7 +132,14 @@ function createS3Client(config) {
 function createMinioBackupError(error, config, objectKey) {
   const status = error?.$metadata?.httpStatusCode || error?.statusCode || null;
   const reason = error?.message || 'Unknown MinIO error';
-  const wrappedError = new Error(`MinIO backup gagal saat upload: ${reason}`);
+  const hint = (
+    status === 502
+    || /xml parse error/i.test(reason)
+    || /unexpected content/i.test(reason)
+  )
+    ? 'Endpoint mengembalikan respons non-S3; cek reverse proxy/CDN dan kompatibilitas path-style pada endpoint.'
+    : null;
+  const wrappedError = new Error(`MinIO backup gagal saat upload: ${reason}${hint ? ` ${hint}` : ''}`);
 
   wrappedError.code = 'MINIO_BACKUP_FAILED';
   wrappedError.data = {
@@ -137,6 +151,7 @@ function createMinioBackupError(error, config, objectKey) {
     objectKey: objectKey || null,
     source: config.source || 'env',
     reason,
+    hint,
   };
 
   return wrappedError;
@@ -164,10 +179,13 @@ async function maybeUploadBackupToS3(backupResult, overrides = null) {
 
   try {
     const client = createS3Client(config);
+    const fileBuffer = fs.readFileSync(backupResult.filePath);
     const response = await client.send(new PutObjectCommand({
       Bucket: config.bucket,
       Key: objectKey,
-      Body: fs.createReadStream(backupResult.filePath),
+      Body: fileBuffer,
+      ContentLength: fileBuffer.length,
+      ContentMD5: buildContentMd5(fileBuffer),
       ContentType: getMimeType(backupResult.filePath),
       Metadata: {
         database: sanitizeMetadataValue(backupResult.database),

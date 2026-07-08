@@ -9,6 +9,7 @@ const {
   uploadMultipartToDrive,
   updateMultipartInDrive,
 } = require('./googleDriveBackup');
+const { ensureBackupStorageDir } = require('../src/utils/backupStorage');
 
 const env = process.argv[2] || process.env.NODE_ENV || 'development';
 const envFile = `.env.${env}`;
@@ -21,7 +22,7 @@ if (fs.existsSync(envFilePath)) {
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
-const backupsDir = path.join(process.cwd(), 'backups');
+const backupsDir = ensureBackupStorageDir();
 
 function getBackupFiles() {
   if (!fs.existsSync(backupsDir)) {

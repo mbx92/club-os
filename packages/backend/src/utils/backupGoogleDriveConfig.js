@@ -27,6 +27,14 @@ function extractGoogleDriveSettingsFromTenant(tenant) {
     config.folderUrl = googleDrive.folderUrl;
   }
 
+  if (googleDrive.oauth && typeof googleDrive.oauth === 'object') {
+    config.oauth = {
+      clientId: googleDrive.oauth.clientId || null,
+      clientSecret: googleDrive.oauth.clientSecret || null,
+      refreshToken: googleDrive.oauth.refreshToken || null,
+    };
+  }
+
   return config;
 }
 

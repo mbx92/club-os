@@ -52,13 +52,17 @@ services:
       MINIO_BACKUP_OBJECT_PREFIX: ${MINIO_BACKUP_OBJECT_PREFIX:-}
       MINIO_BACKUP_FORCE_PATH_STYLE: ${MINIO_BACKUP_FORCE_PATH_STYLE:-true}
       MINIO_BACKUP_USE_SSL: ${MINIO_BACKUP_USE_SSL:-false}
+      BACKUP_STORAGE_DIR: ${BACKUP_STORAGE_DIR:-/app/backups}
       # Optional: pin auto-backup settings to a specific tenant
       AUTO_BACKUP_TENANT_ID: ${AUTO_BACKUP_TENANT_ID:-}
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-}
+      FRONTEND_URL: ${FRONTEND_URL:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
       - "${BACKEND_PORT:-3001}:3000"
     volumes:
+      - backend_backups:/app/backups
       - backend_uploads:/app/packages/backend/uploads
       - backend_logs:/app/packages/backend/logs
       # Service account JSON (gitignored) — mount from host when using GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_FILE
@@ -80,5 +84,6 @@ services:
       - "${FRONTEND_PORT:-8081}:80"
 
 volumes:
+  backend_backups:
   backend_uploads:
   backend_logs:

@@ -276,6 +276,98 @@
                   placeholder="1ESvPnfhl6eG21uIyE42ywJY8FtM3xDuV"
                 >
               </div>
+
+              <div class="rounded-2xl border border-base-300 bg-base-200/40 p-4 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 class="font-semibold">OAuth Google Drive</h3>
+                    <p class="text-sm text-base-content/60">
+                      Hubungkan akun Google untuk upload backup tanpa edit file env server.
+                    </p>
+                  </div>
+                  <span
+                    class="badge"
+                    :class="googleDriveOAuthConnected ? 'badge-success' : 'badge-ghost'"
+                  >
+                    {{ googleDriveOAuthConnected ? 'Terhubung' : 'Belum terhubung' }}
+                  </span>
+                </div>
+
+                <div v-if="oauthConnection && !oauthConnection.ok" class="alert alert-warning alert-soft text-sm py-2">
+                  <IconAlertTriangle class="h-4 w-4 shrink-0" />
+                  <span>{{ oauthConnection.issue || oauthStatus?.lastError || 'Koneksi Google Drive belum valid' }}</span>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4">
+                  <div class="form-control">
+                    <label class="label">
+                      <span class="label-text font-semibold">OAuth Client ID</span>
+                    </label>
+                    <input
+                      v-model="googleDriveSettings.oauth.clientId"
+                      type="text"
+                      class="input input-bordered w-full"
+                      placeholder="xxxx.apps.googleusercontent.com"
+                    >
+                  </div>
+
+                  <div class="form-control">
+                    <label class="label">
+                      <span class="label-text font-semibold">OAuth Client Secret</span>
+                    </label>
+                    <input
+                      v-model="googleDriveSettings.oauth.clientSecret"
+                      type="password"
+                      class="input input-bordered w-full"
+                      :placeholder="googleDriveSettings.oauth.hasStoredClientSecret ? 'Kosongkan jika tidak diubah' : 'Masukkan client secret'"
+                    >
+                  </div>
+                </div>
+
+                <div class="rounded-xl border border-dashed border-base-300 bg-base-100/70 p-3 text-xs text-base-content/65 space-y-1">
+                  <p><strong>Redirect URI</strong> yang didaftarkan di Google Cloud Console:</p>
+                  <code class="block break-all">{{ redirectUri || 'Memuat...' }}</code>
+                  <p class="pt-1">Scope: <code>https://www.googleapis.com/auth/drive.file</code></p>
+                </div>
+
+                <div v-if="googleDriveOAuthConnected" class="text-sm text-base-content/70 space-y-1">
+                  <p v-if="oauthStatus?.connectedEmail">Akun: {{ oauthStatus.connectedEmail }}</p>
+                  <p v-if="oauthStatus?.connectedAt">Terhubung: {{ formatOAuthDate(oauthStatus.connectedAt) }}</p>
+                  <p v-if="oauthStatus?.refreshTokenPreview">Refresh token: {{ oauthStatus.refreshTokenPreview }}</p>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    :disabled="connecting || saving || !canConnectGoogleDrive"
+                    @click="handleConnectGoogleDrive"
+                  >
+                    <span v-if="connecting" class="loading loading-spinner loading-sm"></span>
+                    <IconLink v-else class="h-4 w-4" />
+                    Hubungkan Google
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline btn-sm"
+                    :disabled="testing || saving"
+                    @click="handleTestGoogleDriveOAuth"
+                  >
+                    <span v-if="testing" class="loading loading-spinner loading-sm"></span>
+                    <IconPlugConnected v-else class="h-4 w-4" />
+                    Tes Koneksi
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-sm text-error"
+                    :disabled="disconnecting || saving || !googleDriveOAuthConnected"
+                    @click="handleDisconnectGoogleDrive"
+                  >
+                    <span v-if="disconnecting" class="loading loading-spinner loading-sm"></span>
+                    Putuskan
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div class="card-actions justify-end gap-2 pt-6">
@@ -614,6 +706,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useTenantSettings } from '@/composables/admin/useTenantSettings'
 import { useDatabaseBackup } from '@/composables/admin/useDatabaseBackup'
+import { useGoogleDriveOAuth } from '@/composables/admin/useGoogleDriveOAuth'
 import { useNotification } from '@/composables/core/useNotification'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -622,7 +715,9 @@ import {
   IconCloudUpload,
   IconCreditCard,
   IconDeviceFloppy,
-  IconFolder
+  IconFolder,
+  IconLink,
+  IconPlugConnected
 } from '@tabler/icons-vue'
 
 const authStore = useAuthStore()
@@ -635,6 +730,18 @@ const {
   patchTenantSettings
 } = useTenantSettings()
 const { createBackup, isCreatingBackup } = useDatabaseBackup()
+const {
+  oauthStatus,
+  oauthConnection,
+  redirectUri,
+  connecting,
+  testing,
+  disconnecting,
+  fetchOAuthStatus,
+  connectOAuth,
+  disconnectOAuth,
+  testOAuthConnection,
+} = useGoogleDriveOAuth()
 
 const savingSection = ref('')
 const activeCloudProcess = ref('')
@@ -659,7 +766,12 @@ const createDefaultPaymentSettings = () => ({
 const createDefaultGoogleDriveSettings = () => ({
   enabled: false,
   required: false,
-  folderId: ''
+  folderId: '',
+  oauth: {
+    clientId: '',
+    clientSecret: '',
+    hasStoredClientSecret: false,
+  },
 })
 
 const createDefaultMinioSettings = () => ({
@@ -723,7 +835,23 @@ const normalizePaymentSettings = (payment = {}) => {
 const normalizeGoogleDriveSettings = (googleDrive = {}) => ({
   enabled: Boolean(googleDrive.enabled),
   required: Boolean(googleDrive.required),
-  folderId: googleDrive.folderId || ''
+  folderId: googleDrive.folderId || '',
+  oauth: {
+    clientId: googleDrive.oauth?.clientId || '',
+    clientSecret: '',
+    hasStoredClientSecret: Boolean(googleDrive.oauth?.clientSecret),
+  },
+})
+
+const googleDriveOAuthConnected = computed(() => Boolean(oauthStatus.value?.connected))
+
+const canConnectGoogleDrive = computed(() => {
+  const hasClientId = Boolean(googleDriveSettings.value.oauth.clientId.trim())
+  const hasSecret = Boolean(
+    googleDriveSettings.value.oauth.clientSecret.trim()
+    || googleDriveSettings.value.oauth.hasStoredClientSecret
+  )
+  return hasClientId && hasSecret
 })
 
 const normalizeMinioSettings = (minio = {}) => ({
@@ -782,6 +910,11 @@ const applySettings = (settingsSource = {}) => {
 
   originalPaymentSettings.value = clone(paymentSettings.value)
   originalGoogleDriveSettings.value = clone(googleDriveSettings.value)
+  originalGoogleDriveSettings.value.oauth = {
+    ...originalGoogleDriveSettings.value.oauth,
+    storedClientSecret: settingsSource?.backup?.googleDrive?.oauth?.clientSecret || '',
+    storedRefreshToken: settingsSource?.backup?.googleDrive?.oauth?.refreshToken || '',
+  }
   originalMinioSettings.value = clone(minioSettings.value)
   originalGlitchtipSettings.value = clone(glitchtipSettings.value)
 }
@@ -817,27 +950,47 @@ const sanitizePaymentSettings = () => ({
   }
 })
 
-const buildBackupSettingsPayload = () => ({
-  backup: {
-    googleDrive: {
-      enabled: googleDriveSettings.value.enabled,
-      required: googleDriveSettings.value.enabled ? googleDriveSettings.value.required : false,
-      folderId: googleDriveSettings.value.folderId.trim()
-    },
-    minio: {
-      enabled: minioSettings.value.enabled,
-      required: minioSettings.value.enabled ? minioSettings.value.required : false,
-      endpoint: minioSettings.value.endpoint.trim(),
-      region: minioSettings.value.region.trim() || 'us-east-1',
-      bucket: minioSettings.value.bucket.trim(),
-      accessKeyId: minioSettings.value.accessKeyId.trim(),
-      secretAccessKey: minioSettings.value.secretAccessKey.trim(),
-      objectPrefix: minioSettings.value.objectPrefix.trim(),
-      forcePathStyle: minioSettings.value.forcePathStyle,
-      useSsl: minioSettings.value.useSsl
-    }
+const buildBackupSettingsPayload = () => {
+  const currentOAuth = originalGoogleDriveSettings.value.oauth || {}
+  const nextClientSecret = googleDriveSettings.value.oauth.clientSecret.trim()
+    || currentOAuth.storedClientSecret
+    || undefined
+
+  const oauthPayload = {
+    clientId: googleDriveSettings.value.oauth.clientId.trim(),
   }
-})
+
+  if (nextClientSecret) {
+    oauthPayload.clientSecret = nextClientSecret
+  }
+
+  if (currentOAuth.storedRefreshToken) {
+    oauthPayload.refreshToken = currentOAuth.storedRefreshToken
+  }
+
+  return {
+    backup: {
+      googleDrive: {
+        enabled: googleDriveSettings.value.enabled,
+        required: googleDriveSettings.value.enabled ? googleDriveSettings.value.required : false,
+        folderId: googleDriveSettings.value.folderId.trim(),
+        oauth: oauthPayload,
+      },
+      minio: {
+        enabled: minioSettings.value.enabled,
+        required: minioSettings.value.enabled ? minioSettings.value.required : false,
+        endpoint: minioSettings.value.endpoint.trim(),
+        region: minioSettings.value.region.trim() || 'us-east-1',
+        bucket: minioSettings.value.bucket.trim(),
+        accessKeyId: minioSettings.value.accessKeyId.trim(),
+        secretAccessKey: minioSettings.value.secretAccessKey.trim(),
+        objectPrefix: minioSettings.value.objectPrefix.trim(),
+        forcePathStyle: minioSettings.value.forcePathStyle,
+        useSsl: minioSettings.value.useSsl,
+      },
+    },
+  }
+}
 
 const sanitizeGlitchtipSettings = () => ({
   enabled: Boolean(glitchtipSettings.value.enabled),
@@ -909,8 +1062,9 @@ const saveBackupSettings = async (section, successMessage) => {
     const result = await patchTenantSettings(payload, successMessage)
 
     if (result.success) {
-      originalGoogleDriveSettings.value = clone(googleDriveSettings.value)
-      originalMinioSettings.value = clone(minioSettings.value)
+      const tenantData = await fetchTenantSettings()
+      applySettings(tenantData?.settings || {})
+      await fetchOAuthStatus()
     }
 
     return result
@@ -1030,6 +1184,45 @@ const resetGlitchtipSettings = () => {
   glitchtipSettings.value = clone(originalGlitchtipSettings.value)
 }
 
+const formatOAuthDate = (value) => {
+  if (!value) return '-'
+  try {
+    return new Date(value).toLocaleString('id-ID')
+  } catch (_) {
+    return value
+  }
+}
+
+const handleConnectGoogleDrive = async () => {
+  if (!canConnectGoogleDrive.value) {
+    showWarning('Isi Client ID dan Client Secret, lalu simpan terlebih dahulu')
+    return
+  }
+
+  if (hasGoogleDriveChanges.value) {
+    const saved = await saveBackupSettings('googleDrive', 'Kredensial Google Drive disimpan')
+    if (!saved.success) return
+  }
+
+  const result = await connectOAuth()
+  if (result.success) {
+    const tenantData = await fetchTenantSettings()
+    applySettings(tenantData?.settings || {})
+  }
+}
+
+const handleTestGoogleDriveOAuth = async () => {
+  await testOAuthConnection()
+}
+
+const handleDisconnectGoogleDrive = async () => {
+  const result = await disconnectOAuth()
+  if (result.success) {
+    const tenantData = await fetchTenantSettings()
+    applySettings(tenantData?.settings || {})
+  }
+}
+
 watch(
   tenantSettings,
   (newValue) => {
@@ -1042,5 +1235,6 @@ watch(
 
 onMounted(async () => {
   await loadSettings()
+  await fetchOAuthStatus()
 })
 </script>
