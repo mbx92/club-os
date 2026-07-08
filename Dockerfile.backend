@@ -1,3 +1,5 @@
+FROM postgres:17-bookworm AS postgres_tools
+
 FROM node:20-bookworm-slim
 
 WORKDIR /app
@@ -6,13 +8,11 @@ COPY package.json package-lock.json ./
 COPY packages/backend/package.json packages/backend/package-lock.json ./packages/backend/
 COPY packages/frontend/package.json packages/frontend/package-lock.json ./packages/frontend/
 
+COPY --from=postgres_tools /usr/lib/postgresql/17 /usr/lib/postgresql/17
+COPY --from=postgres_tools /usr/lib/x86_64-linux-gnu/libpq.so* /usr/lib/x86_64-linux-gnu/
+
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends curl gnupg ca-certificates default-mysql-client \
-  && install -d /usr/share/postgresql-common/pgdg \
-  && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg \
-  && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
-  && apt-get update \
-  && apt-get install -y --no-install-recommends postgresql-client-17 \
+  && apt-get install -y --no-install-recommends ca-certificates default-mysql-client \
   && rm -rf /var/lib/apt/lists/*
 
 RUN npm ci --include=dev
@@ -21,6 +21,7 @@ COPY . .
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV PATH="/usr/lib/postgresql/17/bin:${PATH}"
 
 RUN chmod +x /app/docker-entrypoint.sh \
   && mkdir -p /app/backups /app/packages/backend/public /app/packages/backend/uploads /app/packages/backend/logs
