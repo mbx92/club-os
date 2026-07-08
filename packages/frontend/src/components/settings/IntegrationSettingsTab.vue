@@ -557,6 +557,19 @@
             <div class="card-actions justify-end gap-2 pt-6">
               <button
                 type="button"
+                class="btn btn-outline"
+                :disabled="saving || isTestingMinio"
+                @click="handleTestMinioConnection"
+              >
+                <span
+                  v-if="isTestingMinio"
+                  class="loading loading-spinner loading-sm"
+                ></span>
+                <IconPlugConnected v-else class="h-5 w-5" />
+                Test MinIO
+              </button>
+              <button
+                type="button"
                 class="btn btn-ghost"
                 :disabled="saving || isCreatingBackup || !minioSettings.enabled"
                 @click="handleProcessCloudBackup('minio')"
@@ -729,7 +742,12 @@ const {
   fetchTenantSettings,
   patchTenantSettings
 } = useTenantSettings()
-const { createBackup, isCreatingBackup } = useDatabaseBackup()
+const {
+  createBackup,
+  testMinioConnection,
+  isCreatingBackup,
+  isTestingMinio,
+} = useDatabaseBackup()
 const {
   oauthStatus,
   oauthConnection,
@@ -1105,6 +1123,28 @@ const handleSaveGoogleDriveSettings = async () => {
 const handleSaveMinioSettings = async () => {
   if (!validateMinioSettings()) return
   await saveBackupSettings('minio', 'MinIO backup settings updated successfully')
+}
+
+const handleTestMinioConnection = async () => {
+  if (!minioSettings.value.enabled) {
+    showWarning('Aktifkan MinIO dulu sebelum test koneksi')
+    return
+  }
+
+  if (!validateMinioSettings()) {
+    return
+  }
+
+  const saved = await saveBackupSettings('minio', 'MinIO settings saved')
+  if (!saved.success) {
+    return
+  }
+
+  try {
+    await testMinioConnection()
+  } catch (error) {
+    console.error('[IntegrationSettingsTab] Failed to test MinIO connection:', error)
+  }
 }
 
 const handleSaveGlitchtipSettings = async () => {

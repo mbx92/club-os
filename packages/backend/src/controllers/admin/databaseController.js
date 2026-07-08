@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const { createBackup } = require('../../../scripts/backupDatabase');
 const { createSequelizeBackup } = require('../../../scripts/backupDatabaseSequelize');
+const { testMinioConnection } = require('../../../scripts/s3Backup');
 const { createError } = require('../../utils/errorCodes');
 const logger = require('../../utils/logger');
 const { resolveBackupOptionsForTenantId } = require('../../utils/backupGoogleDriveConfig');
@@ -232,6 +233,44 @@ async function createDatabaseBackup(req, res, next) {
     const wrappedError = createError('BACKUP_FAILED', backupFailure.message, backupFailure.data);
     wrappedError.stack = err.stack;
     return next(wrappedError);
+  }
+}
+
+async function testMinioBackupConnection(req, res, next) {
+  try {
+    const backupOptions = await resolveBackupOptions(req);
+    const connection = await testMinioConnection(backupOptions.minioConfig);
+
+    logger.info('MinIO connection test completed', {
+      userId: req.user.id,
+      userName: req.user.name,
+      targetTenantId: backupOptions.targetTenantId,
+      ok: connection.ok,
+      endpoint: connection.endpoint || null,
+      bucket: connection.bucket || null,
+      objectKey: connection.objectKey || null,
+      reason: connection.reason || connection.issue || null,
+    });
+
+    return res.json({
+      success: connection.ok,
+      data: connection,
+      message: connection.ok
+        ? 'Koneksi MinIO berhasil'
+        : (connection.issue || connection.reason || 'Koneksi MinIO gagal'),
+    });
+  } catch (err) {
+    logger.error('MinIO connection test failed unexpectedly', {
+      userId: req.user.id,
+      error: err.message,
+      stack: err.stack,
+    });
+
+    if (err.isOperational) {
+      return next(err);
+    }
+
+    return next(createError('INTERNAL_ERROR', err.message || 'Test koneksi MinIO gagal'));
   }
 }
 
@@ -588,6 +627,7 @@ async function restoreImportSource(req, res, next) {
 
 module.exports = {
   createDatabaseBackup,
+  testMinioBackupConnection,
   listBackups,
   downloadBackup,
   deleteBackup,

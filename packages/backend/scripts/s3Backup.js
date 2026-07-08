@@ -1,6 +1,10 @@
 const fs = require('fs');
 const crypto = require('crypto');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} = require('@aws-sdk/client-s3');
 const { getMimeType } = require('./googleDriveBackup');
 
 function parseBoolean(value) {
@@ -105,6 +109,11 @@ function buildObjectKey(backupResult, objectPrefix) {
   return objectPrefix ? `${objectPrefix}/${backupResult.filename}` : backupResult.filename;
 }
 
+function buildTestObjectKey(objectPrefix) {
+  const suffix = `clubos-minio-test-${Date.now()}.txt`;
+  return objectPrefix ? `${objectPrefix}/__healthcheck__/${suffix}` : `__healthcheck__/${suffix}`;
+}
+
 function sanitizeMetadataValue(value) {
   return String(value || '')
     .slice(0, 200)
@@ -129,7 +138,7 @@ function createS3Client(config) {
   });
 }
 
-function createMinioBackupError(error, config, objectKey) {
+function createMinioOperationError(error, config, stage, objectKey) {
   const status = error?.$metadata?.httpStatusCode || error?.statusCode || null;
   const reason = error?.message || 'Unknown MinIO error';
   const hint = (
@@ -139,12 +148,17 @@ function createMinioBackupError(error, config, objectKey) {
   )
     ? 'Endpoint mengembalikan respons non-S3; cek reverse proxy/CDN dan kompatibilitas path-style pada endpoint.'
     : null;
-  const wrappedError = new Error(`MinIO backup gagal saat upload: ${reason}${hint ? ` ${hint}` : ''}`);
+  const stageLabel = stage === 'cleanup'
+    ? 'cleanup'
+    : stage === 'connection_test'
+      ? 'test koneksi'
+      : 'upload';
+  const wrappedError = new Error(`MinIO backup gagal saat ${stageLabel}: ${reason}${hint ? ` ${hint}` : ''}`);
 
   wrappedError.code = 'MINIO_BACKUP_FAILED';
   wrappedError.data = {
     provider: 'minio',
-    stage: 'upload',
+    stage,
     status,
     endpoint: config.endpoint || null,
     bucket: config.bucket || null,
@@ -155,6 +169,18 @@ function createMinioBackupError(error, config, objectKey) {
   };
 
   return wrappedError;
+}
+
+async function putObjectToS3(client, config, objectKey, body, contentType, metadata = {}) {
+  return client.send(new PutObjectCommand({
+    Bucket: config.bucket,
+    Key: objectKey,
+    Body: body,
+    ContentLength: body.length,
+    ContentMD5: buildContentMd5(body),
+    ContentType: contentType,
+    Metadata: metadata,
+  }));
 }
 
 async function maybeUploadBackupToS3(backupResult, overrides = null) {
@@ -180,20 +206,19 @@ async function maybeUploadBackupToS3(backupResult, overrides = null) {
   try {
     const client = createS3Client(config);
     const fileBuffer = fs.readFileSync(backupResult.filePath);
-    const response = await client.send(new PutObjectCommand({
-      Bucket: config.bucket,
-      Key: objectKey,
-      Body: fileBuffer,
-      ContentLength: fileBuffer.length,
-      ContentMD5: buildContentMd5(fileBuffer),
-      ContentType: getMimeType(backupResult.filePath),
-      Metadata: {
+    const response = await putObjectToS3(
+      client,
+      config,
+      objectKey,
+      fileBuffer,
+      getMimeType(backupResult.filePath),
+      {
         database: sanitizeMetadataValue(backupResult.database),
         environment: sanitizeMetadataValue(backupResult.environment),
         format: sanitizeMetadataValue(backupResult.format || 'unknown'),
         timestamp: sanitizeMetadataValue(backupResult.timestamp),
-      },
-    }));
+      }
+    );
 
     return {
       enabled: true,
@@ -210,7 +235,7 @@ async function maybeUploadBackupToS3(backupResult, overrides = null) {
     };
   } catch (error) {
     if (config.required) {
-      throw createMinioBackupError(error, config, objectKey);
+      throw createMinioOperationError(error, config, 'upload', objectKey);
     }
 
     return {
@@ -228,8 +253,83 @@ async function maybeUploadBackupToS3(backupResult, overrides = null) {
   }
 }
 
+async function testMinioConnection(overrides = null) {
+  const config = resolveMinioBackupConfig(overrides);
+  const configIssue = validateMinioBackupConfig(config);
+
+  if (configIssue) {
+    return {
+      ok: false,
+      issue: configIssue,
+      provider: 'minio',
+      bucket: config.bucket || null,
+      endpoint: config.endpoint || null,
+      source: config.source || 'env',
+    };
+  }
+
+  const client = createS3Client(config);
+  const objectKey = buildTestObjectKey(config.objectPrefix);
+  const payload = Buffer.from('club-os minio connectivity test', 'utf8');
+
+  try {
+    const response = await putObjectToS3(
+      client,
+      config,
+      objectKey,
+      payload,
+      'text/plain; charset=utf-8',
+      {
+        kind: 'connectivity-test',
+        timestamp: sanitizeMetadataValue(new Date().toISOString()),
+      }
+    );
+
+    let cleanup = { attempted: false, deleted: false, error: null };
+
+    try {
+      cleanup.attempted = true;
+      await client.send(new DeleteObjectCommand({
+        Bucket: config.bucket,
+        Key: objectKey,
+      }));
+      cleanup.deleted = true;
+    } catch (error) {
+      cleanup.error = error.message;
+    }
+
+    return {
+      ok: true,
+      provider: 'minio',
+      bucket: config.bucket,
+      endpoint: config.endpoint,
+      region: config.region,
+      source: config.source,
+      objectKey,
+      eTag: response.ETag ? response.ETag.replace(/"/g, '') : null,
+      cleanup,
+    };
+  } catch (error) {
+    const wrapped = createMinioOperationError(error, config, 'connection_test', objectKey);
+    return {
+      ok: false,
+      provider: 'minio',
+      bucket: config.bucket,
+      endpoint: config.endpoint,
+      region: config.region,
+      source: config.source,
+      objectKey,
+      status: wrapped.data.status,
+      issue: wrapped.message,
+      reason: wrapped.data.reason,
+      hint: wrapped.data.hint || null,
+    };
+  }
+}
+
 module.exports = {
   maybeUploadBackupToS3,
+  testMinioConnection,
   getMinioBackupConfig,
   resolveMinioBackupConfig,
   validateMinioBackupConfig,

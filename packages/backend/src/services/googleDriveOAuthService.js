@@ -23,9 +23,10 @@ function maskSecret(value, visible = 4) {
 }
 
 function buildOAuthConfigFromRecord(oauth = {}) {
-  const clientId = String(oauth.clientId || '').trim();
-  const clientSecret = String(oauth.clientSecret || '').trim();
-  const refreshToken = String(oauth.refreshToken || '').trim();
+  const oauthRecord = oauth && typeof oauth === 'object' ? oauth : {};
+  const clientId = String(oauthRecord.clientId || '').trim();
+  const clientSecret = String(oauthRecord.clientSecret || '').trim();
+  const refreshToken = String(oauthRecord.refreshToken || '').trim();
 
   if (!clientId || !clientSecret || !refreshToken) {
     return null;

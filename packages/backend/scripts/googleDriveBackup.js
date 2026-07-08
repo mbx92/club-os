@@ -124,9 +124,10 @@ function getGoogleDriveConfig() {
 }
 
 function buildOAuthConfigFromParts(oauth = {}) {
-  const clientId = String(oauth.clientId || '').trim();
-  const clientSecret = String(oauth.clientSecret || '').trim();
-  const refreshToken = String(oauth.refreshToken || '').trim();
+  const oauthRecord = oauth && typeof oauth === 'object' ? oauth : {};
+  const clientId = String(oauthRecord.clientId || '').trim();
+  const clientSecret = String(oauthRecord.clientSecret || '').trim();
+  const refreshToken = String(oauthRecord.refreshToken || '').trim();
 
   if (!clientId || !clientSecret || !refreshToken) {
     return null;
@@ -469,6 +470,16 @@ async function listDriveFilesInFolder({ accessToken, folderId }) {
 }
 
 async function maybeUploadBackupToGoogleDrive(backupResult, overrides = null) {
+  if (overrides && hasOwnProperty(overrides, 'enabled') && overrides.enabled === false) {
+    return {
+      enabled: false,
+      uploaded: false,
+      skipped: true,
+      reason: 'disabled',
+      source: overrides.source || 'tenant_settings',
+    };
+  }
+
   const config = resolveGoogleDriveConfig(overrides);
   const configIssue = validateGoogleDriveConfig(config);
 

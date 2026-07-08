@@ -29,6 +29,14 @@ router.use(requireSuperAdminOrAdmin);
 router.post('/backup', databaseController.createDatabaseBackup);
 
 /**
+ * @route   POST /api/v1/admin/database/minio/test
+ * @desc    Test MinIO/S3-compatible backup connection for tenant
+ * @body    tenantId? Optional tenant ID used as settings source for backup.minio
+ * @access  Super Admin or Admin
+ */
+router.post('/minio/test', databaseController.testMinioBackupConnection);
+
+/**
  * @route   GET /api/v1/admin/database/google-drive/oauth/status
  * @desc    Google Drive OAuth connection status for tenant backup
  * @access  Super Admin or Admin

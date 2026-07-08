@@ -14,6 +14,7 @@ export function useDatabaseBackup() {
   const databaseInfo = ref(null)
   const isLoading = ref(false)
   const isCreatingBackup = ref(false)
+  const isTestingMinio = ref(false)
 
   /**
    * Fetch all backups
@@ -92,6 +93,35 @@ export function useDatabaseBackup() {
       throw err
     } finally {
       isCreatingBackup.value = false
+    }
+  }
+
+  const testMinioConnection = async (options = {}) => {
+    isTestingMinio.value = true
+    try {
+      const payload = {}
+
+      if (options.tenantId) {
+        payload.tenantId = options.tenantId
+      }
+
+      const response = await api.post('/admin/database/minio/test', payload)
+      const data = response.data || response
+
+      if (data.success) {
+        showSuccess(data.message || 'Koneksi MinIO berhasil')
+      } else {
+        showError(data.message || 'Koneksi MinIO gagal')
+      }
+
+      return data
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to test MinIO connection'
+      showError(errorMessage)
+      console.error('[useDatabaseBackup] MinIO Test Error:', err)
+      throw err
+    } finally {
+      isTestingMinio.value = false
     }
   }
 
@@ -174,10 +204,12 @@ export function useDatabaseBackup() {
     databaseInfo,
     isLoading,
     isCreatingBackup,
+    isTestingMinio,
 
     // Methods
     fetchBackups,
     createBackup,
+    testMinioConnection,
     downloadBackup,
     deleteBackup,
     fetchDatabaseInfo
