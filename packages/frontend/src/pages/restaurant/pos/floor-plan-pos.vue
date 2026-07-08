@@ -3,7 +3,9 @@ path: /restaurant/pos/floor-plan-pos
 meta:
   title: Kasir POS
   layout: default
-  action: create
+  actions:
+    - create
+    - update
   subject: Transaction
 </route>
 

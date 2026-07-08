@@ -116,6 +116,14 @@ const MENU_CONFIG = [
     requiredPermission: { action: 'read', subject: 'Transaction' },
     children: [
       {
+        key: 'restaurant.floor-plan-pos',
+        label: 'Kasir POS',
+        icon: 'CashRegister',
+        path: '/restaurant/pos/floor-plan-pos',
+        requiredModule: 'restaurant',
+        requiredPermission: { action: 'create', subject: 'Transaction' },
+      },
+      {
         key: 'restaurant.orders',
         label: 'Orders',
         icon: 'ClipboardList',

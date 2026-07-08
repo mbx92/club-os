@@ -39,6 +39,9 @@ const ROUTE_TO_SUBJECT_MAP = {
   
   '/auth/logout': { subject: 'Auth', actions: ['create'] },
   '/auth/profile': { subject: 'Auth', actions: ['read'] },
+  '/auth/operator/list': { subject: 'Auth', actions: ['read'] },
+  '/auth/operator/verify': { subject: 'Auth', actions: ['create'] },
+  '/auth/operator/users/:id/pin': { subject: 'User', actions: ['update'] },
   
   '/users': {
     GET: { subject: 'User', actions: ['read'] },
@@ -75,9 +78,26 @@ const ROUTE_TO_SUBJECT_MAP = {
   
   // Dashboard
   '/gym/dashboard': { subject: 'Dashboard', actions: ['read'] },
+  '/gym/dashboard/overview': { subject: 'Dashboard', actions: ['read'] },
+  '/gym/dashboard/stats': { subject: 'Member', actions: ['read'] },
+  '/gym/dashboard/comprehensive': { subject: 'Transaction', actions: ['read'] },
   '/gym/dashboard/petty-cash': { subject: 'CashRegisterSession', actions: ['read'] },
   '/gym/dashboard/petty-cash/print-shift-report': { subject: 'CashRegisterSession', actions: ['create'] },
+  '/gym/dashboard/petty-cash/daily-report': { subject: 'CashRegisterSession', actions: ['read'] },
+  '/gym/dashboard/petty-cash/print-daily-report': { subject: 'CashRegisterSession', actions: ['read'] },
   
+  // Members (gym admin CRUD — distinct from /member portal)
+  '/gym/members': {
+    GET: { subject: 'Member', actions: ['read'] },
+    POST: { subject: 'Member', actions: ['create'] }
+  },
+  '/gym/members/:id': {
+    GET: { subject: 'Member', actions: ['read'] },
+    PUT: { subject: 'Member', actions: ['update'] },
+    DELETE: { subject: 'Member', actions: ['delete'] }
+  },
+  '/gym/members/:id/reset-password': { subject: 'Member', actions: ['update'] },
+
   // Check-ins
   '/gym/check-ins': {
     GET: { subject: 'CheckIn', actions: ['read'] },
@@ -101,6 +121,8 @@ const ROUTE_TO_SUBJECT_MAP = {
     DELETE: { subject: 'Trainer', actions: ['delete'] }
   },
   '/gym/trainers/:id/toggle-active': { subject: 'Trainer', actions: ['update'] },
+  '/gym/trainers/:id/restore': { subject: 'Trainer', actions: ['update'] },
+  '/gym/trainers/:id/reset-password': { subject: 'Trainer', actions: ['update'] },
   '/gym/trainers/:id/commissions': { subject: 'TrainerCommission', actions: ['read'] },
   '/gym/trainers/:id/commissions/:commissionId/pay': { subject: 'TrainerCommission', actions: ['update'] },
   '/gym/trainers/commissions/backfill': { subject: 'TrainerCommission', actions: ['manage'] },
@@ -117,6 +139,11 @@ const ROUTE_TO_SUBJECT_MAP = {
   },
   
   // Reports
+  '/gym/reports/revenue': { subject: 'Transaction', actions: ['read'] },
+  '/gym/reports/profit-loss': { subject: 'Transaction', actions: ['read'] },
+  '/gym/reports/attendance': { subject: 'CheckIn', actions: ['read'] },
+  '/gym/reports/service-status': { subject: 'ActiveService', actions: ['read'] },
+  '/gym/reports/service-commission-income': { subject: 'TrainerCommission', actions: ['read'] },
   '/gym/reports/trainer-commissions': { subject: 'TrainerCommission', actions: ['read'] },
   
   // Staff Attendance
@@ -139,13 +166,22 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/gym/staff-attendance/:id': { subject: 'StaffAttendance', actions: ['update'] },
 
   // Frontend SPA routes — Restaurant (enforced via Vue route meta; listed here for permission catalog sync)
-  '/restaurant/pos/floor-plan-pos': { subject: 'Transaction', actions: ['create', 'read'] },
-  '/restaurant/pos': { subject: 'Transaction', actions: ['create', 'read'] },
-  '/restaurant/orders': { subject: 'Transaction', actions: ['read', 'update'] },
+  '/restaurant/pos/floor-plan-pos': { subject: 'Transaction', actions: ['create', 'read', 'update'] },
+  '/restaurant/pos': { subject: 'Transaction', actions: ['create', 'read', 'update'] },
+  '/restaurant/orders': { subject: 'Transaction', actions: ['read', 'create', 'update'] },
+  '/restaurant/orders/:id': { subject: 'Transaction', actions: ['read', 'create', 'update'] },
   '/restaurant/void-transactions': { subject: 'Transaction', actions: ['cancel'] },
   '/restaurant/tables/floor-plan': { subject: 'RestaurantTable', actions: ['read', 'update'] },
   
   // Employee Schedules
+  '/gym/employee-schedules': {
+    GET: { subject: 'EmployeeSchedule', actions: ['read'] },
+    POST: { subject: 'EmployeeSchedule', actions: ['create'] }
+  },
+  '/gym/employee-schedules/export': { subject: 'EmployeeSchedule', actions: ['read'] },
+  '/gym/employee-schedules/generate-from-templates': { subject: 'EmployeeSchedule', actions: ['create'] },
+  '/gym/employee-schedules/employee/:employeeId': { subject: 'EmployeeSchedule', actions: ['delete'] },
+  '/gym/employee-schedules/user/:userId': { subject: 'EmployeeSchedule', actions: ['delete'] },
   '/gym/employee-schedules/assign-shifts': { subject: 'EmployeeSchedule', actions: ['create'] },
   '/gym/employee-schedules/:id': {
     PUT: { subject: 'EmployeeSchedule', actions: ['update'] },
@@ -156,7 +192,15 @@ const ROUTE_TO_SUBJECT_MAP = {
     PUT: { subject: 'EmployeeSchedule', actions: ['update'] },
     DELETE: { subject: 'EmployeeSchedule', actions: ['delete'] }
   },
-  
+  '/gym/employee-schedule-templates': {
+    GET: { subject: 'EmployeeSchedule', actions: ['read'] },
+    POST: { subject: 'EmployeeSchedule', actions: ['create'] }
+  },
+
+  '/gym/schedule-periods': {
+    GET: { subject: 'EmployeeSchedule', actions: ['read'] },
+    POST: { subject: 'EmployeeSchedule', actions: ['create'] }
+  },
   '/gym/schedule-periods/:id': {
     GET: { subject: 'EmployeeSchedule', actions: ['read'] },
     PUT: { subject: 'EmployeeSchedule', actions: ['update'] },
@@ -165,7 +209,14 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/gym/schedule-periods/:id/assignments/:assignmentId': { subject: 'EmployeeSchedule', actions: ['delete'] },
   '/gym/schedule-periods/:id/assignments/employee/:employeeId': { subject: 'EmployeeSchedule', actions: ['delete'] },
   '/gym/schedule-periods/:id/assignments/user/:userId': { subject: 'EmployeeSchedule', actions: ['delete'] },
-  
+  '/gym/schedule-periods/:id/status': { subject: 'EmployeeSchedule', actions: ['update'] },
+  '/gym/schedule-periods/:id/assign': { subject: 'EmployeeSchedule', actions: ['create'] },
+  '/gym/schedule-periods/:id/generate': { subject: 'EmployeeSchedule', actions: ['create'] },
+
+  '/gym/shifts': {
+    GET: { subject: 'EmployeeSchedule', actions: ['read'] },
+    POST: { subject: 'EmployeeSchedule', actions: ['create'] }
+  },
   '/gym/shifts/:id': {
     GET: { subject: 'Shift', actions: ['read'] },
     PUT: { subject: 'Shift', actions: ['update'] },
@@ -205,6 +256,9 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/services/:memberId': { subject: 'ActiveService', actions: ['read'] },
   '/services/detail/:id': { subject: 'ActiveService', actions: ['read'] },
   '/services/bulk-purchase': { subject: 'ActiveService', actions: ['create'] },
+  '/services/:id/use-session': { subject: 'ActiveService', actions: ['update'] },
+  '/services/:id/assign-trainer': { subject: 'ActiveService', actions: ['update'] },
+  '/services/:id/cancel': { subject: 'ActiveService', actions: ['delete'] },
   
   '/service/management/stats': { subject: 'ActiveService', actions: ['read'] },
   '/service/management/list': { subject: 'ActiveService', actions: ['read'] },
@@ -324,143 +378,198 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/transactions/combined': { subject: 'Transaction', actions: ['create'] },
   
   
-  '/transaction-settings/shipping': {
-    GET: { subject: 'Settings', actions: ['read'] },
-    PUT: { subject: 'Settings', actions: ['update'] }
+  '/transaction-settings': {
+    GET: { subject: 'Tenant', actions: ['read'] },
+    PUT: { subject: 'Tenant', actions: ['update'] }
   },
-  '/transaction-settings/reset': { subject: 'Settings', actions: ['create'] },
+  '/transaction-settings/reset': { subject: 'Tenant', actions: ['update'] },
+  '/transaction-settings/tax': {
+    GET: { subject: 'Tenant', actions: ['read'] },
+    PUT: { subject: 'Tenant', actions: ['update'] }
+  },
+  '/transaction-settings/service-charge': {
+    GET: { subject: 'Tenant', actions: ['read'] },
+    PUT: { subject: 'Tenant', actions: ['update'] }
+  },
+  '/transaction-settings/currency': {
+    GET: { subject: 'Tenant', actions: ['read'] },
+    PUT: { subject: 'Tenant', actions: ['update'] }
+  },
+  '/transaction-settings/invoice': {
+    GET: { subject: 'Tenant', actions: ['read'] },
+    PUT: { subject: 'Tenant', actions: ['update'] }
+  },
+  '/transaction-settings/payment': {
+    GET: { subject: 'Tenant', actions: ['read'] },
+    PUT: { subject: 'Tenant', actions: ['update'] }
+  },
+  '/transaction-settings/discount': {
+    GET: { subject: 'Tenant', actions: ['read'] },
+    PUT: { subject: 'Tenant', actions: ['update'] }
+  },
+  '/transaction-settings/shipping': {
+    GET: { subject: 'Tenant', actions: ['read'] },
+    PUT: { subject: 'Tenant', actions: ['update'] }
+  },
   
   // ═══════════════════════════════════════════════════════════════════════════
   // RESTAURANT MODULE
   // ═══════════════════════════════════════════════════════════════════════════
   
   // Dashboard
-  '/modules/restaurant/dashboard/overview': { subject: 'Transaction', actions: ['read'] },
-  '/modules/restaurant/dashboard/comprehensive': { subject: 'Transaction', actions: ['read'] },
-  '/modules/restaurant/dashboard/sales-trend': { subject: 'Transaction', actions: ['read'] },
-  '/modules/restaurant/dashboard/top-products': { subject: 'Transaction', actions: ['read'] },
-  '/modules/restaurant/dashboard/recent-orders': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/dashboard/overview': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/dashboard/comprehensive': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/dashboard/sales-trend': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/dashboard/top-products': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/dashboard/recent-orders': { subject: 'Transaction', actions: ['read'] },
 
   // Orders
-  '/modules/restaurant/orders': {
+  '/restaurant/orders': {
     GET: { subject: 'Transaction', actions: ['read'] },
     POST: { subject: 'Transaction', actions: ['create'] }
   },
-  '/modules/restaurant/orders/kitchen': { subject: 'Transaction', actions: ['read'] },
-  '/modules/restaurant/orders/queue': { subject: 'Transaction', actions: ['read'] },
-  '/modules/restaurant/orders/queue/stream': { subject: 'Transaction', actions: ['read'] },
-  '/modules/restaurant/orders/queue/display': { subject: 'Transaction', actions: ['read'] },
-  '/modules/restaurant/orders/kitchen/stream': { subject: 'Transaction', actions: ['read'] },
-  '/modules/restaurant/orders/:id': {
+  '/restaurant/orders/kitchen': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/orders/queue': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/orders/queue/stats': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/orders/queue/stream': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/orders/queue/display': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/orders/kitchen/stream': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/orders/:id': {
     GET: { subject: 'Transaction', actions: ['read'] },
     PUT: { subject: 'Transaction', actions: ['update'] },
     DELETE: { subject: 'Transaction', actions: ['delete'] }
   },
-  '/modules/restaurant/orders/:id/status': { subject: 'Transaction', actions: ['update'] },
-  '/modules/restaurant/orders/:id/items': {
+  '/restaurant/orders/:id/status': { subject: 'Transaction', actions: ['create', 'update'] },
+  '/restaurant/orders/:id/items': {
     POST: { subject: 'Transaction', actions: ['create', 'update'] },
   },
-  '/modules/restaurant/orders/:id/payment': { subject: 'Transaction', actions: ['create'] },
-  '/modules/restaurant/orders/:id/split': { subject: 'Transaction', actions: ['create'] },
-  '/modules/restaurant/orders/:id/merge': { subject: 'Transaction', actions: ['create'] },
-  '/modules/restaurant/orders/:id/void': { subject: 'Transaction', actions: ['delete'] },
-  '/modules/restaurant/orders/:id/print': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/orders/:orderId/items/grouped': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/orders/:orderId/items/:itemId/status': { subject: 'Transaction', actions: ['create', 'update'] },
+  '/restaurant/orders/:id/complete': { subject: 'Transaction', actions: ['create', 'update'] },
+  '/restaurant/orders/:id/transfer-items': { subject: 'Transaction', actions: ['create', 'update'] },
+  '/restaurant/orders/:id/move-table': { subject: 'Transaction', actions: ['create', 'update'] },
+  '/restaurant/orders/:id/splits': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/orders/table/:tableId': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/orders/direct': { subject: 'Transaction', actions: ['create'] },
+  '/restaurant/orders/validate-voucher': { subject: 'Voucher', actions: ['read'] },
+  '/restaurant/orders/drawer/open': { subject: 'Transaction', actions: ['create', 'update'] },
+  '/restaurant/orders/merge': { subject: 'Transaction', actions: ['create', 'update'] },
+  '/restaurant/orders/queue/:id/status': { subject: 'Transaction', actions: ['create', 'update'] },
+  '/restaurant/orders/queue/:id/call': { subject: 'Transaction', actions: ['create', 'update'] },
+  '/restaurant/orders/:id/payment': { subject: 'Transaction', actions: ['create'] },
+  '/restaurant/orders/:id/split': { subject: 'Transaction', actions: ['create', 'update'] },
+  '/restaurant/orders/:id/merge': { subject: 'Transaction', actions: ['create', 'update'] },
+  '/restaurant/orders/:id/void': { subject: 'Transaction', actions: ['delete'] },
+  '/restaurant/orders/:id/print': { subject: 'Transaction', actions: ['read'] },
   
   // Products
-  '/modules/restaurant/products': {
+  '/restaurant/products': {
     GET: { subject: 'RestaurantProduct', actions: ['read'] },
     POST: { subject: 'RestaurantProduct', actions: ['create'] }
   },
-  '/modules/restaurant/products/low-stock': { subject: 'RestaurantProduct', actions: ['read'] },
-  '/modules/restaurant/products/:id': {
+  '/restaurant/products/low-stock': { subject: 'RestaurantProduct', actions: ['read'] },
+  '/restaurant/products/:id': {
     GET: { subject: 'RestaurantProduct', actions: ['read'] },
     PUT: { subject: 'RestaurantProduct', actions: ['update'] },
     DELETE: { subject: 'RestaurantProduct', actions: ['delete'] }
   },
-  '/modules/restaurant/products/:id/adjust-stock': { subject: 'RestaurantProduct', actions: ['update'] },
-  '/modules/restaurant/products/:productId/extras': {
+  '/restaurant/products/:id/adjust-stock': { subject: 'RestaurantProduct', actions: ['update'] },
+  '/restaurant/products/:productId/extras': {
     GET: { subject: 'RestaurantProduct', actions: ['read'] },
     POST: { subject: 'RestaurantProduct', actions: ['create'] }
   },
-  '/modules/restaurant/products/:productId/extras/:id': {
+  '/restaurant/products/:productId/extras/:id': {
     PUT: { subject: 'RestaurantProduct', actions: ['update'] },
     DELETE: { subject: 'RestaurantProduct', actions: ['delete'] }
   },
   
   // Product Categories
-  '/modules/restaurant/categories': {
+  '/restaurant/categories': {
     GET: { subject: 'RestaurantCategory', actions: ['read'] },
     POST: { subject: 'RestaurantCategory', actions: ['create'] }
   },
-  '/modules/restaurant/categories/tree': { subject: 'RestaurantCategory', actions: ['read'] },
-  '/modules/restaurant/categories/reorder': { subject: 'RestaurantCategory', actions: ['update'] },
-  '/modules/restaurant/categories/:id': {
+  '/restaurant/categories/tree': { subject: 'RestaurantCategory', actions: ['read'] },
+  '/restaurant/categories/reorder': { subject: 'RestaurantCategory', actions: ['update'] },
+  '/restaurant/categories/:id': {
     GET: { subject: 'RestaurantCategory', actions: ['read'] },
     PUT: { subject: 'RestaurantCategory', actions: ['update'] },
     DELETE: { subject: 'RestaurantCategory', actions: ['delete'] }
   },
   
   // Locations
-  '/modules/restaurant/locations': {
+  '/restaurant/locations': {
     GET: { subject: 'RestaurantLocation', actions: ['read'] },
     POST: { subject: 'RestaurantLocation', actions: ['create'] }
   },
-  '/modules/restaurant/locations/with-stock': { subject: 'RestaurantLocation', actions: ['read'] },
-  '/modules/restaurant/locations/distance/:fromId/:toId': { subject: 'RestaurantLocation', actions: ['read'] },
-  '/modules/restaurant/locations/:id': {
+  '/restaurant/locations/with-stock': { subject: 'RestaurantLocation', actions: ['read'] },
+  '/restaurant/locations/distance/:fromId/:toId': { subject: 'RestaurantLocation', actions: ['read'] },
+  '/restaurant/locations/:id': {
     GET: { subject: 'RestaurantLocation', actions: ['read'] },
     PUT: { subject: 'RestaurantLocation', actions: ['update'] },
     DELETE: { subject: 'RestaurantLocation', actions: ['delete'] }
   },
-  '/modules/restaurant/locations/:id/stock-summary': { subject: 'RestaurantLocation', actions: ['read'] },
+  '/restaurant/locations/:id/stock-summary': { subject: 'RestaurantLocation', actions: ['read'] },
+  '/restaurant/locations/:id/toggle': { subject: 'RestaurantLocation', actions: ['update'] },
   
   // Tables
-  '/modules/restaurant/tables': {
+  '/restaurant/tables': {
     GET: { subject: 'RestaurantTable', actions: ['read'] },
     POST: { subject: 'RestaurantTable', actions: ['create'] }
   },
-  '/modules/restaurant/tables/statistics': { subject: 'RestaurantTable', actions: ['read'] },
-  '/modules/restaurant/tables/stats': { subject: 'RestaurantTable', actions: ['read'] },
-  '/modules/restaurant/tables/layout/:locationId': { subject: 'RestaurantTable', actions: ['read'] },
-  '/modules/restaurant/tables/:id': {
+  '/restaurant/tables/statistics': { subject: 'RestaurantTable', actions: ['read'] },
+  '/restaurant/tables/stats': { subject: 'RestaurantTable', actions: ['read'] },
+  '/restaurant/tables/layout/:locationId': { subject: 'RestaurantTable', actions: ['read'] },
+  '/restaurant/tables/:id': {
     GET: { subject: 'RestaurantTable', actions: ['read'] },
     PUT: { subject: 'RestaurantTable', actions: ['update'] },
     DELETE: { subject: 'RestaurantTable', actions: ['delete'] }
   },
-  '/modules/restaurant/tables/:id/occupy': { subject: 'RestaurantTable', actions: ['update'] },
-  '/modules/restaurant/tables/:id/release': { subject: 'RestaurantTable', actions: ['update'] },
-  '/modules/restaurant/tables/:id/reserve': { subject: 'RestaurantTable', actions: ['update'] },
-  '/modules/restaurant/tables/:id/cleaning': { subject: 'RestaurantTable', actions: ['update'] },
+  '/restaurant/tables/:id/occupy': { subject: 'RestaurantTable', actions: ['update'] },
+  '/restaurant/tables/:id/release': { subject: 'RestaurantTable', actions: ['update'] },
+  '/restaurant/tables/:id/reserve': { subject: 'RestaurantTable', actions: ['update'] },
+  '/restaurant/tables/:id/cleaning': { subject: 'RestaurantTable', actions: ['update'] },
   
   // Stock Movement
-  '/modules/restaurant/stock-movements': {
+  '/restaurant/stock-movements': {
     GET: { subject: 'RestaurantStock', actions: ['read'] }
   },
-  '/modules/restaurant/stock-movements/report': { subject: 'RestaurantStock', actions: ['read'] },
-  '/modules/restaurant/stock-movements/summary': { subject: 'RestaurantStock', actions: ['read'] },
-  '/modules/restaurant/stock-movements/most-moved': { subject: 'RestaurantStock', actions: ['read'] },
-  '/modules/restaurant/stock-movements/product/:productId': { subject: 'RestaurantStock', actions: ['read'] },
-  '/modules/restaurant/stock-movements/:id': { subject: 'RestaurantStock', actions: ['read'] },
-  '/modules/restaurant/stock-movements/stock-in': { subject: 'RestaurantStock', actions: ['create'] },
-  '/modules/restaurant/stock-movements/stock-out': { subject: 'RestaurantStock', actions: ['create'] },
-  '/modules/restaurant/stock-movements/adjustment': { subject: 'RestaurantStock', actions: ['create'] },
-  '/modules/restaurant/stock-movements/transfer': { subject: 'RestaurantStock', actions: ['create'] },
+  '/restaurant/stock-movements/report': { subject: 'RestaurantStock', actions: ['read'] },
+  '/restaurant/stock-movements/summary': { subject: 'RestaurantStock', actions: ['read'] },
+  '/restaurant/stock-movements/most-moved': { subject: 'RestaurantStock', actions: ['read'] },
+  '/restaurant/stock-movements/product/:productId': { subject: 'RestaurantStock', actions: ['read'] },
+  '/restaurant/stock-movements/:id': { subject: 'RestaurantStock', actions: ['read'] },
+  '/restaurant/stock-movements/stock-in': { subject: 'RestaurantStock', actions: ['create'] },
+  '/restaurant/stock-movements/stock-out': { subject: 'RestaurantStock', actions: ['create'] },
+  '/restaurant/stock-movements/adjustment': { subject: 'RestaurantStock', actions: ['create'] },
+  '/restaurant/stock-movements/transfer': { subject: 'RestaurantStock', actions: ['create'] },
   
   // Reports
-  '/modules/restaurant/reports/sales': { subject: 'Transaction', actions: ['read'] },
-  '/modules/restaurant/reports/products': { subject: 'Transaction', actions: ['read'] },
-  '/modules/restaurant/reports/tables': { subject: 'Transaction', actions: ['read'] },
-  '/modules/restaurant/reports/daily-summary': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/reports/sales': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/reports/products': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/reports/tables': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/reports/daily-summary': { subject: 'Transaction', actions: ['read'] },
   
   // Combined Billing
-  '/modules/restaurant/combined-billing/preview': { subject: 'Transaction', actions: ['read'] },
-  '/modules/restaurant/combined-billing/process': { subject: 'Transaction', actions: ['create'] },
+  '/restaurant/billing/combined': { subject: 'Transaction', actions: ['create'] },
+  '/restaurant/billing/receipt/:id': { subject: 'Transaction', actions: ['read'] },
+  '/restaurant/billing/validate-voucher': { subject: 'Voucher', actions: ['read'] },
+  '/restaurant/stock-report': { subject: 'RestaurantStock', actions: ['read'] },
+  '/restaurant/queue-display': { subject: 'Transaction', actions: ['read'] },
+
+  // Product extras (bulk/migrate)
+  '/restaurant/products/bulk': { subject: 'RestaurantProduct', actions: ['create'] },
+  '/restaurant/products/migrate': { subject: 'RestaurantProduct', actions: ['update'] },
+  '/restaurant/products/migrate-all': { subject: 'RestaurantProduct', actions: ['update'] },
+  '/restaurant/products/json/:extraName': { subject: 'RestaurantProduct', actions: ['delete'] },
+  '/restaurant/products/:extraId/toggle': { subject: 'RestaurantProduct', actions: ['update'] },
   
   // ═══════════════════════════════════════════════════════════════════════════
   // FINANCE MODULE
   // ═══════════════════════════════════════════════════════════════════════════
   
   '/finance/dashboard': { subject: 'FinanceDashboard', actions: ['read'] },
+  '/finance/dashboard/overview': { subject: 'FinanceDashboard', actions: ['read'] },
+  '/finance/dashboard/summary-cards': { subject: 'FinanceDashboard', actions: ['read'] },
   
   '/finance/incomes': {
     GET: { subject: 'Income', actions: ['read'] },
@@ -490,6 +599,9 @@ const ROUTE_TO_SUBJECT_MAP = {
     PUT: { subject: 'Expense', actions: ['update'] },
     DELETE: { subject: 'Expense', actions: ['delete'] }
   },
+  '/finance/expenses/:id/approve': { subject: 'Expense', actions: ['update'] },
+  '/finance/expenses/:id/pay': { subject: 'Expense', actions: ['update'] },
+  '/finance/expenses/:id/reopen': { subject: 'Expense', actions: ['update'] },
   
   '/finance/expense-categories': {
     GET: { subject: 'ExpenseCategory', actions: ['read'] },
@@ -502,9 +614,14 @@ const ROUTE_TO_SUBJECT_MAP = {
   
   '/finance/cash-flow': { subject: 'CashFlow', actions: ['read'] },
   '/finance/cash-flow/projection': { subject: 'CashFlow', actions: ['read'] },
+  '/finance/cash-flow/summary': { subject: 'CashFlow', actions: ['read'] },
+  '/finance/cash-flow/by-category': { subject: 'CashFlow', actions: ['read'] },
+  '/finance/cash-flow/statement': { subject: 'CashFlow', actions: ['read'] },
   
   '/finance/reports/financial': { subject: 'FinancialReport', actions: ['read'] },
   '/finance/reports/revenue': { subject: 'FinancialReport', actions: ['read'] },
+  '/finance/reports/profit-loss': { subject: 'FinancialReport', actions: ['read'] },
+  '/finance/reports/expenses': { subject: 'Expense', actions: ['read'] },
   
   // Petty Cash
   '/finance/petty-cash': {
@@ -649,6 +766,10 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/integrations/hikvision/devices/:id/sync': { subject: 'HikvisionDevice', actions: ['update'] },
   '/integrations/hikvision/devices/:id/test': { subject: 'HikvisionDevice', actions: ['read'] },
   '/integrations/hikvision/devices/:id/logs': { subject: 'HikvisionDevice', actions: ['read'] },
+  '/integrations/hikvision/devices/:id/sync-logs': { subject: 'HikvisionDevice', actions: ['read'] },
+  '/integrations/hikvision/devices/:id/status': { subject: 'HikvisionDevice', actions: ['read'] },
+  '/integrations/hikvision/devices/:id/sync-status': { subject: 'HikvisionDevice', actions: ['read'] },
+  '/integrations/hikvision/devices/:id/push-pending-employees': { subject: 'HikvisionDevice', actions: ['update'] },
   
   // Device Employee Management (on hardware)
   '/integrations/hikvision/devices/:id/employees': {
@@ -689,9 +810,13 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/integrations/hikvision/device-employees': { 
     GET: { subject: 'HikvisionDevice', actions: ['read'] }
   },
-  '/integrations/hikvision/device-employees/:id': { 
-    PUT: { subject: 'HikvisionDevice', actions: ['update'] }
+  '/integrations/hikvision/device-employees/:id': {
+    PUT: { subject: 'HikvisionDevice', actions: ['update'] },
+    PATCH: { subject: 'HikvisionDevice', actions: ['update'] }
   },
+  '/integrations/hikvision/device-employees/:id/status': { subject: 'HikvisionDevice', actions: ['update'] },
+  '/integrations/hikvision/device-employees/duplicates': { subject: 'HikvisionDevice', actions: ['read'] },
+  '/integrations/hikvision/device-employees/merge': { subject: 'HikvisionDevice', actions: ['update'] },
   
   // Staff Device Number Mapping
   '/integrations/hikvision/staff-mapping': { 
@@ -765,6 +890,9 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/reports/members/growth': { subject: 'Member', actions: ['read'] },
   '/reports/members/retention': { subject: 'Member', actions: ['read'] },
   
+  '/reports/daily/daily-summary': { subject: 'Transaction', actions: ['read'] },
+  '/reports/daily/daily-summary/export': { subject: 'Transaction', actions: ['read'] },
+
   // Forecasting Reports
   '/reports/forecasting/revenue': { subject: 'Transaction', actions: ['read'] },
   '/reports/forecasting/members': { subject: 'Member', actions: ['read'] },

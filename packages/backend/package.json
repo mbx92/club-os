@@ -36,6 +36,7 @@
     "check:models": "node scripts/checkModelHealth.js",
     "check:controllers": "node scripts/checkControllersHealth.js",
     "check:menu-keys": "node scripts/checkMenuKeySync.js",
+    "check:route-permissions": "node scripts/auditRoutePermissions.js",
     "test:restaurant:api": "node scripts/testRestaurantAPI.js",
     "generate:routes": "node scripts/generateRoutesMetadata-v2.js",
     "sync:features": "node scripts/syncFeatures.js",

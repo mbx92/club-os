@@ -240,6 +240,7 @@ const MENU_KEY_MIN_ACTIONS = {
   'restaurant.floor-plan-pos': { Transaction: ['read', 'create', 'update'] },
   'restaurant.pos': { Transaction: ['read', 'create', 'update'] },
   'restaurant.orders': { Transaction: ['read', 'create', 'update'] },
+  'restaurant.floor-plan': { RestaurantTable: ['read', 'update'] },
   'restaurant.void-transactions': { Transaction: ['read', 'cancel'] },
   'gym.void-transactions': { Transaction: ['read', 'cancel'] },
 };

@@ -30,6 +30,12 @@ export function checkPermission(action, subject) {
   return allowedActions.includes('*') || allowedActions.includes(action)
 }
 
+/** True if user can perform any of the listed actions on a subject */
+export function checkAnyPermission(actions, subject) {
+  if (!Array.isArray(actions) || actions.length === 0) return false
+  return actions.some(action => checkPermission(action, subject))
+}
+
 /**
  * Check if a menu key is in the user's backend menuAccess list.
  */

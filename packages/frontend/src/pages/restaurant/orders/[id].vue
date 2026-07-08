@@ -2,7 +2,10 @@
 meta:
   title: Order Detail
   layout: default
-  action: read
+  actions:
+    - read
+    - create
+    - update
   subject: Transaction
 </route>
 

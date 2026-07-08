@@ -16,6 +16,9 @@ const { authenticate, authenticateSSE } = require('../../../middlewares/authMidd
 const { authorize, authorizeAny } = require('../../../middlewares/permissionMiddleware');
 const { requireModule } = require('../../../middlewares/featureGateMiddleware');
 
+/** POS order mutations — kasir with Transaction:create must be able to run the full POS flow */
+const authorizePosWrite = authorizeAny(['create', 'update'], 'Transaction');
+
 // ===== PUBLIC ROUTES (no auth required) =====
 
 /**
@@ -180,7 +183,7 @@ router.post('/validate-voucher',
  * @body {Array} orderIds - Array of order IDs to merge
  */
 router.post('/merge',
-  authorize('update', 'Transaction'),
+  authorizePosWrite,
   orderController.mergeBills
 );
 
@@ -190,7 +193,7 @@ router.post('/merge',
  * @access Private - requires 'update' permission on 'Transaction'
  */
 router.put('/:id/status',
-  authorize('update', 'Transaction'),
+  authorizePosWrite,
   orderController.updateOrderStatus
 );
 
@@ -203,7 +206,7 @@ router.put('/:id/status',
  * @body {UUID}   targetTableId - Destination table ID
  */
 router.post('/:id/transfer-items',
-  authorize('update', 'Transaction'),
+  authorizePosWrite,
   orderController.transferItems
 );
 
@@ -214,7 +217,7 @@ router.post('/:id/transfer-items',
  * @body {UUID} newTableId - Target table ID to move the order to
  */
 router.put('/:id/move-table',
-  authorize('update', 'Transaction'),
+  authorizePosWrite,
   orderController.moveTable
 );
 
@@ -224,7 +227,7 @@ router.put('/:id/move-table',
  * @access Private - requires 'create' or 'update' permission on 'Transaction'
  */
 router.post('/:id/items',
-  authorizeAny(['create', 'update'], 'Transaction'),
+  authorizePosWrite,
   orderController.addOrderItems
 );
 
@@ -245,7 +248,7 @@ router.get('/:orderId/items/grouped',
  * @body {String} status - New status (pending, preparing, ready, served, cancelled)
  */
 router.put('/:orderId/items/:itemId/status',
-  authorize('update', 'Transaction'),
+  authorizePosWrite,
   orderController.updateItemStatus
 );
 
@@ -260,7 +263,7 @@ router.put('/:orderId/items/:itemId/status',
  * @body {String} [notes] - Additional notes
  */
 router.post('/:id/complete',
-  authorize('update', 'Transaction'),
+  authorizePosWrite,
   orderController.completeOrder
 );
 
@@ -272,7 +275,7 @@ router.post('/:id/complete',
  * @body {Number|Array} splits - Number for equal split, or Array of { itemIds, customerName } for by_items
  */
 router.post('/:id/split',
-  authorize('update', 'Transaction'),
+  authorizePosWrite,
   orderController.splitBill
 );
 
@@ -303,7 +306,7 @@ router.post('/:id/print',
  * @access Private - requires 'update' permission on 'Transaction'
  */
 router.post('/drawer/open',
-  authorize('update', 'Transaction'),
+  authorizePosWrite,
   orderController.openDrawer
 );
 
@@ -316,7 +319,7 @@ router.post('/drawer/open',
  * @access Private - requires 'update' permission on 'Transaction'
  */
 router.put('/queue/:id/status',
-  authorize('update', 'Transaction'),
+  authorizePosWrite,
   orderController.updateQueueStatus
 );
 
@@ -326,7 +329,7 @@ router.put('/queue/:id/status',
  * @access Private - requires 'update' permission on 'Transaction'
  */
 router.post('/queue/:id/call',
-  authorize('update', 'Transaction'),
+  authorizePosWrite,
   orderController.callQueueNumber
 );
 

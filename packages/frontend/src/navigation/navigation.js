@@ -447,7 +447,7 @@ export const navigation = [
     icon: "tools-kitchen-2",
     menuKey: "restaurant",
     action: "read",
-    subject: "Restaurant",
+    subject: "Transaction",
     modes: ["gym", "fitness", "full"],
     requireModule: "restaurant",
     children: [
@@ -457,7 +457,7 @@ export const navigation = [
         icon: "dashboard",
         menuKey: "restaurant.dashboard",
         action: "read",
-        subject: "Restaurant",
+        subject: "Transaction",
       },
       {
         label: "Categories",

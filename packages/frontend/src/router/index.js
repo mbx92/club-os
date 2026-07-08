@@ -327,14 +327,17 @@ router.beforeEach(async (to, from) => {
   }
 
   // Check permission if private page and has meta.action + meta.subject
-  if (!isPublic && to.meta?.action && to.meta?.subject) {
+  if (!isPublic && to.meta?.subject && (to.meta?.action || to.meta?.actions?.length)) {
     // Only enforce if user is not super-admin
     if (!isSuperAdmin) {
-      const action = to.meta.action
       const subject = to.meta.subject
+      const actions = to.meta.actions?.length
+        ? to.meta.actions
+        : [to.meta.action]
 
-      if (!checkPermission(action, subject)) {
-        debug.log('[Router Guard] Permission denied:', { action, subject, path: to.path })
+      const allowed = actions.some(action => checkPermission(action, subject))
+      if (!allowed) {
+        debug.log('[Router Guard] Permission denied:', { actions, subject, path: to.path })
         return {
           path: '/403',
           query: { from: to.fullPath, reason: 'permission' },
