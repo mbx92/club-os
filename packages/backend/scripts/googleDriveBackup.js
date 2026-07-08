@@ -153,11 +153,7 @@ function resolveGoogleDriveConfig(overrides = null) {
 
   const tenantOAuthRecord = configOverrides.oauth || null;
   const tenantOAuth = buildOAuthConfigFromParts(tenantOAuthRecord);
-  const hasTenantOAuthPartial = Boolean(
-    tenantOAuthRecord?.clientId && tenantOAuthRecord?.clientSecret
-  );
-  const oauthRefreshToken = tenantOAuth
-    || (!hasTenantOAuthPartial ? baseConfig.oauthRefreshToken : null);
+  const oauthRefreshToken = tenantOAuth || baseConfig.oauthRefreshToken;
   const serviceAccount = oauthRefreshToken ? null : baseConfig.serviceAccount;
 
   return {
