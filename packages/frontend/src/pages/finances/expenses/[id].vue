@@ -90,10 +90,13 @@ const resolvePaymentOption = (currentExpense = null) => {
 }
 
 const { fetchFunds: fetchPettyCashFunds } = usePettyCash()
-const { vaultAccounts, fetchVaultAccounts } = useVault()
+const { vaultAccounts, fetchVaultAccounts, accountsLoading: vaultAccountsLoading } = useVault()
 
 const id = route.params.id
-onMounted(() => fetchExpense(id))
+onMounted(() => {
+  fetchExpense(id)
+  fetchVaultAccounts({ isActive: 'true' })
+})
 
 const confirmDialog    = ref(null)
 const expenseFormModal = ref(null)
@@ -497,12 +500,18 @@ const handleReopen = async () => {
             <label class="label">
               <span class="label-text font-medium">Vault Account <span class="text-error">*</span></span>
             </label>
-            <select v-model="payForm.vaultAccountId" class="select select-bordered w-full">
+            <div v-if="vaultAccountsLoading" class="flex items-center gap-2 text-sm text-base-content/60 py-2">
+              <span class="loading loading-spinner loading-xs"></span> Memuat vault account...
+            </div>
+            <select v-else-if="vaultAccounts.length" v-model="payForm.vaultAccountId" class="select select-bordered w-full">
               <option value="">-- Pilih Vault Account --</option>
               <option v-for="account in vaultAccounts" :key="account.id" :value="account.id">
                 {{ account.name }} — Saldo: {{ fmt(account.balance) }}
               </option>
             </select>
+            <div v-else class="text-sm text-base-content/60 py-2">
+              ⚠️ Belum ada vault account. Silakan buat vault account terlebih dahulu, atau lakukan collect dari cash drawer untuk auto-create akun "Kas".
+            </div>
           </div>
           <!-- Bank Name (only for bank_transfer) -->
           <div v-if="payForm.paymentOption === 'bank_transfer'" class="form-control">

@@ -214,12 +214,18 @@
             <label class="label">
               <span class="label-text font-medium">Vault Account <span class="text-error">*</span></span>
             </label>
-            <select v-model="formData.vaultAccountId" class="select select-bordered w-full">
+            <div v-if="vaultAccountsLoading" class="flex items-center gap-2 text-sm text-base-content/60 py-2">
+              <span class="loading loading-spinner loading-xs"></span> Memuat vault account...
+            </div>
+            <select v-else-if="vaultAccounts.length" v-model="formData.vaultAccountId" class="select select-bordered w-full">
               <option value="">Pilih vault account</option>
               <option v-for="account in vaultAccounts" :key="account.id" :value="account.id">
                 {{ account.name }} — {{ formatCurrency(account.balance) }}
               </option>
             </select>
+            <div v-else class="text-sm text-warning py-2">
+              ⚠️ Belum ada vault account. Lakukan collect dari cash drawer untuk auto-create akun "Kas".
+            </div>
           </div>
           <div v-if="formData.paymentOption === 'bank_transfer'" class="form-control">
             <label class="label">
@@ -407,7 +413,7 @@ const errors = ref({})
 const tagsInput = ref('')
 
 const { suppliers: supplierList, fetchSuppliers } = useSuppliers()
-const { vaultAccounts, fetchVaultAccounts } = useVault()
+const { vaultAccounts, fetchVaultAccounts, accountsLoading: vaultAccountsLoading } = useVault()
 const vendorMode = ref('select') // 'select' | 'manual'
 
 const PAYMENT_OPTION_MAP = {
