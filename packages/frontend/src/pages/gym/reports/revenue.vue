@@ -152,6 +152,9 @@ onMounted(() => {
           <span v-if="loading" class="loading loading-dots loading-sm"></span>
           <span v-else>{{ formatCurrency(summary.totalRevenue) }}</span>
         </div>
+        <div v-if="(summary.totalRounding ?? 0) !== 0" class="stat-desc" :class="summary.totalRounding > 0 ? 'text-success' : 'text-error'">
+          Rounding {{ summary.totalRounding >= 0 ? '+' : '' }}{{ formatCurrency(summary.totalRounding) }}
+        </div>
       </div>
 
       <div class="stat bg-base-100 rounded-box shadow">

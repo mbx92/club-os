@@ -35,7 +35,12 @@ meta:
           <div class="stat">
             <div class="stat-title">Total Revenue</div>
             <div class="stat-value text-success">{{ formatCurrency(reportData.summary.totalRevenue) }}</div>
-            <div class="stat-desc">{{ reportData.summary.period?.startDate }} - {{ reportData.summary.period?.endDate }}</div>
+            <div class="stat-desc">
+              {{ reportData.summary.period?.startDate }} - {{ reportData.summary.period?.endDate }}
+              <span v-if="(reportData.summary.totalRounding ?? 0) !== 0" :class="reportData.summary.totalRounding > 0 ? 'text-success' : 'text-error'">
+                · Rounding {{ reportData.summary.totalRounding >= 0 ? '+' : '' }}{{ formatCurrency(reportData.summary.totalRounding) }}
+              </span>
+            </div>
           </div>
         </div>
         <div class="stats shadow">
