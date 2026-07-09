@@ -131,6 +131,7 @@ async function getRevenueReport(req, res, next) {
         [fn('SUM', col('serviceCharge')), 'serviceCharge'],
         [fn('SUM', col('voucherDiscount')), 'discounts'],
         [fn('SUM', col('totalAmount')), 'revenue'],
+        [fn('SUM', col('roundingAmount')), 'rounding'],
         [fn('COUNT', col('id')), 'transactionCount']
       ],
       group: [fn('DATE_TRUNC', trunc, col('createdAt'))],
@@ -138,10 +139,14 @@ async function getRevenueReport(req, res, next) {
       raw: true
     });
 
-    // Enrich period data with gross revenue
+    // Enrich period data with gross revenue & rounding
     const enrichedRevenueByPeriod = revenueByPeriod.map(r => {
       const gross = parseFloat(r.subtotal || 0) + parseFloat(r.tax || 0) + parseFloat(r.serviceCharge || 0);
-      return { ...r, grossRevenue: Math.round(gross * 100) / 100 };
+      return {
+        ...r,
+        grossRevenue: Math.round(gross * 100) / 100,
+        rounding: parseFloat(r.rounding || 0),
+      };
     });
 
     // Revenue by module/type
@@ -154,6 +159,7 @@ async function getRevenueReport(req, res, next) {
         [fn('SUM', col('serviceCharge')), 'serviceCharge'],
         [fn('SUM', col('voucherDiscount')), 'discounts'],
         [fn('SUM', col('totalAmount')), 'revenue'],
+        [fn('SUM', col('roundingAmount')), 'rounding'],
         [fn('COUNT', col('id')), 'transactionCount'],
         [fn('AVG', col('totalAmount')), 'avgTransaction']
       ],
@@ -252,6 +258,7 @@ async function getRevenueReport(req, res, next) {
         [fn('SUM', col('serviceCharge')), 'totalServiceCharge'],
         [fn('SUM', col('voucherDiscount')), 'totalDiscounts'],
         [fn('SUM', col('totalAmount')), 'netRevenue'],
+        [fn('SUM', col('roundingAmount')), 'totalRounding'],
         [fn('COUNT', col('id')), 'totalTransactions'],
         [fn('AVG', col('totalAmount')), 'avgTransaction']
       ],
@@ -263,7 +270,11 @@ async function getRevenueReport(req, res, next) {
     const totalServiceCharge = parseFloat(grandTotal?.totalServiceCharge) || 0;
     const totalDiscounts = parseFloat(grandTotal?.totalDiscounts) || 0;
     const netRevenue = parseFloat(grandTotal?.netRevenue) || 0;
+    const totalRounding = Math.round((parseFloat(grandTotal?.totalRounding) || 0) * 100) / 100;
     const grossRevenue = grossSubtotal + totalTax + totalServiceCharge;
+
+    // Revenue excl. rounding (rounding is shown separately)
+    const totalRevenue = Math.round(grossRevenue * 100) / 100;
 
     // Forecast
     const forecastData = enrichedRevenueByPeriod.map(r => ({ period: r.period, value: r.grossRevenue }));
@@ -273,7 +284,8 @@ async function getRevenueReport(req, res, next) {
       success: true,
       data: {
         summary: {
-          totalRevenue: Math.round(grossRevenue * 100) / 100,
+          totalRevenue: totalRevenue,
+          totalRounding: totalRounding,
           totalTransactions: parseInt(grandTotal?.totalTransactions) || 0,
           avgTransaction: Math.round((parseFloat(grandTotal?.avgTransaction) || 0) * 100) / 100,
           totalTax: totalTax,
