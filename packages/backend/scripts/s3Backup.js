@@ -4,6 +4,7 @@ const {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  ListObjectsV2Command,
 } = require('@aws-sdk/client-s3');
 const { getMimeType } = require('./googleDriveBackup');
 
@@ -183,6 +184,64 @@ async function putObjectToS3(client, config, objectKey, body, contentType, metad
   }));
 }
 
+async function listS3Objects(client, config) {
+  const objects = [];
+  let continuationToken = null;
+
+  do {
+    const command = new ListObjectsV2Command({
+      Bucket: config.bucket,
+      Prefix: config.objectPrefix || undefined,
+      ContinuationToken: continuationToken || undefined,
+    });
+
+    const response = await client.send(command);
+
+    if (response.Contents) {
+      objects.push(...response.Contents);
+    }
+
+    continuationToken = response.IsTruncated ? response.NextContinuationToken : null;
+  } while (continuationToken);
+
+  return objects;
+}
+
+async function cleanOldS3Backups({ client, config, keepCount = 10 }) {
+  console.log(`🧹 Checking for old S3/MinIO backups (keep last ${keepCount})...`);
+
+  const objects = await listS3Objects(client, config);
+
+  // Filter to only backup objects (skip healthcheck/test objects), sort by LastModified descending
+  const backupObjects = objects
+    .filter(obj => obj.Key && !obj.Key.includes('__healthcheck__/'))
+    .sort((a, b) => new Date(b.LastModified) - new Date(a.LastModified));
+
+  const toDelete = backupObjects.slice(keepCount);
+
+  if (toDelete.length === 0) {
+    console.log(`   No old objects to delete (total: ${backupObjects.length}, keep: ${keepCount}).`);
+    return { deleted: 0, kept: backupObjects.length };
+  }
+
+  console.log(`   Deleting ${toDelete.length} old backup(s) from S3/MinIO...`);
+
+  for (const obj of toDelete) {
+    try {
+      await client.send(new DeleteObjectCommand({
+        Bucket: config.bucket,
+        Key: obj.Key,
+      }));
+      console.log(`   🗑️  Deleted: ${obj.Key}`);
+    } catch (error) {
+      console.warn(`   ⚠️  Failed to delete ${obj.Key}: ${error.message}`);
+    }
+  }
+
+  console.log(`   Cleanup complete. Kept ${keepCount}, deleted ${toDelete.length}.`);
+  return { deleted: toDelete.length, kept: keepCount };
+}
+
 async function maybeUploadBackupToS3(backupResult, overrides = null) {
   const config = resolveMinioBackupConfig(overrides);
   const configIssue = validateMinioBackupConfig(config);
@@ -219,6 +278,13 @@ async function maybeUploadBackupToS3(backupResult, overrides = null) {
         timestamp: sanitizeMetadataValue(backupResult.timestamp),
       }
     );
+
+    // Clean up old backups on S3/MinIO (keep last 10)
+    try {
+      await cleanOldS3Backups({ client, config, keepCount: 10 });
+    } catch (cleanupError) {
+      console.warn('⚠️  S3/MinIO cleanup skipped:', cleanupError.message);
+    }
 
     return {
       enabled: true,
@@ -333,6 +399,8 @@ module.exports = {
   getMinioBackupConfig,
   resolveMinioBackupConfig,
   validateMinioBackupConfig,
+  listS3Objects,
+  cleanOldS3Backups,
   parseEndpoint,
   normalizeObjectPrefix,
 };

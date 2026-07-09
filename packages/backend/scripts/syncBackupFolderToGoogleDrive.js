@@ -8,6 +8,7 @@ const {
   listDriveFilesInFolder,
   uploadMultipartToDrive,
   updateMultipartInDrive,
+  cleanOldGoogleDriveBackups,
 } = require('./googleDriveBackup');
 const { ensureBackupStorageDir } = require('../src/utils/backupStorage');
 
@@ -148,6 +149,19 @@ async function syncBackupFolderToGoogleDrive() {
     }
 
     updated += 1;
+  }
+
+  // Clean up old backups on Google Drive (keep last 10)
+  if (!dryRun) {
+    try {
+      await cleanOldGoogleDriveBackups({
+        accessToken,
+        folderId: config.folderId,
+        keepCount: 10,
+      });
+    } catch (cleanupError) {
+      console.warn('⚠️  Google Drive cleanup skipped:', cleanupError.message);
+    }
   }
 
   return {

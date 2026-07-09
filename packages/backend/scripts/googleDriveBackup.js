@@ -452,7 +452,7 @@ async function listDriveFilesInFolder({ accessToken, folderId }) {
         q: `'${folderId}' in parents and trashed = false`,
         supportsAllDrives: true,
         includeItemsFromAllDrives: true,
-        fields: 'nextPageToken, files(id, name, size, mimeType, modifiedTime, parents)',
+        fields: 'nextPageToken, files(id, name, size, mimeType, createdTime, modifiedTime, parents)',
         pageSize: 1000,
         pageToken,
       },
@@ -463,6 +463,52 @@ async function listDriveFilesInFolder({ accessToken, folderId }) {
   } while (pageToken);
 
   return files;
+}
+
+async function deleteFileFromDrive({ accessToken, fileId }) {
+  await axios.delete(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      params: {
+        supportsAllDrives: true,
+      },
+    }
+  );
+}
+
+async function cleanOldGoogleDriveBackups({ accessToken, folderId, keepCount = 10 }) {
+  console.log(`🧹 Checking for old Google Drive backups (keep last ${keepCount})...`);
+
+  const files = await listDriveFilesInFolder({ accessToken, folderId });
+
+  // Sort by createdTime descending (newest first)
+  const sorted = files
+    .filter(file => file.createdTime)
+    .sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
+
+  const toDelete = sorted.slice(keepCount);
+
+  if (toDelete.length === 0) {
+    console.log(`   No old files to delete (total: ${sorted.length}, keep: ${keepCount}).`);
+    return { deleted: 0, kept: sorted.length };
+  }
+
+  console.log(`   Deleting ${toDelete.length} old backup(s) from Google Drive...`);
+
+  for (const file of toDelete) {
+    try {
+      await deleteFileFromDrive({ accessToken, fileId: file.id });
+      console.log(`   🗑️  Deleted: ${file.name}`);
+    } catch (error) {
+      console.warn(`   ⚠️  Failed to delete ${file.name}: ${error.message}`);
+    }
+  }
+
+  console.log(`   Cleanup complete. Kept ${keepCount}, deleted ${toDelete.length}.`);
+  return { deleted: toDelete.length, kept: keepCount };
 }
 
 async function maybeUploadBackupToGoogleDrive(backupResult, overrides = null) {
@@ -521,6 +567,17 @@ async function maybeUploadBackupToGoogleDrive(backupResult, overrides = null) {
       throw createGoogleDriveBackupError(error, config, 'upload');
     }
 
+    // Clean up old backups on Google Drive (keep last 10)
+    try {
+      await cleanOldGoogleDriveBackups({
+        accessToken,
+        folderId: config.folderId,
+        keepCount: 10,
+      });
+    } catch (cleanupError) {
+      console.warn('⚠️  Google Drive cleanup skipped:', cleanupError.message);
+    }
+
     return {
       enabled: true,
       uploaded: true,
@@ -562,5 +619,7 @@ module.exports = {
   uploadMultipartToDrive,
   updateMultipartInDrive,
   listDriveFilesInFolder,
+  deleteFileFromDrive,
+  cleanOldGoogleDriveBackups,
   getMimeType,
 };
