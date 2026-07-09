@@ -794,9 +794,11 @@ const createOrder = async (req, res, next) => {
       }, { transaction: t });
     }
 
+    // Payment status — defined here so vault inflow check below can also use it
+    const paymentStatus = orderStatus === 'completed' ? 'completed' : 'pending';
+
     // Create payment records if payments provided
     if (payments.length > 0) {
-      const paymentStatus = orderStatus === 'completed' ? 'completed' : 'pending';
       for (const payment of payments) {
         await TransactionPayment.create({
           transactionId: order.id,
