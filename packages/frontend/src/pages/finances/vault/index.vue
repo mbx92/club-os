@@ -472,7 +472,6 @@ onMounted(async () => {
                   {{ account.name }} ({{ account.accountType }}) - {{ formatCurrency(account.balance) }}
                 </option>
               </select>
-              </div>
             </div>
           </div>
         </div>
