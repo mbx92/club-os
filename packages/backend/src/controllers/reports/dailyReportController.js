@@ -3,7 +3,7 @@
  *
  * Generates a daily summary report matching the "LAPORAN HARIAN" format:
  *   TGL | RESTO | SERVICE | TAX | GYM | TOTAL QRIS | TOTAL MANDIRI | TOTAL BCA
- *   | PENGELUARAN KASIR | KETERANGAN | TOTAL CASH | ACTUAL CASH | SELISIH CASH
+ *   | TOTAL NON CASH | PENGELUARAN KASIR | KETERANGAN | TOTAL CASH | ACTUAL CASH | SELISIH CASH
  *
  * Data sources:
  *   - Transaction (restaurant & gym sales)
@@ -21,6 +21,33 @@ const {
 } = require('../../utils/reportingStatus');
 
 /**
+ * Convert a local date string (YYYY-MM-DD) to UTC datetime range,
+ * respecting the tenant's timezone so the report covers the full local day.
+ *
+ * Example: "2026-07-09" in "Asia/Makassar" (UTC+8) →
+ *   { start: "2026-07-08T16:00:00.000Z", end: "2026-07-09T15:59:59.999Z" }
+ */
+function localDateToUTCRange(dateStr, timezone) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+
+  // Determine the UTC offset at noon on the target date in the tenant timezone.
+  const noonUTC = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  const localStr = noonUTC.toLocaleString('sv-SE', { timeZone: timezone });
+  // sv-SE gives "2026-07-09 20:00:00" for Asia/Makassar (UTC+8)
+  const localDate = new Date(localStr.replace(' ', 'T') + 'Z');
+  const offsetMs = localDate.getTime() - noonUTC.getTime();
+
+  // Local midnight → UTC = midnight(UTC) - offset
+  const startUTC = new Date(Date.UTC(y, m - 1, d, 0, 0, 0) - offsetMs);
+  const endUTC   = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999) - offsetMs);
+
+  return {
+    start: startUTC.toISOString().replace(/(\.\d{3})?Z/, '.000Z'),
+    end:   endUTC.toISOString().replace(/(\.\d{3})?Z$/, '.999Z').replace(/\.\d{3}Z$/, '.999Z'),
+  };
+}
+
+/**
  * GET /reports/finance/daily-summary
  *
  * @query startDate  YYYY-MM-DD (required)
@@ -35,13 +62,22 @@ async function getDailySummaryReport(req, res, next) {
       return res.status(400).json({ message: 'startDate and endDate are required (YYYY-MM-DD)' });
     }
 
+    // Tenant timezone — same logic as cashRegisterController so reports align
+    const tenantTimezone = req.user?.tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
+
+    // Convert local date range to UTC so we cover the full local day
+    const utcStart = localDateToUTCRange(startDate, tenantTimezone);
+    const utcEnd   = endDate !== startDate
+      ? localDateToUTCRange(endDate, tenantTimezone)
+      : utcStart;
+
     const tenantFilter = isSuperAdmin ? '' : 'AND t."tenantId" = :tenantId';
     const tenantFilterExp = isSuperAdmin ? '' : 'AND e."tenantId" = :tenantId';
     const tenantFilterCrs = isSuperAdmin ? '' : 'AND crs."tenantId" = :tenantId';
 
     const replacements = {
-      startDate: `${startDate}T00:00:00.000Z`,
-      endDate: `${endDate}T23:59:59.999Z`,
+      utcStart: utcStart.start,
+      utcEnd:   utcEnd.end,
       ...(isSuperAdmin ? {} : { tenantId }),
     };
 
@@ -57,7 +93,7 @@ async function getDailySummaryReport(req, res, next) {
       FROM "Transactions" t
       WHERE t."status" IN (${REVENUE_RECOGNIZED_TRANSACTION_STATUS_SQL})
         AND ${PAID_TRANSACTION_EXISTS_SQL}
-        AND t."createdAt" BETWEEN :startDate AND :endDate
+        AND t."createdAt" BETWEEN :utcStart AND :utcEnd
         AND t."deletedAt" IS NULL
         ${tenantFilter}
         AND NOT EXISTS (
@@ -82,7 +118,7 @@ async function getDailySummaryReport(req, res, next) {
       JOIN "Transactions" t ON tp."transactionId" = t."id"
       WHERE t."status" IN (${REVENUE_RECOGNIZED_TRANSACTION_STATUS_SQL})
         AND tp."status" = '${COMPLETED_PAYMENT_STATUS}'
-        AND t."createdAt" BETWEEN :startDate AND :endDate
+        AND t."createdAt" BETWEEN :utcStart AND :utcEnd
         AND t."deletedAt" IS NULL
         AND tp."deletedAt" IS NULL
         ${tenantFilter}
@@ -101,7 +137,7 @@ async function getDailySummaryReport(req, res, next) {
       FROM "Expenses" e
       WHERE e."paymentMethod" = 'cash'
         AND e."status" IN ('approved', 'paid')
-        AND e."expenseDate" BETWEEN :startDate AND :endDate
+        AND e."expenseDate" BETWEEN :utcStart AND :utcEnd
         AND e."deletedAt" IS NULL
         ${tenantFilterExp}
       GROUP BY DATE(e."expenseDate")
@@ -117,12 +153,12 @@ async function getDailySummaryReport(req, res, next) {
         COALESCE(SUM(crs."difference"), 0)      AS difference
       FROM "CashRegisterSessions" crs
       WHERE crs."status" = 'closed'
-        AND crs."shiftDate" BETWEEN :startDate AND :endDate
+        AND crs."shiftDate" BETWEEN :utcStart AND :utcEnd
         AND crs."deletedAt" IS NULL
         ${tenantFilterCrs}
       GROUP BY crs."shiftDate"
       ORDER BY date
-    `, { replacements: { startDate, endDate, ...(isSuperAdmin ? {} : { tenantId }) } });
+    `, { replacements: { utcStart: startDate, utcEnd: endDate, ...(isSuperAdmin ? {} : { tenantId }) } });
 
     // ─── Build date range ──────────────────────────────────────────────
     const start = new Date(startDate);
@@ -304,10 +340,17 @@ async function exportDailySummaryReport(req, res, next) {
     };
     await getDailySummaryReport(req, fakeRes, (err) => { if (err) throw err; });
 
+    // Same timezone-aware conversion as getDailySummaryReport
+    const tenantTimezone = req.user?.tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
+    const expUtcStart = localDateToUTCRange(startDate, tenantTimezone);
+    const expUtcEnd   = endDate !== startDate
+      ? localDateToUTCRange(endDate, tenantTimezone)
+      : expUtcStart;
+
     const tenantFilter = isSuperAdmin ? '' : 'AND t."tenantId" = :tenantId';
     const replacements = {
-      startDate: `${startDate}T00:00:00.000Z`,
-      endDate: `${endDate}T23:59:59.999Z`,
+      utcStart: expUtcStart.start,
+      utcEnd:   expUtcEnd.end,
       ...(isSuperAdmin ? {} : { tenantId }),
     };
 
@@ -339,7 +382,7 @@ async function exportDailySummaryReport(req, res, next) {
       LEFT JOIN "TransactionItems" ti ON ti."transactionId" = t."id" AND ti."deletedAt" IS NULL
       WHERE t."status" IN (${REVENUE_RECOGNIZED_TRANSACTION_STATUS_SQL})
         AND ${PAID_TRANSACTION_EXISTS_SQL}
-        AND t."createdAt" BETWEEN :startDate AND :endDate
+        AND t."createdAt" BETWEEN :utcStart AND :utcEnd
         AND t."deletedAt" IS NULL
         ${tenantFilter}
       ORDER BY t."createdAt", t."transactionNumber", ti."itemName"
@@ -363,7 +406,7 @@ async function exportDailySummaryReport(req, res, next) {
         AND tp."status" = '${COMPLETED_PAYMENT_STATUS}'
         AND tp."deletedAt" IS NULL
         AND t."deletedAt" IS NULL
-        AND t."createdAt" BETWEEN :startDate AND :endDate
+        AND t."createdAt" BETWEEN :utcStart AND :utcEnd
         ${tenantFilter}
       ORDER BY t."createdAt", t."transactionNumber", tp."paymentMethod"
     `, { replacements });
@@ -390,7 +433,7 @@ async function exportDailySummaryReport(req, res, next) {
        AND ec."deletedAt" IS NULL
       WHERE e."paymentMethod" = 'cash'
         AND e."status" IN ('approved', 'paid')
-        AND e."expenseDate" BETWEEN :startDate AND :endDate
+        AND e."expenseDate" BETWEEN :utcStart AND :utcEnd
         AND e."deletedAt" IS NULL
         ${isSuperAdmin ? '' : 'AND e."tenantId" = :tenantId'}
       ORDER BY e."expenseDate", e."expenseNumber"
@@ -409,7 +452,7 @@ async function exportDailySummaryReport(req, res, next) {
       FROM "Transactions" t
       WHERE t."status" IN (${REVENUE_RECOGNIZED_TRANSACTION_STATUS_SQL})
         AND ${PAID_TRANSACTION_EXISTS_SQL}
-        AND t."createdAt" BETWEEN :startDate AND :endDate
+        AND t."createdAt" BETWEEN :utcStart AND :utcEnd
         AND t."deletedAt" IS NULL
         ${tenantFilter}
       GROUP BY t."transactionType"
@@ -428,7 +471,7 @@ async function exportDailySummaryReport(req, res, next) {
         AND tp."status" = '${COMPLETED_PAYMENT_STATUS}'
         AND tp."deletedAt" IS NULL
         AND t."deletedAt" IS NULL
-        AND t."createdAt" BETWEEN :startDate AND :endDate
+        AND t."createdAt" BETWEEN :utcStart AND :utcEnd
         ${tenantFilter}
       GROUP BY tp."paymentMethod",
                COALESCE(tp."paymentDetails"->>'bank', tp."paymentDetails"->>'provider', '')
