@@ -8,7 +8,7 @@
  *   npm run db:backup:production
  */
 
-const { exec } = require('child_process');
+const { exec, execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
@@ -54,6 +54,30 @@ function deleteLocalBackupFile(filePath) {
 
   fs.unlinkSync(filePath);
   return true;
+}
+
+function resolvePgDumpBinary() {
+  const candidates = [
+    process.env.PG_DUMP_PATH,
+    'pg_dump',
+    '/usr/lib/postgresql/17/bin/pg_dump',
+    '/usr/bin/pg_dump',
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      execSync(`"${candidate}" --version`, { stdio: 'ignore' });
+      return candidate;
+    } catch (_) {
+      // try next candidate
+    }
+  }
+
+  const error = new Error(
+    'pg_dump tidak ditemukan. Install PostgreSQL client tools (postgresql-client-17) agar backup menghasilkan file .sql.'
+  );
+  error.code = 'NATIVE_BACKUP_FAILED';
+  throw error;
 }
 
 /**
@@ -114,12 +138,13 @@ function backupMySQL(filename) {
 function backupPostgreSQL(filename) {
   return new Promise((resolve, reject) => {
     const filePath = path.join(backupsDir, filename);
+    const pgDumpBinary = resolvePgDumpBinary();
     
     // Set PGPASSWORD environment variable for PostgreSQL
     const pgEnv = { ...process.env, PGPASSWORD: dbConfig.password };
     
     // Build pg_dump command
-    const command = `pg_dump -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -F p -f "${filePath}"`;
+    const command = `"${pgDumpBinary}" -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.user} -d ${dbConfig.database} -F p -f "${filePath}"`;
     
     console.log(`🔄 Starting PostgreSQL backup for ${env} environment...`);
     console.log(`📦 Database: ${dbConfig.database}`);

@@ -14,6 +14,12 @@ cd /app
 mkdir -p packages/backend/public packages/backend/uploads packages/backend/logs
 mkdir -p "${BACKUP_STORAGE_DIR:-/app/backups}"
 
+if command -v pg_dump >/dev/null 2>&1; then
+  echo "pg_dump ready: $(pg_dump --version)"
+else
+  echo "WARNING: pg_dump not found — database backups will fall back to JSON format"
+fi
+
 if [ "${WAIT_FOR_DB}" = "true" ]; then
   echo "Waiting for PostgreSQL to become available..."
   node <<'EOF'
