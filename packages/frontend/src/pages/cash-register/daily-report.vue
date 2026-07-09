@@ -125,6 +125,10 @@ const qrisPayment = computed(
   () => reportCashier.value?.paymentMethods?.qris || null
 );
 
+const qrisBankDetail = computed(
+  () => qrisPayment.value?.detail || []
+);
+
 const otherNonCashPayments = computed(() => {
   if (!reportCashier.value?.paymentMethods) return [];
   return Object.entries(reportCashier.value.paymentMethods)
@@ -363,7 +367,7 @@ const shiftStatusBadge = (status) =>
               class="bg-primary/10 px-5 py-3 rounded-t-2xl flex items-center gap-2"
             >
               <IconBuildingStore class="w-5 h-5 text-primary" />
-              <h2 class="font-bold text-base tracking-wide">REPORT CASHIER</h2>
+              <h2 class="font-bold text-base tracking-wide">REPORT RESTO</h2>
               <span class="ml-auto text-xs text-base-content/50">{{
                 dayjs(selectedDate).format("DD/MM/YYYY")
               }}</span>
@@ -455,6 +459,23 @@ const shiftStatusBadge = (status) =>
                   </td>
                   <td class="text-right">
                     {{ formatCurrency(qrisPayment.amount) }}
+                  </td>
+                </tr>
+                <!-- QRIS Bank Detail -->
+                <tr
+                  v-for="bank in qrisBankDetail"
+                  :key="bank.bankName"
+                  class="bg-info/5"
+                >
+                  <td class="pl-6 text-xs text-base-content/60">
+                    <span class="mr-1 text-base-content/30">&rsaquo;</span>
+                    {{ bank.bankName }}
+                    <span class="badge badge-xs badge-ghost ml-1"
+                      >{{ bank.transactionCount }}x</span
+                    >
+                  </td>
+                  <td class="text-right text-xs text-info font-medium">
+                    {{ formatCurrency(bank.total) }}
                   </td>
                 </tr>
                 <!-- Other non-cash (e_wallet, bank_transfer, etc.) -->
