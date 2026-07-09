@@ -42,7 +42,7 @@ async function createExpense(req, res, next) {
     notes,
     tags,
     attachments,
-    pettyCashId
+    pettyCashId,
     fundSource,
     vaultAccountId,
   } = req.body;
