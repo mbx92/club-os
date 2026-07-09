@@ -26,6 +26,12 @@ const {
   COMPLETED_PAYMENT_STATUS,
   shouldIncludeCashierTransaction,
 } = require('../../../utils/reportingStatus');
+const {
+  getTenantTimezone,
+  startOfDayInTz,
+  endOfDayInTz,
+  todayInTz,
+} = require('../../../utils/tenantTimezone');
 
 function getTransactionLocationWhere(locationId) {
   return locationId ? { locationId } : {};
@@ -110,7 +116,8 @@ exports.openShift = async (req, res, next) => {
     // ── Opsi B: cek apakah ada transaksi hari ini sebelum shift dibuka ────────
     // Jika ada, geser openedAt mundur ke transaksi paling awal yang belum
     // ter-cover oleh session lain (sehingga tetap masuk laporan shift ini).
-    const dayMidnight = new Date(`${shiftDate}T00:00:00+07:00`);
+    const tenantTz = getTenantTimezone(req);
+    const dayMidnight = startOfDayInTz(shiftDate, tenantTz);
 
     // Ambil semua session yang telah ada hari ini (lokasi sama atau null)
     const todaySessions = await CashRegisterSession.findAll({
@@ -518,8 +525,9 @@ exports.listSessions = async (req, res, next) => {
           // Cash expenses for this shift's date (based on expenseDate)
           // CATATAN: petty_cash TIDAK dimasukkan karena uangnya keluar dari fund petty cash,
           // bukan dari laci kas register. Hanya 'cash' yang mengurangi saldo kas register.
-          const csShiftStart = new Date(`${session.shiftDate}T00:00:00+08:00`);
-          const csShiftEnd   = new Date(`${session.shiftDate}T23:59:59.999+08:00`);
+          const csTz = getTenantTimezone(req);
+          const csShiftStart = startOfDayInTz(session.shiftDate, csTz);
+          const csShiftEnd   = endOfDayInTz(session.shiftDate, csTz);
           const expenseResult = await Expense.findAll({
             where: {
               tenantId,
@@ -731,8 +739,9 @@ exports.getShiftReport = async (req, res, next) => {
     });
 
     // ── Load expenses for this shift's date (based on expenseDate, not createdAt) ──
-    const shiftDayStart = new Date(`${session.shiftDate}T00:00:00+08:00`);
-    const shiftDayEnd   = new Date(`${session.shiftDate}T23:59:59.999+08:00`);
+    const shiftTz = getTenantTimezone(req);
+    const shiftDayStart = startOfDayInTz(session.shiftDate, shiftTz);
+    const shiftDayEnd   = endOfDayInTz(session.shiftDate, shiftTz);
     const expenses = await Expense.findAll({
       where: {
         tenantId,
@@ -1566,13 +1575,11 @@ exports.getDailyReport = async (req, res, next) => {
     const { tenantId } = req.user;
     const { type = 'all', locationId } = req.query;
 
-    // Parse date — default to today in WIB/WITA (Asia/Makassar)
+    // Parse date — default to today in tenant timezone (from DB)
+    const dailyTz = getTenantTimezone(req);
     let targetDate = req.query.date;
     if (!targetDate) {
-      const now = new Date();
-      // UTC+8
-      const wita = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-      targetDate = wita.toISOString().slice(0, 10);
+      targetDate = todayInTz(dailyTz);
     }
 
     // Day window: all sessions whose shiftDate = targetDate
@@ -1649,8 +1656,8 @@ exports.getDailyReport = async (req, res, next) => {
     });
 
     // Load ALL expenses for the target date (based on expenseDate, not createdAt)
-    const dayStart = new Date(`${targetDate}T00:00:00+08:00`);
-    const dayEnd   = new Date(`${targetDate}T23:59:59.999+08:00`);
+    const dayStart = startOfDayInTz(targetDate, dailyTz);
+    const dayEnd   = endOfDayInTz(targetDate, dailyTz);
     const allExpenses = await Expense.findAll({
       where: {
         tenantId,
@@ -2187,10 +2194,10 @@ exports.printDailyReport = async (req, res, next) => {
     const { tenantId } = req.user;
     const { type = 'all', locationId } = req.body;
 
+    const printTz = getTenantTimezone(req);
     let targetDate = req.body.date;
     if (!targetDate) {
-      const wita = new Date(Date.now() + 8 * 60 * 60 * 1000);
-      targetDate = wita.toISOString().slice(0, 10);
+      targetDate = todayInTz(printTz);
     }
 
     // Reuse getDailyReport logic — call the same data pipeline
@@ -2240,8 +2247,8 @@ exports.printDailyReport = async (req, res, next) => {
       order: [['createdAt', 'ASC']],
     });
 
-    const pDayStart = new Date(`${targetDate}T00:00:00+08:00`);
-    const pDayEnd   = new Date(`${targetDate}T23:59:59.999+08:00`);
+    const pDayStart = startOfDayInTz(targetDate, printTz);
+    const pDayEnd   = endOfDayInTz(targetDate, printTz);
     const allExpenses = await Expense.findAll({
       where: {
         tenantId,
@@ -2434,8 +2441,9 @@ exports.printShiftReport = async (req, res, next) => {
     });
 
     // ── Load expenses for this shift's date (based on expenseDate, not createdAt) ──
-    const pShiftStart = new Date(`${session.shiftDate}T00:00:00+08:00`);
-    const pShiftEnd   = new Date(`${session.shiftDate}T23:59:59.999+08:00`);
+    const pShiftTz = getTenantTimezone(req);
+    const pShiftStart = startOfDayInTz(session.shiftDate, pShiftTz);
+    const pShiftEnd   = endOfDayInTz(session.shiftDate, pShiftTz);
     const expenses = await Expense.findAll({
       where: {
         tenantId,
@@ -3016,8 +3024,9 @@ exports.diagnoseReport = async (req, res, next) => {
     });
 
     // Expenses for this shift's date (based on expenseDate, not createdAt)
-    const dShiftStart = new Date(`${session.shiftDate}T00:00:00+08:00`);
-    const dShiftEnd   = new Date(`${session.shiftDate}T23:59:59.999+08:00`);
+    const dShiftTz = getTenantTimezone(req);
+    const dShiftStart = startOfDayInTz(session.shiftDate, dShiftTz);
+    const dShiftEnd   = endOfDayInTz(session.shiftDate, dShiftTz);
     const expenses = await Expense.findAll({
       where: {
         tenantId,

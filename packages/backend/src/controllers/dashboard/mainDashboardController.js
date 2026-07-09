@@ -26,6 +26,16 @@ const {
   REVENUE_RECOGNIZED_TRANSACTION_STATUS_SQL,
   COMPLETED_PAYMENT_STATUS,
 } = require('../../utils/reportingStatus');
+const {
+  getTenantTimezone,
+  todayInTz,
+  startOfDayInTz,
+  endOfDayInTz,
+  addDays,
+  firstDayOfMonth,
+  lastDayOfPrevMonth,
+  firstDayOfPrevMonth,
+} = require('../../utils/tenantTimezone');
 
 // Import restaurant models (these are already loaded in main models/index.js)
 const RestaurantTable = db.RestaurantTable;
@@ -50,18 +60,20 @@ async function getMainDashboard(req, res, next) {
       where.locationId = locationId;
     }
 
-    // Date ranges
+    // Date ranges — computed in tenant timezone read from DB
     const now = new Date();
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    const tz = getTenantTimezone(req);
+    const todayStr     = todayInTz(tz);
+    const yesterdayStr = addDays(todayStr, -1);
+    const tomorrowStr  = addDays(todayStr, 1);
 
-    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59, 999);
+    const today        = startOfDayInTz(todayStr, tz);
+    const tomorrow     = startOfDayInTz(tomorrowStr, tz);
+    const yesterday    = startOfDayInTz(yesterdayStr, tz);
+
+    const thisMonthStart = startOfDayInTz(firstDayOfMonth(todayStr), tz);
+    const lastMonthStart = startOfDayInTz(firstDayOfPrevMonth(todayStr), tz);
+    const lastMonthEnd   = endOfDayInTz(lastDayOfPrevMonth(todayStr), tz);
 
     // ===============================
     // FINANCIAL OVERVIEW (ALL MODULES)

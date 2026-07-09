@@ -7,6 +7,11 @@ const { Op, fn, col, literal } = require('sequelize');
 const { generateForecast } = require('../../utils/forecasting');
 const logger = require('../../utils/logger');
 const {
+  getTenantTimezone,
+  startOfDayInTz,
+  endOfDayInTz,
+} = require('../../utils/tenantTimezone');
+const {
   REVENUE_RECOGNIZED_TRANSACTION_STATUSES,
   REVENUE_RECOGNIZED_TRANSACTION_STATUS_SQL,
   COMPLETED_PAYMENT_STATUS,
@@ -103,14 +108,15 @@ async function getRevenueReport(req, res, next) {
   try {
     const { tenantId, isSuperAdmin } = req.user;
     const { startDate, endDate, groupBy = 'monthly' } = req.query;
+    const tz = getTenantTimezone(req);
 
     const where = {
       status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES },
       [Op.and]: paidTxLiteral
     };
     if (!isSuperAdmin) where.tenantId = tenantId;
-    if (startDate) where.createdAt = { ...(where.createdAt || {}), [Op.gte]: new Date(`${startDate}T00:00:00.000Z`) };
-    if (endDate) where.createdAt = { ...(where.createdAt || {}), [Op.lte]: new Date(`${endDate}T23:59:59.999Z`) };
+    if (startDate) where.createdAt = { ...(where.createdAt || {}), [Op.gte]: startOfDayInTz(startDate, tz) };
+    if (endDate) where.createdAt = { ...(where.createdAt || {}), [Op.lte]: endOfDayInTz(endDate, tz) };
 
     const dateTruncMap = { daily: 'day', weekly: 'week', monthly: 'month', yearly: 'year' };
     const trunc = dateTruncMap[groupBy] || 'month';
@@ -158,8 +164,8 @@ async function getRevenueReport(req, res, next) {
 
     // Payment method distribution + bank detail breakdown
     const tenantFilter = !isSuperAdmin ? 't."tenantId" = :tenantId AND' : '';
-    const dateStartVal = startDate ? new Date(`${startDate}T00:00:00.000Z`) : null;
-    const dateEndVal   = endDate   ? new Date(`${endDate}T23:59:59.999Z`)   : null;
+    const dateStartVal = startDate ? startOfDayInTz(startDate, tz) : null;
+    const dateEndVal   = endDate   ? endOfDayInTz(endDate, tz)     : null;
     const dateFilter = dateStartVal && dateEndVal
       ? 't."createdAt" BETWEEN :dateStart AND :dateEnd'
       : dateStartVal
@@ -296,19 +302,20 @@ async function getProfitLossReport(req, res, next) {
   try {
     const { tenantId, isSuperAdmin } = req.user;
     const { startDate, endDate, groupBy = 'monthly' } = req.query;
+    const tz = getTenantTimezone(req);
 
     const txWhere = {
       status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES },
       [Op.and]: paidTxLiteral
     };
     if (!isSuperAdmin) txWhere.tenantId = tenantId;
-    if (startDate) txWhere.createdAt = { ...(txWhere.createdAt || {}), [Op.gte]: new Date(`${startDate}T00:00:00.000Z`) };
-    if (endDate) txWhere.createdAt = { ...(txWhere.createdAt || {}), [Op.lte]: new Date(`${endDate}T23:59:59.999Z`) };
+    if (startDate) txWhere.createdAt = { ...(txWhere.createdAt || {}), [Op.gte]: startOfDayInTz(startDate, tz) };
+    if (endDate) txWhere.createdAt = { ...(txWhere.createdAt || {}), [Op.lte]: endOfDayInTz(endDate, tz) };
 
     const expWhere = { status: { [Op.in]: ['approved', 'paid'] } };
     if (!isSuperAdmin) expWhere.tenantId = tenantId;
-    if (startDate) expWhere.expenseDate = { ...(expWhere.expenseDate || {}), [Op.gte]: new Date(`${startDate}T00:00:00.000Z`) };
-    if (endDate) expWhere.expenseDate = { ...(expWhere.expenseDate || {}), [Op.lte]: new Date(`${endDate}T23:59:59.999Z`) };
+    if (startDate) expWhere.expenseDate = { ...(expWhere.expenseDate || {}), [Op.gte]: startOfDayInTz(startDate, tz) };
+    if (endDate) expWhere.expenseDate = { ...(expWhere.expenseDate || {}), [Op.lte]: endOfDayInTz(endDate, tz) };
 
     const dateTruncMap = { daily: 'day', weekly: 'week', monthly: 'month', yearly: 'year' };
     const trunc = dateTruncMap[groupBy] || 'month';
@@ -425,12 +432,13 @@ async function getCashFlowReport(req, res, next) {
   try {
     const { tenantId, isSuperAdmin } = req.user;
     const { startDate, endDate, groupBy = 'monthly' } = req.query;
+    const tz = getTenantTimezone(req);
 
     const dateTruncMap = { daily: 'day', weekly: 'week', monthly: 'month', yearly: 'year' };
     const trunc = dateTruncMap[groupBy] || 'month';
 
-    const dateStart = startDate ? new Date(`${startDate}T00:00:00.000Z`) : null;
-    const dateEnd   = endDate   ? new Date(`${endDate}T23:59:59.999Z`)   : null;
+    const dateStart = startDate ? startOfDayInTz(startDate, tz) : null;
+    const dateEnd   = endDate   ? endOfDayInTz(endDate, tz)     : null;
 
     const tenantWhere = !isSuperAdmin ? { tenantId } : {};
 
@@ -763,8 +771,9 @@ async function getShareholderReport(req, res, next) {
       }));
     }
 
-    const dateStart = new Date(`${startDate}T00:00:00.000Z`);
-    const dateEnd   = new Date(`${endDate}T23:59:59.999Z`);
+    const tz = getTenantTimezone(req);
+    const dateStart = startOfDayInTz(startDate, tz);
+    const dateEnd   = endOfDayInTz(endDate, tz);
     const tenantFilter = !isSuperAdmin ? { tenantId } : {};
 
     const txWhere = {
