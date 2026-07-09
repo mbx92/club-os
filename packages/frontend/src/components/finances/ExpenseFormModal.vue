@@ -208,8 +208,19 @@
           </div>
         </div>
 
-        <!-- Bank Name + Payment Notes -->
+        <!-- Bank Name + Payment Notes + Vault Account -->
         <div v-if="formData.paymentOption" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div v-if="formData.paymentOption === 'vault_cash'" class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Vault Account <span class="text-error">*</span></span>
+            </label>
+            <select v-model="formData.vaultAccountId" class="select select-bordered w-full">
+              <option value="">Pilih vault account</option>
+              <option v-for="account in vaultAccounts" :key="account.id" :value="account.id">
+                {{ account.name }} — {{ formatCurrency(account.balance) }}
+              </option>
+            </select>
+          </div>
           <div v-if="formData.paymentOption === 'bank_transfer'" class="form-control">
             <label class="label">
               <span class="label-text font-medium">Nama Bank</span>
@@ -364,7 +375,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import CurrencyInput from '@/components/shared/CurrencyInput.vue'
-import { useSuppliers } from '@/composables/finances'
+import { useSuppliers, useVault } from '@/composables/finances'
 
 const props = defineProps({
   expense: {
@@ -396,6 +407,7 @@ const errors = ref({})
 const tagsInput = ref('')
 
 const { suppliers: supplierList, fetchSuppliers } = useSuppliers()
+const { vaultAccounts, fetchVaultAccounts } = useVault()
 const vendorMode = ref('select') // 'select' | 'manual'
 
 const PAYMENT_OPTION_MAP = {
@@ -444,6 +456,7 @@ const formData = ref({
   paymentOption: '',
   bankName: '',
   paymentNotes: '',
+  vaultAccountId: '',
   status: 'draft',
   notes: '',
   isRecurring: false,
@@ -504,7 +517,11 @@ const validate = () => {
   if (formData.value.isRecurring && !formData.value.recurringFrequency) {
     errors.value.recurringFrequency = 'Frequency is required for recurring expenses'
   }
-  
+
+  if (formData.value.paymentOption === 'vault_cash' && !formData.value.vaultAccountId) {
+    errors.value.vaultAccountId = 'Pilih vault account sumber dana'
+  }
+
   return Object.keys(errors.value).length === 0
 }
 
@@ -566,12 +583,14 @@ const onSupplierSelect = (event) => {
 const open = (expense = null) => {
   // Fetch active suppliers for dropdown
   fetchSuppliers({ isActive: 'true', limit: 200, sortBy: 'name', sortOrder: 'ASC' })
+  fetchVaultAccounts({ isActive: 'true' })
 
   if (expense) {
     formData.value = {
       ...expense,
       supplierId: expense.supplierId || '',
       paymentOption: resolvePaymentOption(expense),
+      vaultAccountId: expense.vaultAccountId || '',
       expenseDate: expense.expenseDate?.split('T')[0] || '',
       dueDate: expense.dueDate?.split('T')[0] || '',
       recurringEndDate: expense.recurringEndDate?.split('T')[0] || '',
@@ -596,6 +615,7 @@ const open = (expense = null) => {
       paymentOption: resolvePaymentOption(),
       bankName: '',
       paymentNotes: '',
+      vaultAccountId: '',
       status: 'draft',
       notes: '',
       isRecurring: false,

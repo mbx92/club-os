@@ -7,7 +7,7 @@ meta:
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useExpenses, usePettyCash } from '@/composables/finances'
+import { useExpenses, usePettyCash, useVault } from '@/composables/finances'
 import { useAuthStore } from '@/stores/auth'
 import { useNotification } from '@/composables/core/useNotification'
 import DialogConfirm from '@/components/shared/DialogConfirm.vue'
@@ -90,6 +90,7 @@ const resolvePaymentOption = (currentExpense = null) => {
 }
 
 const { fetchFunds: fetchPettyCashFunds } = usePettyCash()
+const { vaultAccounts, fetchVaultAccounts } = useVault()
 
 const id = route.params.id
 onMounted(() => fetchExpense(id))
@@ -97,7 +98,7 @@ onMounted(() => fetchExpense(id))
 const confirmDialog    = ref(null)
 const expenseFormModal = ref(null)
 const showPayModal = ref(false)
-const payForm = ref({ paymentOption: 'vault_cash', bankName: '', paymentNotes: '', paidDate: new Date().toISOString().split('T')[0], pettyCashId: '' })
+const payForm = ref({ paymentOption: 'vault_cash', bankName: '', paymentNotes: '', paidDate: new Date().toISOString().split('T')[0], pettyCashId: '', vaultAccountId: '' })
 const pettyCashFunds = ref([])
 const pettyCashFundsLoading = ref(false)
 
@@ -155,9 +156,12 @@ const handleMarkAsPaid = () => {
     paymentNotes: '',
     paidDate: new Date().toISOString().split('T')[0],
     pettyCashId: '',
+    vaultAccountId: exp.value?.vaultAccountId || '',
   }
   if (payForm.value.paymentOption === 'petty_cash') {
     loadPettyCashFunds()
+  } else if (payForm.value.paymentOption === 'vault_cash') {
+    fetchVaultAccounts({ isActive: 'true' })
   }
   showPayModal.value = true
 }
@@ -185,6 +189,10 @@ const submitMarkAsPaid = async () => {
     return
   }
 
+  if (payForm.value.paymentOption === 'vault_cash' && !payForm.value.vaultAccountId) {
+    return
+  }
+
   const paymentConfig = PAYMENT_OPTION_MAP[payForm.value.paymentOption] || PAYMENT_OPTION_MAP.vault_cash
   const payload = {
     paymentMethod: paymentConfig.paymentMethod,
@@ -195,6 +203,9 @@ const submitMarkAsPaid = async () => {
   }
   if (payForm.value.paymentOption === 'petty_cash') {
     payload.pettyCashId = payForm.value.pettyCashId
+  }
+  if (payForm.value.paymentOption === 'vault_cash' && payForm.value.vaultAccountId) {
+    payload.vaultAccountId = payForm.value.vaultAccountId
   }
   if (payForm.value.paymentOption === 'bank_transfer' && payForm.value.bankName) {
     payload.bankName = payForm.value.bankName
@@ -478,6 +489,18 @@ const handleReopen = async () => {
               <option value="">-- Pilih Dana --</option>
               <option v-for="fund in pettyCashFunds" :key="fund.id" :value="fund.id">
                 {{ fund.name }} — Saldo: {{ fmt(fund.balance) }}
+              </option>
+            </select>
+          </div>
+          <!-- Vault Account (only for vault_cash) -->
+          <div v-if="payForm.paymentOption === 'vault_cash'" class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Vault Account <span class="text-error">*</span></span>
+            </label>
+            <select v-model="payForm.vaultAccountId" class="select select-bordered w-full">
+              <option value="">-- Pilih Vault Account --</option>
+              <option v-for="account in vaultAccounts" :key="account.id" :value="account.id">
+                {{ account.name }} — Saldo: {{ fmt(account.balance) }}
               </option>
             </select>
           </div>
