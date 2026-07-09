@@ -873,6 +873,14 @@ const ROUTE_TO_SUBJECT_MAP = {
   // Service Reports
   '/reports/services/performance': { subject: 'Transaction', actions: ['read'] },
   '/reports/services/active': { subject: 'ActiveService', actions: ['read'] },
+  // Vault / Brankas
+  "/finance/vault/accounts": { subject: "Finance", actions: ["read", "create", "update", "delete"] },
+  "/finance/vault/summary": { subject: "Finance", actions: ["read"] },
+  "/finance/vault/collectibles": { subject: "Finance", actions: ["read"] },
+  "/finance/vault/mutations": { subject: "Finance", actions: ["read"] },
+  "/finance/vault/collect": { subject: "Finance", actions: ["create"] },
+  "/finance/vault/transfer": { subject: "Finance", actions: ["create"] },
+  "/finance/vault/adjust": { subject: "Finance", actions: ["update"] },
   
   // Finance Reports (Reports Module)
   '/reports/finance/revenue': { subject: 'Transaction', actions: ['read'] },

@@ -34,9 +34,11 @@ const authStore = useAuthStore()
 
 const {
   mutations,
+  vaultAccounts,
   mutationsLoading,
   mutationPagination,
   fetchMutations,
+  fetchVaultAccounts,
 } = useVault()
 
 const { locations, fetchLocations } = useRestaurantLocations()
@@ -50,6 +52,8 @@ const filters = ref({
   mutationType: route.query.mutationType || '',
   sourceAccount: route.query.sourceAccount || '',
   destinationAccount: route.query.destinationAccount || '',
+  sourceVaultAccountId: route.query.sourceVaultAccountId || '',
+  destinationVaultAccountId: route.query.destinationVaultAccountId || '',
   status: route.query.status || 'posted',
   locationId: route.query.locationId || '',
   search: route.query.search || '',
@@ -149,6 +153,8 @@ const syncQuery = async () => {
     mutationType: filters.value.mutationType || undefined,
     sourceAccount: filters.value.sourceAccount || undefined,
     destinationAccount: filters.value.destinationAccount || undefined,
+    sourceVaultAccountId: filters.value.sourceVaultAccountId || undefined,
+    destinationVaultAccountId: filters.value.destinationVaultAccountId || undefined,
     status: filters.value.status || undefined,
     locationId: filters.value.locationId || undefined,
     search: filters.value.search || undefined,
@@ -168,6 +174,8 @@ const loadMutations = async () => {
     mutationType: filters.value.mutationType,
     sourceAccount: filters.value.sourceAccount,
     destinationAccount: filters.value.destinationAccount,
+    sourceVaultAccountId: filters.value.sourceVaultAccountId,
+    destinationVaultAccountId: filters.value.destinationVaultAccountId,
     status: filters.value.status,
     locationId: filters.value.locationId,
     search: filters.value.search,
@@ -193,6 +201,8 @@ const resetFilters = async () => {
     mutationType: '',
     sourceAccount: '',
     destinationAccount: '',
+    sourceVaultAccountId: '',
+    destinationVaultAccountId: '',
     status: 'posted',
     locationId: '',
     search: '',
@@ -218,6 +228,7 @@ onMounted(async () => {
 
   await Promise.all([
     fetchLocations({ isActive: true, limit: 200 }).catch(() => null),
+    fetchVaultAccounts().catch(() => null),
     loadMutations(),
   ])
 })
@@ -323,6 +334,24 @@ onMounted(async () => {
               </option>
             </select>
           </div>
+          <div class="form-control">
+            <label class="label"><span class="label-text font-medium">Akun Sumber</span></label>
+            <select v-model="filters.sourceVaultAccountId" class="select select-bordered w-full">
+              <option value="">Semua Akun</option>
+              <option v-for="account in vaultAccounts" :key="account.id" :value="account.id">
+                {{ account.name }}
+              </option>
+            </select>
+          </div>
+          <div class="form-control">
+            <label class="label"><span class="label-text font-medium">Akun Tujuan</span></label>
+            <select v-model="filters.destinationVaultAccountId" class="select select-bordered w-full">
+              <option value="">Semua Akun</option>
+              <option v-for="account in vaultAccounts" :key="account.id" :value="account.id">
+                {{ account.name }}
+              </option>
+            </select>
+          </div>
         </div>
 
         <div class="flex justify-end">
@@ -366,8 +395,8 @@ onMounted(async () => {
                 <td><div class="font-medium">{{ mutation.mutationNumber || '-' }}</div></td>
                 <td>{{ formatDate(mutation.mutationDate) }}</td>
                 <td>{{ mutationTypeLabel(mutation.mutationType) }}</td>
-                <td>{{ accountLabel(mutation.sourceAccount) }}</td>
-                <td>{{ accountLabel(mutation.destinationAccount) }}</td>
+                <td>{{ mutation.sourceVaultAccount?.name || accountLabel(mutation.sourceAccount) }}</td>
+                <td>{{ mutation.destinationVaultAccount?.name || accountLabel(mutation.destinationAccount) }}</td>
                 <td class="font-semibold">{{ formatCurrency(mutation.amount) }}</td>
                 <td>
                   <router-link

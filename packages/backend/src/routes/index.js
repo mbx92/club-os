@@ -51,7 +51,8 @@ const {
   analyticsRoutes,
   pettyCashRoutes,
   supplierRoutes,
-  shareholderRoutes
+  shareholderRoutes,
+  vaultRoutes
 } = require('./finance');
 
 // ==========================================
@@ -106,6 +107,7 @@ router.use('/finance/analytics', analyticsRoutes);
 router.use('/finance/petty-cash', pettyCashRoutes);
 router.use('/finance/suppliers', supplierRoutes);
 router.use('/finance/shareholders', shareholderRoutes);
+router.use('/finance/vault', vaultRoutes);
 
 // Gym module (feature-gated)
 // RBAC-09: legacy '/modules/pos' and '/modules/restaurant' placeholder routes

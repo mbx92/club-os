@@ -46,6 +46,7 @@ const { showWarning } = useNotification()
 
 const {
   summary,
+  vaultAccounts,
   pendingCollectionsPreview,
   collectibles,
   summaryLoading,
@@ -55,6 +56,7 @@ const {
   fetchSummary,
   fetchCollectibles,
   collectToVault,
+  fetchVaultAccounts,
 } = useVault()
 
 const { locations, fetchLocations } = useRestaurantLocations()
@@ -74,6 +76,7 @@ const filters = ref({
 const collectForm = ref({
   mutationDate: formatLocalDate(new Date()),
   notes: '',
+  vaultAccountId: '',
 })
 
 const selectedCollections = ref({})
@@ -312,6 +315,7 @@ const submitCollect = async () => {
   const payload = {
     mutationDate: collectForm.value.mutationDate,
     notes: collectForm.value.notes || undefined,
+    vaultAccountId: collectForm.value.vaultAccountId || undefined,
     collections: selectedSessionRows.value.map(session => {
       const selected = selectedCollections.value[session.id]
       const item = {
@@ -328,6 +332,7 @@ const submitCollect = async () => {
 
   selectedCollections.value = {}
   collectForm.value.notes = ''
+  collectForm.value.vaultAccountId = ''
   await loadVaultData()
 }
 
@@ -339,6 +344,7 @@ onMounted(async () => {
 
   await Promise.all([
     fetchLocations({ isActive: true, limit: 200 }).catch(() => null),
+    fetchVaultAccounts().catch(() => null),
     loadVaultData(),
   ])
 })
@@ -456,6 +462,16 @@ onMounted(async () => {
               <div class="form-control">
                 <label class="label"><span class="label-text font-medium">Catatan Global</span></label>
                 <input v-model="collectForm.notes" type="text" class="input input-bordered w-full" placeholder="Contoh: Pengambilan kas sore oleh admin" />
+              </div>
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text font-medium">Tujuan Vault Account</span></label>
+              <select v-model="collectForm.vaultAccountId" class="select select-bordered w-full">
+                <option value="">Default (Kas)</option>
+                <option v-for="account in vaultAccounts" :key="account.id" :value="account.id">
+                  {{ account.name }} ({{ account.accountType }}) - {{ formatCurrency(account.balance) }}
+                </option>
+              </select>
               </div>
             </div>
           </div>

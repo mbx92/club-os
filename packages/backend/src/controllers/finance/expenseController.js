@@ -8,7 +8,7 @@
  * @module controllers/finance/expenseController
  */
 
-const { Expense, ExpenseCategory, User, Location, PettyCash, PettyCashTransaction, sequelize } = require('../../models');
+const { Expense, ExpenseCategory, User, Location, PettyCash, PettyCashTransaction, VaultAccount, CashMutation, sequelize } = require('../../models');
 const { Op, Transaction: SequelizeTransaction } = require('sequelize');
 const logger = require('../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../utils/requestHelper');
@@ -43,6 +43,8 @@ async function createExpense(req, res, next) {
     tags,
     attachments,
     pettyCashId
+    fundSource,
+    vaultAccountId,
   } = req.body;
 
   // Validasi: jika langsung paid dengan petty_cash, pettyCashId wajib
@@ -51,6 +53,15 @@ async function createExpense(req, res, next) {
       success: false,
       code: 'VALIDATION_ERROR',
       message: 'pettyCashId wajib disertakan saat paymentMethod adalah petty_cash'
+    });
+  }
+
+  // Validasi: vault account wajib jika fundSource = vault
+  if (status === 'paid' && fundSource === 'vault' && !vaultAccountId) {
+    return res.status(400).json({
+      success: false,
+      code: 'VALIDATION_ERROR',
+      message: 'vaultAccountId wajib disertakan saat fundSource adalah vault'
     });
   }
 
@@ -107,6 +118,8 @@ async function createExpense(req, res, next) {
           notes: notes || null,
           tags,
           attachments,
+          fundSource: fundSource || null,
+          vaultAccountId: vaultAccountId || null,
           createdBy: userId
         }, { transaction });
 
@@ -162,8 +175,51 @@ async function createExpense(req, res, next) {
           }, { transaction });
         }
 
+        // Jika langsung paid dengan vault, deduct balance vault
+        let vaultMutation = null;
+        if (status === 'paid' && fundSource === 'vault' && vaultAccountId) {
+          const vaultAccount = await VaultAccount.findOne({
+            where: { id: vaultAccountId, tenantId, isActive: true },
+            lock: transaction.LOCK.UPDATE,
+            transaction
+          });
+
+          if (!vaultAccount) {
+            await transaction.rollback();
+            return { vaultAccountNotFound: true };
+          }
+
+          const expenseAmount = parseFloat(amount) + parseFloat(taxAmount);
+          const balanceBefore = parseFloat(vaultAccount.balance || 0);
+
+          if (balanceBefore < expenseAmount) {
+            await transaction.rollback();
+            return { vaultInsufficientBalance: true, currentBalance: balanceBefore, needed: expenseAmount, vaultName: vaultAccount.name };
+          }
+
+          const balanceAfter = balanceBefore - expenseAmount;
+          await vaultAccount.update({ balance: balanceAfter }, { transaction });
+
+          vaultMutation = await CashMutation.create({
+            tenantId,
+            sourceVaultAccountId: vaultAccount.id,
+            sourceAccount: vaultAccount.name,
+            amount: expenseAmount,
+            mutationType: 'vault_expense',
+            referenceType: 'Expense',
+            referenceId: expense.id,
+            referenceNumber: expenseNumber,
+            status: 'posted',
+            mutationDate: expenseDate
+              ? new Date(expenseDate).toISOString().split('T')[0]
+              : new Date().toISOString().split('T')[0],
+            notes: 'Pembayaran expense: ' + title,
+            createdBy: userId,
+          }, { transaction });
+        }
+
         await transaction.commit();
-        return { expense, expenseNumber, pctTransaction };
+        return { expense, expenseNumber, pctTransaction, vaultMutation };
       } catch (err) {
         await transaction.rollback();
         throw err;
@@ -194,7 +250,23 @@ async function createExpense(req, res, next) {
       });
     }
 
-    const { expense, expenseNumber, pctTransaction } = result;
+    if (result.vaultAccountNotFound) {
+      return res.status(404).json({
+        success: false,
+        code: 'VAULT_ACCOUNT_NOT_FOUND',
+        message: 'Akun vault tidak ditemukan atau tidak aktif'
+      });
+    }
+
+    if (result.vaultInsufficientBalance) {
+      return res.status(400).json({
+        success: false,
+        code: 'VAULT_INSUFFICIENT_BALANCE',
+        message: `Saldo vault ${result.vaultName || ''} tidak cukup. Saldo: ${result.currentBalance}, dibutuhkan: ${result.needed}`
+      });
+    }
+
+    const { expense, expenseNumber, pctTransaction, vaultMutation } = result;
 
     // Fetch with associations
     const createdExpense = await Expense.findByPk(expense.id, {
@@ -213,6 +285,12 @@ async function createExpense(req, res, next) {
           transactionNumber: pctTransaction.transactionNumber,
           balanceBefore: pctTransaction.balanceBefore,
           balanceAfter: pctTransaction.balanceAfter
+        }
+      } : {}),
+      ...(vaultMutation ? {
+        vault: {
+          vaultAccountId: vaultMutation.sourceVaultAccountId,
+          amount: vaultMutation.amount,
         }
       } : {})
     });
@@ -620,7 +698,7 @@ async function markExpenseAsPaid(req, res, next) {
   try {
     const { tenantId, isSuperAdmin, id: userId } = req.user;
     const { id } = req.params;
-    const { paymentMethod, bankName, paymentNotes, paidDate = new Date(), pettyCashId } = req.body;
+    const { paymentMethod, fundSource, bankName, paymentNotes, paidDate = new Date(), pettyCashId, vaultAccountId } = req.body;
 
     // Validasi: petty_cash harus menyertakan pettyCashId
     if (paymentMethod === 'petty_cash' && !pettyCashId) {
@@ -629,6 +707,16 @@ async function markExpenseAsPaid(req, res, next) {
         success: false,
         code: 'VALIDATION_ERROR',
         message: 'pettyCashId wajib disertakan saat paymentMethod adalah petty_cash'
+      });
+    }
+
+    // Validasi: vault account wajib jika fundSource = vault
+    if (fundSource === 'vault' && !vaultAccountId) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        code: 'VALIDATION_ERROR',
+        message: 'vaultAccountId wajib disertakan saat fundSource adalah vault'
       });
     }
 
@@ -746,6 +834,12 @@ async function markExpenseAsPaid(req, res, next) {
           transactionNumber: pctTransaction.transactionNumber,
           balanceBefore: pctTransaction.balanceBefore,
           balanceAfter: pctTransaction.balanceAfter
+        }
+      } : {}),
+      ...(vaultMutation ? {
+        vault: {
+          vaultAccountId: vaultMutation.sourceVaultAccountId,
+          amount: vaultMutation.amount,
         }
       } : {})
     });

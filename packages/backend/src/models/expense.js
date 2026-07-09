@@ -5,42 +5,35 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Expense extends Model {
     static associate(models) {
-      // An expense belongs to a tenant
       Expense.belongsTo(models.Tenant, {
         foreignKey: 'tenantId',
         as: 'tenant'
       });
-
-      // An expense belongs to a category
       Expense.belongsTo(models.ExpenseCategory, {
         foreignKey: 'categoryId',
         as: 'category'
       });
-
-      // An expense may belong to a location
       Expense.belongsTo(models.Location, {
         foreignKey: 'locationId',
         as: 'location'
       });
-
-      // An expense may belong to a supplier
       if (models.Supplier) {
         Expense.belongsTo(models.Supplier, {
           foreignKey: 'supplierId',
           as: 'supplier'
         });
       }
-
-      // An expense is created by a user
       Expense.belongsTo(models.User, {
         foreignKey: 'createdBy',
         as: 'creator'
       });
-
-      // An expense may be approved by a user
       Expense.belongsTo(models.User, {
         foreignKey: 'approvedBy',
         as: 'approver'
+      });
+      Expense.belongsTo(models.VaultAccount, {
+        foreignKey: 'vaultAccountId',
+        as: 'vaultAccount'
       });
     }
   }
@@ -54,35 +47,23 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: {
-        model: 'Tenants',
-        key: 'id'
-      }
+      references: { model: 'Tenants', key: 'id' }
     },
     locationId: {
       type: DataTypes.UUID,
       allowNull: true,
-      references: {
-        model: 'Locations',
-        key: 'id'
-      }
+      references: { model: 'Locations', key: 'id' }
     },
     supplierId: {
       type: DataTypes.UUID,
       allowNull: true,
-      references: {
-        model: 'Suppliers',
-        key: 'id'
-      },
+      references: { model: 'Suppliers', key: 'id' },
       comment: 'Optional link to a supplier/vendor record'
     },
     categoryId: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: {
-        model: 'ExpenseCategories',
-        key: 'id'
-      }
+      references: { model: 'ExpenseCategories', key: 'id' }
     },
     expenseNumber: {
       type: DataTypes.STRING,
@@ -92,126 +73,110 @@ module.exports = (sequelize, DataTypes) => {
     },
     title: {
       type: DataTypes.STRING,
-      allowNull: false,
-      comment: 'Expense title/description'
+      allowNull: false
     },
     description: {
       type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'Detailed description of expense'
+      allowNull: true
     },
     amount: {
       type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
-      defaultValue: 0,
-      comment: 'Expense amount'
+      defaultValue: 0
     },
     taxAmount: {
       type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
-      defaultValue: 0,
-      comment: 'Tax amount if applicable'
+      defaultValue: 0
     },
     totalAmount: {
       type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
-      defaultValue: 0,
-      comment: 'Total amount (amount + tax)'
+      defaultValue: 0
     },
     expenseDate: {
       type: DataTypes.DATE,
-      allowNull: false,
-      comment: 'Date of expense occurrence'
+      allowNull: false
     },
     dueDate: {
       type: DataTypes.DATE,
-      allowNull: true,
-      comment: 'Payment due date (for payables)'
+      allowNull: true
     },
     paidDate: {
       type: DataTypes.DATE,
-      allowNull: true,
-      comment: 'Actual payment date'
+      allowNull: true
     },
     paymentMethod: {
       type: DataTypes.STRING,
+      allowNull: true
+    },
+    fundSource: {
+      type: DataTypes.STRING(30),
       allowNull: true,
-      comment: 'Payment method used (cash, bank_transfer, transfer, credit_card, debit_card, check, other)'
+      comment: 'Source of funds: cash_drawer, vault, bank, petty_cash'
+    },
+    vaultAccountId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      comment: 'Vault account used when fundSource = vault'
     },
     bankName: {
       type: DataTypes.STRING,
-      allowNull: true,
-      comment: 'Bank name for bank_transfer payment (e.g. BCA, Mandiri, BRI, BNI)'
+      allowNull: true
     },
     paymentNotes: {
       type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'Payment-specific notes (e.g. card holder, last 4 digits, bank branch)'
+      allowNull: true
     },
     referenceNumber: {
       type: DataTypes.STRING,
-      allowNull: true,
-      comment: 'Reference/invoice number from vendor'
+      allowNull: true
     },
     vendor: {
       type: DataTypes.STRING,
-      allowNull: true,
-      comment: 'Vendor/supplier name'
+      allowNull: true
     },
     status: {
       type: DataTypes.ENUM('draft', 'pending', 'approved', 'paid', 'cancelled'),
       allowNull: false,
-      defaultValue: 'draft',
-      comment: 'Expense status'
+      defaultValue: 'draft'
     },
     isRecurring: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
-      allowNull: false,
-      comment: 'Whether this is a recurring expense'
+      allowNull: false
     },
     recurringFrequency: {
       type: DataTypes.ENUM('daily', 'weekly', 'monthly', 'quarterly', 'yearly'),
-      allowNull: true,
-      comment: 'Frequency if recurring'
+      allowNull: true
     },
     recurringEndDate: {
       type: DataTypes.DATE,
-      allowNull: true,
-      comment: 'End date for recurring expense'
+      allowNull: true
     },
     attachments: {
       type: DataTypes.JSONB,
       allowNull: true,
-      defaultValue: [],
-      comment: 'Array of attachment file paths'
+      defaultValue: []
     },
     notes: {
       type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'Additional notes'
+      allowNull: true
     },
     tags: {
       type: DataTypes.ARRAY(DataTypes.STRING),
       allowNull: true,
-      defaultValue: [],
-      comment: 'Tags for categorization'
+      defaultValue: []
     },
     createdBy: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: {
-        model: 'Users',
-        key: 'id'
-      }
+      references: { model: 'Users', key: 'id' }
     },
     approvedBy: {
       type: DataTypes.UUID,
       allowNull: true,
-      references: {
-        model: 'Users',
-        key: 'id'
-      }
+      references: { model: 'Users', key: 'id' }
     },
     approvedAt: {
       type: DataTypes.DATE,
@@ -220,8 +185,7 @@ module.exports = (sequelize, DataTypes) => {
     version: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: 0,
-      comment: 'Version number for optimistic locking'
+      defaultValue: 0
     }
   }, {
     sequelize,
@@ -230,42 +194,23 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     paranoid: true,
     indexes: [
-      {
-        fields: ['tenantId']
-      },
-      {
-        fields: ['tenantId', 'expenseNumber'],
-        unique: true
-      },
-      {
-        fields: ['categoryId']
-      },
-      {
-        fields: ['locationId']
-      },
-      {
-        fields: ['status']
-      },
-      {
-        fields: ['expenseDate']
-      },
-      {
-        fields: ['createdBy']
-      },
-      {
-        fields: ['tenantId', 'expenseDate']
-      },
-      {
-        fields: ['tenantId', 'status', 'expenseDate']
-      }
+      { fields: ['tenantId'] },
+      { fields: ['tenantId', 'expenseNumber'], unique: true },
+      { fields: ['categoryId'] },
+      { fields: ['locationId'] },
+      { fields: ['status'] },
+      { fields: ['expenseDate'] },
+      { fields: ['createdBy'] },
+      { fields: ['tenantId', 'expenseDate'] },
+      { fields: ['tenantId', 'status', 'expenseDate'] },
+      { fields: ['fundSource'] },
+      { fields: ['vaultAccountId'] }
     ],
     hooks: {
       beforeValidate: (expense) => {
-        // Calculate total amount
         expense.totalAmount = parseFloat(expense.amount || 0) + parseFloat(expense.taxAmount || 0);
       },
       beforeUpdate: (expense) => {
-        // Increment version for optimistic locking
         expense.version += 1;
       }
     }

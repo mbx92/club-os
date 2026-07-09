@@ -17,6 +17,7 @@ export function useVault() {
   const { showSuccess, handleError } = useNotification()
 
   const summary = ref(null)
+  const vaultAccounts = ref([])
   const pendingCollectionsPreview = ref([])
   const collectibles = ref({ sessions: [], daily: [], pagination: defaultPagination() })
   const mutations = ref([])
@@ -24,6 +25,7 @@ export function useVault() {
   const summaryLoading = ref(false)
   const collectiblesLoading = ref(false)
   const mutationsLoading = ref(false)
+  const accountsLoading = ref(false)
   const actionLoading = ref(false)
 
   const mutationPagination = ref(defaultPagination())
@@ -38,6 +40,67 @@ export function useVault() {
     return params.toString()
   }
 
+  // ── Vault Account CRUD ────────────────────────────────────────────────────
+
+  const fetchVaultAccounts = async (filters = {}) => {
+    accountsLoading.value = true
+    try {
+      const queryString = buildQueryString(filters)
+      const response = await api.get(`/finance/vault/accounts${queryString ? `?${queryString}` : ''}`)
+      const payload = resolvePayload(response) || []
+      vaultAccounts.value = Array.isArray(payload) ? payload : []
+      return vaultAccounts.value
+    } catch (error) {
+      handleError(error, 'Gagal memuat vault accounts')
+      throw error
+    } finally {
+      accountsLoading.value = false
+    }
+  }
+
+  const createVaultAccount = async (data) => {
+    actionLoading.value = true
+    try {
+      const response = await api.post('/finance/vault/accounts', data)
+      showSuccess('Vault account berhasil dibuat')
+      return resolvePayload(response)
+    } catch (error) {
+      handleError(error, 'Gagal membuat vault account')
+      throw error
+    } finally {
+      actionLoading.value = false
+    }
+  }
+
+  const updateVaultAccount = async (id, data) => {
+    actionLoading.value = true
+    try {
+      const response = await api.put(`/finance/vault/accounts/${id}`, data)
+      showSuccess('Vault account berhasil diperbarui')
+      return resolvePayload(response)
+    } catch (error) {
+      handleError(error, 'Gagal memperbarui vault account')
+      throw error
+    } finally {
+      actionLoading.value = false
+    }
+  }
+
+  const deleteVaultAccount = async (id) => {
+    actionLoading.value = true
+    try {
+      await api.delete(`/finance/vault/accounts/${id}`)
+      showSuccess('Vault account berhasil dihapus')
+    } catch (error) {
+      handleError(error, 'Gagal menghapus vault account')
+      throw error
+    } finally {
+      actionLoading.value = false
+    }
+  }
+
+  // ── Summary & Collectibles ────────────────────────────────────────────────
+
   const fetchSummary = async (filters = {}) => {
     summaryLoading.value = true
     try {
@@ -47,6 +110,9 @@ export function useVault() {
 
       summary.value = payload.summary || payload
       pendingCollectionsPreview.value = payload.pendingCollectionsPreview || []
+      if (summary.value?.accounts) {
+        vaultAccounts.value = summary.value.accounts
+      }
 
       return payload
     } catch (error) {
@@ -121,20 +187,65 @@ export function useVault() {
     }
   }
 
+  // ── Transfer & Adjustment ─────────────────────────────────────────────────
+
+  const transferBetweenAccounts = async (payload) => {
+    actionLoading.value = true
+    try {
+      const response = await api.post('/finance/vault/transfer', payload)
+      showSuccess('Transfer vault berhasil')
+      return resolvePayload(response)
+    } catch (error) {
+      handleError(error, 'Gagal transfer vault')
+      throw error
+    } finally {
+      actionLoading.value = false
+    }
+  }
+
+  const adjustVault = async (payload) => {
+    actionLoading.value = true
+    try {
+      const response = await api.post('/finance/vault/adjust', payload)
+      showSuccess('Penyesuaian vault berhasil')
+      return resolvePayload(response)
+    } catch (error) {
+      handleError(error, 'Gagal penyesuaian vault')
+      throw error
+    } finally {
+      actionLoading.value = false
+    }
+  }
+
   return {
+    // State
     summary,
+    vaultAccounts,
     pendingCollectionsPreview,
     collectibles,
     mutations,
     summaryLoading,
     collectiblesLoading,
     mutationsLoading,
+    accountsLoading,
     actionLoading,
     mutationPagination,
     collectiblePagination,
+
+    // Vault Accounts
+    fetchVaultAccounts,
+    createVaultAccount,
+    updateVaultAccount,
+    deleteVaultAccount,
+
+    // Summary & Collectibles
     fetchSummary,
     fetchCollectibles,
     fetchMutations,
     collectToVault,
+
+    // Transfer & Adjustment
+    transferBetweenAccounts,
+    adjustVault,
   }
 }
