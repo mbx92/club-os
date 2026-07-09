@@ -810,14 +810,25 @@ const shiftStatusBadge = (status) =>
                   {{ formatCurrency(cashSummary.totalNonCash ?? 0) }}
                 </td>
               </tr>
-              <!-- Balance: Revenue = Cash + Non-Cash -->
+              <!-- Rounding (selisih pembulatan) -->
+              <tr v-if="(reportCashier?.H_rounding ?? 0) !== 0" class="bg-warning/5 hover">
+                <td class="pl-4">
+                  <span class="inline-block w-2 h-2 rounded-full bg-warning mr-2"></span>
+                  Pembulatan (Rounding)
+                </td>
+                <td class="text-right font-medium"
+                  :class="(reportCashier?.H_rounding ?? 0) > 0 ? 'text-success' : 'text-error'">
+                  {{ (reportCashier?.H_rounding ?? 0) >= 0 ? '+' : '' }}{{ formatCurrency(reportCashier?.H_rounding ?? 0) }}
+                </td>
+              </tr>
+              <!-- Balance: Revenue + Rounding = Cash + Non-Cash -->
               <tr class="bg-base-200/30">
                 <td class="text-xs text-base-content/60 pl-4">
                   <IconCircleCheck class="w-3 h-3 inline mr-1" />
-                  Total Revenue = Cash + Non-Cash
+                  Revenue + Rounding = Cash + Non-Cash
                 </td>
                 <td class="text-right font-bold">
-                  {{ formatCurrency(cashSummary.totalSales ?? 0) }}
+                  {{ formatCurrency((cashSummary.totalSales ?? 0) + (reportCashier?.H_rounding ?? 0)) }}
                 </td>
               </tr>
               <tr v-if="(reportCashier?.R_complimentTotal ?? 0) > 0" class="hover">
@@ -984,11 +995,22 @@ const shiftStatusBadge = (status) =>
                   {{ formatCurrency(cashSummary.totalNonCash ?? 0) }}
                 </td>
               </tr>
-              <!-- Balance check: Revenue = Cash + Non-Cash -->
+              <!-- Rounding detail -->
+              <tr v-if="(reportCashier?.H_rounding ?? 0) !== 0" class="hover">
+                <td class="pl-4">
+                  <span class="inline-block w-2 h-2 rounded-full bg-warning mr-2"></span>
+                  Pembulatan (Rounding)
+                </td>
+                <td class="text-right font-medium"
+                  :class="(reportCashier?.H_rounding ?? 0) > 0 ? 'text-success' : 'text-error'">
+                  {{ (reportCashier?.H_rounding ?? 0) >= 0 ? '+' : '' }}{{ formatCurrency(reportCashier?.H_rounding ?? 0) }}
+                </td>
+              </tr>
+              <!-- Balance check: Revenue + Rounding = Cash + Non-Cash -->
               <tr v-if="cashSummary" class="bg-success/5">
                 <td class="pl-4 text-xs text-base-content/60">
                   <IconCircleCheck class="w-3 h-3 inline text-success mr-1" />
-                  Total Revenue = Cash + Non-Cash
+                  Revenue + Rounding = Cash + Non-Cash
                 </td>
                 <td class="text-right font-medium">
                   {{ formatCurrency((cashSummary.cashSalesResto ?? 0) + (cashSummary.cashSalesGym ?? 0) + (cashSummary.totalNonCash ?? 0)) }}
