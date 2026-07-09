@@ -387,11 +387,15 @@ const currentDate = computed(() => dayjs().format('dddd, D MMMM YYYY'))
 // ─── Stat cards ───
 const statCards = computed(() => {
   const rev = summary.value.revenue?.today || {}
+  const revRounding = parseFloat(rev.rounding) || 0
+  const revSub = revRounding !== 0
+    ? `${rev.transactions || 0} transaksi · Rounding ${revRounding >= 0 ? '+' : ''}${formatCurrency(revRounding)}`
+    : `${rev.transactions || 0} transaksi`
   return [
     {
       label: "Today's Revenue",
       value: formatCurrency(rev.total),
-      sub: `${rev.transactions || 0} transaksi`,
+      sub: revSub,
       icon: IconCash,
       iconBg: 'bg-emerald-100 dark:bg-emerald-900/30',
       iconColor: 'text-emerald-600',

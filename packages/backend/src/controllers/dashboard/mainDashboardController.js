@@ -83,6 +83,7 @@ async function getMainDashboard(req, res, next) {
         [fn('SUM', col('tax')), 'tax'],
         [fn('SUM', col('voucherDiscount')), 'discount'],
         [fn('SUM', col('totalAmount')), 'total'],
+        [fn('SUM', col('roundingAmount')), 'rounding'],
         [fn('COUNT', col('id')), 'transactions']
       ],
       group: ['transactionType'],
@@ -127,6 +128,7 @@ async function getMainDashboard(req, res, next) {
     // Calculate totals
     const todayTotalRevenue = todayRevenueByModule.reduce((sum, m) => sum + parseFloat(m.total || 0), 0);
     const todayTotalTransactions = todayRevenueByModule.reduce((sum, m) => sum + parseInt(m.transactions || 0), 0);
+    const todayTotalRounding = todayRevenueByModule.reduce((sum, m) => sum + parseFloat(m.rounding || 0), 0);
 
     const revenueChange = yesterdayTotal > 0
       ? parseFloat((((todayTotalRevenue - yesterdayTotal) / yesterdayTotal) * 100).toFixed(1))
@@ -559,6 +561,7 @@ async function getMainDashboard(req, res, next) {
           revenue: {
             today: {
               total: parseFloat(todayTotalRevenue.toFixed(2)),
+              rounding: parseFloat(todayTotalRounding.toFixed(2)),
               transactions: todayTotalTransactions,
               change: revenueChange,
               byModule: todayRevenueByModule.map(m => ({
@@ -567,6 +570,7 @@ async function getMainDashboard(req, res, next) {
                 subtotal: parseFloat(m.subtotal || 0),
                 tax: parseFloat(m.tax || 0),
                 discount: parseFloat(m.discount || 0),
+                rounding: parseFloat(m.rounding || 0),
                 transactions: parseInt(m.transactions || 0)
               }))
             },
