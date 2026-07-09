@@ -9,7 +9,6 @@ import {
   IconAlertTriangle,
   IconX,
   IconRefresh,
-  IconPencil,
 } from '@tabler/icons-vue'
 import { BANK_OPTIONS, BANK_SELECTION_PAYMENT_METHODS } from '@/utils/paymentBanks'
 
@@ -463,29 +462,30 @@ onMounted(() => {
                   </span>
                   <span v-else class="italic text-base-content/40">Walk-in</span>
                 </td>
-                <td class="text-xs">{{ paymentMethods(tx) }}</td>
+                <td class="text-xs">
+                  <button
+                    v-if="canCancelGym(tx)"
+                    class="link link-hover text-xs"
+                    @click="openPaymentModal(tx)"
+                    title="Klik untuk ubah metode pembayaran"
+                  >
+                    {{ paymentMethods(tx) }}
+                  </button>
+                  <span v-else class="text-xs">{{ paymentMethods(tx) }}</span>
+                </td>
                 <td class="font-semibold text-sm">{{ formatCurrency(tx.totalAmount || tx.amount) }}</td>
                 <td>
                   <span class="badge badge-xs" :class="statusBadgeClass(tx.status)">{{ statusLabel(tx.status) }}</span>
                 </td>
                 <td class="text-right">
-                  <div v-if="canCancelGym(tx)" class="flex justify-end gap-1">
-                    <button
-                      class="btn btn-warning btn-xs btn-labeled"
-                      @click="openCancelModal(tx)"
-                    >
-                      <IconX class="w-3 h-3" />
-                      Batal
-                    </button>
-                    <button
-                      class="btn btn-ghost btn-xs btn-labeled"
-                      @click="openPaymentModal(tx)"
-                      title="Ubah metode pembayaran"
-                    >
-                      <IconPencil class="w-3 h-3" />
-                      Ubah
-                    </button>
-                  </div>
+                  <button
+                    v-if="canCancelGym(tx)"
+                    class="btn btn-warning btn-xs btn-square"
+                    @click="openCancelModal(tx)"
+                    title="Batalkan transaksi"
+                  >
+                    <IconX class="w-3.5 h-3.5" />
+                  </button>
                   <span v-else class="text-xs text-base-content/40">—</span>
                 </td>
               </tr>
@@ -502,29 +502,30 @@ onMounted(() => {
                   <span v-else class="italic text-base-content/40">Walk-in</span>
                 </td>
                 <td class="text-xs">{{ order.table?.tableNumber || '-' }}</td>
-                <td class="text-xs">{{ paymentMethods(order) }}</td>
+                <td class="text-xs">
+                  <button
+                    v-if="canCancelRestaurant(order)"
+                    class="link link-hover text-xs"
+                    @click="openPaymentModal(order)"
+                    title="Klik untuk ubah metode pembayaran"
+                  >
+                    {{ paymentMethods(order) }}
+                  </button>
+                  <span v-else class="text-xs">{{ paymentMethods(order) }}</span>
+                </td>
                 <td class="font-semibold text-sm">{{ formatCurrency(order.totalAmount) }}</td>
                 <td>
                   <span class="badge badge-xs" :class="statusBadgeClass(order.status)">{{ statusLabel(order.status) }}</span>
                 </td>
                 <td class="text-right">
-                  <div v-if="canCancelRestaurant(order)" class="flex justify-end gap-1">
-                    <button
-                      class="btn btn-warning btn-xs btn-labeled"
-                      @click="openCancelModal(order)"
-                    >
-                      <IconX class="w-3 h-3" />
-                      Batal
-                    </button>
-                    <button
-                      class="btn btn-ghost btn-xs btn-labeled"
-                      @click="openPaymentModal(order)"
-                      title="Ubah metode pembayaran"
-                    >
-                      <IconPencil class="w-3 h-3" />
-                      Ubah
-                    </button>
-                  </div>
+                  <button
+                    v-if="canCancelRestaurant(order)"
+                    class="btn btn-warning btn-xs btn-square"
+                    @click="openCancelModal(order)"
+                    title="Batalkan order"
+                  >
+                    <IconX class="w-3.5 h-3.5" />
+                  </button>
                   <span v-else class="text-xs text-base-content/40">—</span>
                 </td>
               </tr>
