@@ -18,6 +18,7 @@ const ConcurrencyUtils = require('../../../utils/concurrency');
 const voucherService = require('../../../services/voucherService');
 const transactionSettingsService = require('../../../services/transactionSettingsService');
 const receiptPrinterService = require('../../../services/receiptPrinterService');
+const { recordPaymentInflow } = require('../../../controllers/finance/vaultController');
 const logger = require('../../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../../utils/requestHelper');
 const { createError } = require('../../../utils/errorCodes');
@@ -421,6 +422,32 @@ exports.createTransaction = async (req, res) => {
       }, { transaction });
       
       transactionPayments.push(transactionPayment);
+    }
+
+    // Record vault inflow for non-cash payments
+    for (const payment of transactionPayments) {
+      await recordPaymentInflow({
+        tenantId,
+        locationId: newTransaction.locationId || null,
+        paymentMethod: payment.paymentMethod,
+        amount: payment.amount,
+        paymentDetails: payment.paymentDetails || {},
+        referenceType: 'transaction',
+        referenceId: newTransaction.id,
+        referenceNumber: newTransaction.transactionNumber,
+        createdBy: req.user.id,
+        dbTransaction: transaction,
+      }).catch(err => {
+        logger.logError('Failed to record vault payment_inflow', {
+          action: 'VAULT_PAYMENT_INFLOW_ERROR',
+          userId: req.user.id,
+          tenantId,
+          paymentMethod: payment.paymentMethod,
+          amount: payment.amount,
+          error: err.message,
+        });
+        // Don't fail the transaction if vault recording fails
+      });
     }
     
     // Record voucher usage using centralized service (single call, outside payment loop)

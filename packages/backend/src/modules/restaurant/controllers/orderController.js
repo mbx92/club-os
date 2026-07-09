@@ -31,6 +31,7 @@ const receiptPrinterService = require('../../../services/receiptPrinterService')
 const { normalizePaymentMethod } = require('../../../utils/paymentMethodNormalizer');
 const transactionSettingsService = require('../../../services/transactionSettingsService');
 const logger = require('../../../utils/logger');
+const { recordPaymentInflow } = require('../../../controllers/finance/vaultController');
 const { can } = require('../../../utils/rbac');
 const { hasFeature } = require('../../../middlewares/featureGateMiddleware');
 
@@ -798,6 +799,33 @@ const createOrder = async (req, res, next) => {
         }, { transaction: t });
       }
     }
+
+      // Record vault inflow for non-cash completed payments (takeaway/delivery)
+      if (paymentStatus === 'completed') {
+        for (const payment of payments) {
+          await recordPaymentInflow({
+            tenantId,
+            locationId: order.locationId || locationId || null,
+            paymentMethod: normalizePaymentMethod(payment.method || 'cash'),
+            amount: parseFloat(payment.amount || 0),
+            paymentDetails: payment.paymentDetails || {},
+            referenceType: 'order',
+            referenceId: order.id,
+            referenceNumber: order.transactionNumber,
+            createdBy: req.user.id,
+            dbTransaction: t,
+          }).catch(err => {
+            logger.logError('Failed to record vault payment_inflow (createOrder)', {
+              action: 'VAULT_PAYMENT_INFLOW_ERROR',
+              userId: req.user.id,
+              tenantId,
+              orderId: order.id,
+              paymentMethod: payment.method,
+              error: err.message,
+            });
+          });
+        }
+      }
 
     // Record voucher usage if voucher was applied
     if (voucherId) {
@@ -1788,6 +1816,31 @@ const completeOrder = async (req, res, next) => {
         }, { transaction: t });
       }
 
+      // Record vault inflow for non-cash payments
+      for (const payment of payments) {
+        await recordPaymentInflow({
+          tenantId,
+          locationId: order.locationId || null,
+          paymentMethod: normalizePaymentMethod(payment.method),
+          amount: parseFloat(payment.amount),
+          paymentDetails: payment.paymentDetails || {},
+          referenceType: 'order',
+          referenceId: order.id,
+          referenceNumber: order.transactionNumber,
+          createdBy: userId,
+          dbTransaction: t,
+        }).catch(err => {
+          logger.logError('Failed to record vault payment_inflow (completeOrder)', {
+            action: 'VAULT_PAYMENT_INFLOW_ERROR',
+            userId,
+            tenantId,
+            orderId: order.id,
+            paymentMethod: payment.method,
+            error: err.message,
+          });
+        });
+      }
+
       // Calculate change amount
       const changeAmount = Math.max(0, totalPaid - totalAmount);
 
@@ -2568,6 +2621,31 @@ const createDirectOrder = async (req, res, next) => {
         notes: payment.reference || null,
         createdBy: userId
       }, { transaction: t });
+    }
+
+    // Record vault inflow for non-cash payments
+    for (const payment of payments) {
+      await recordPaymentInflow({
+        tenantId,
+        locationId: order.locationId || null,
+        paymentMethod: normalizePaymentMethod(payment.method),
+        amount: parseFloat(payment.amount),
+        paymentDetails: payment.paymentDetails || {},
+        referenceType: 'order',
+        referenceId: order.id,
+        referenceNumber: order.transactionNumber,
+        createdBy: userId,
+        dbTransaction: t,
+      }).catch(err => {
+        logger.logError('Failed to record vault payment_inflow (createDirectOrder)', {
+          action: 'VAULT_PAYMENT_INFLOW_ERROR',
+          userId,
+          tenantId,
+          orderId: order.id,
+          paymentMethod: payment.method,
+          error: err.message,
+        });
+      });
     }
 
     // Record voucher usage (VoucherUsage hook auto-increments usageCount)

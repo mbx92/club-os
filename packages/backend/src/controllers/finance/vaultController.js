@@ -1116,6 +1116,163 @@ async function adjustVault(req, res, next) {
   }
 }
 
+/**
+ * Record a payment_inflow mutation to the appropriate vault account.
+ *
+ * This is called automatically whenever a non-cash transaction payment completes.
+ * Cash payments are skipped (they go through manual drawer→vault collection).
+ * Compliment payments are skipped (free/owner-gratis transactions).
+ *
+ * @param {Object} params
+ * @param {string} params.tenantId
+ * @param {string|null} params.locationId
+ * @param {string} params.paymentMethod - normalized payment method (qris, bank_transfer, debit_card, etc.)
+ * @param {number} params.amount - payment amount
+ * @param {Object} params.paymentDetails - raw paymentDetails from TransactionPayment
+ * @param {string} params.referenceType - e.g. 'transaction', 'order'
+ * @param {string} params.referenceId - UUID of the transaction/order
+ * @param {string} params.referenceNumber - human-readable reference number
+ * @param {string} params.createdBy - user UUID who processed the payment
+ * @param {Object} params.dbTransaction - Sequelize transaction object
+ * @returns {Object|null} The created CashMutation or null if skipped
+ */
+async function recordPaymentInflow({
+  tenantId,
+  locationId = null,
+  paymentMethod,
+  amount,
+  paymentDetails = {},
+  referenceType,
+  referenceId,
+  referenceNumber,
+  createdBy,
+  dbTransaction,
+}) {
+  // Skip cash — cash goes through manual drawer→vault collection
+  if (paymentMethod === 'cash') return null;
+
+  // Skip compliment — free/owner-gratis, no actual money
+  if (paymentMethod === 'compliment') return null;
+
+  // Skip if amount is zero or negative
+  if (!amount || parseFloat(amount) <= 0) return null;
+
+  const paymentAmount = parseFloat(amount);
+
+  // ── Find or create vault account ──────────────────────────────────────────
+
+  // Try exact match on paymentMethod first
+  let vaultAccount = await VaultAccount.findOne({
+    where: { tenantId, paymentMethod, isActive: true },
+    lock: dbTransaction?.LOCK?.UPDATE,
+    transaction: dbTransaction,
+  });
+
+  // If not found by paymentMethod, try matching by accountType
+  if (!vaultAccount) {
+    const accountType = mapPaymentMethodToAccountType(paymentMethod);
+    vaultAccount = await VaultAccount.findOne({
+      where: { tenantId, accountType, isActive: true },
+      lock: dbTransaction?.LOCK?.UPDATE,
+      transaction: dbTransaction,
+    });
+  }
+
+  // Auto-create if still not found
+  if (!vaultAccount) {
+    const name = buildVaultAccountName(paymentMethod, paymentDetails);
+    vaultAccount = await VaultAccount.create({
+      tenantId,
+      name,
+      accountType: mapPaymentMethodToAccountType(paymentMethod),
+      paymentMethod,
+      bankName: paymentDetails?.bankName || paymentDetails?.bank_name || null,
+      balance: 0,
+      description: `Auto-created dari transaksi pembayaran ${paymentMethod}`,
+      createdBy,
+    }, { transaction: dbTransaction });
+  }
+
+  // ── Generate mutation number ──────────────────────────────────────────────
+
+  const mutationNumber = await generateMutationNumber(CashMutation, tenantId, dbTransaction);
+
+  // ── Create CashMutation ───────────────────────────────────────────────────
+
+  const cashMutation = await CashMutation.create({
+    tenantId,
+    locationId,
+    mutationNumber,
+    destinationVaultAccountId: vaultAccount.id,
+    destinationAccount: vaultAccount.name,
+    sourceAccount: 'revenue',
+    amount: paymentAmount,
+    mutationType: 'payment_inflow',
+    referenceType,
+    referenceId,
+    referenceNumber,
+    status: 'posted',
+    mutationDate: new Date().toISOString().split('T')[0],
+    notes: `Pemasukan otomatis dari pembayaran ${paymentMethod}`,
+    metadata: {
+      paymentMethod,
+      paymentDetails,
+      autoCreated: true,
+    },
+    createdBy,
+  }, { transaction: dbTransaction });
+
+  // ── Update vault account balance ──────────────────────────────────────────
+
+  const newBalance = parseFloat(vaultAccount.balance || 0) + paymentAmount;
+  await vaultAccount.update({ balance: newBalance }, { transaction: dbTransaction });
+
+  return cashMutation;
+}
+
+/**
+ * Map a normalized paymentMethod to a VaultAccount.accountType.
+ */
+function mapPaymentMethodToAccountType(paymentMethod) {
+  const mapping = {
+    qris: 'qris',
+    bank_transfer: 'bank_transfer',
+    credit_card: 'credit_card',
+    debit_card: 'debit_card',
+    e_wallet: 'e_wallet',
+  };
+  return mapping[paymentMethod] || 'other';
+}
+
+/**
+ * Build a human-readable vault account name from payment method and details.
+ */
+function buildVaultAccountName(paymentMethod, paymentDetails) {
+  const bankName = paymentDetails?.bankName || paymentDetails?.bank_name || '';
+
+  // If we have a bank name, use it in the label
+  if (bankName) {
+    const methodLabel = {
+      qris: `QRIS ${bankName}`,
+      bank_transfer: `Transfer ${bankName}`,
+      debit_card: `Debit ${bankName}`,
+      credit_card: `Kredit ${bankName}`,
+      e_wallet: bankName,
+    };
+    return methodLabel[paymentMethod] || `${bankName}`;
+  }
+
+  // Fallback names by payment method
+  const fallback = {
+    qris: 'QRIS',
+    bank_transfer: 'Transfer Bank',
+    credit_card: 'Kartu Kredit',
+    debit_card: 'Kartu Debit',
+    e_wallet: 'E-Wallet',
+  };
+  return fallback[paymentMethod] || paymentMethod;
+}
+
 module.exports = {
   getAccounts,
   createAccount,
@@ -1127,4 +1284,5 @@ module.exports = {
   getMutations,
   transferBetweenAccounts,
   adjustVault,
+  recordPaymentInflow,
 };
