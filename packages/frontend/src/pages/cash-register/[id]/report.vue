@@ -102,6 +102,10 @@ const qrisPayment = computed(
   () => reportCashier.value?.paymentMethods?.qris || null
 );
 
+const qrisBankDetail = computed(
+  () => qrisPayment.value?.detail || []
+);
+
 const otherNonCashPayments = computed(() => {
   if (!reportCashier.value?.paymentMethods) return [];
   return Object.entries(reportCashier.value.paymentMethods)
@@ -264,7 +268,7 @@ onMounted(load);
               class="bg-primary/10 px-5 py-3 rounded-t-2xl flex items-center gap-2"
             >
               <IconBuildingStore class="w-5 h-5 text-primary" />
-              <h2 class="font-bold text-base tracking-wide">REPORT CASHIER</h2>
+              <h2 class="font-bold text-base tracking-wide">REPORT RESTO</h2>
             </div>
             <table class="table table-sm text-sm">
               <tbody>
@@ -313,7 +317,7 @@ onMounted(load);
                 <!-- #KARTU -->
                 <tr v-if="cardTotal > 0" class="hover">
                   <td>
-                    #Kartu
+                    Kartu
                     <span class="badge badge-xs badge-ghost ml-1">
                       {{ cardPayments.reduce((s, p) => s + (p.count || 0), 0) }}x
                     </span>
@@ -337,14 +341,14 @@ onMounted(load);
                     {{ formatCurrency(bank.total) }}
                   </td>
                 </tr>
-                <!-- #QRIS -->
+                <!-- QRIS -->
                 <tr
                   v-if="qrisPayment"
                   class="hover"
                   :class="qrisPayment.amount === 0 ? 'opacity-40' : ''"
                 >
                   <td>
-                    #QRIS
+                    QRIS
                     <span
                       v-if="qrisPayment.count"
                       class="badge badge-xs badge-ghost ml-1"
@@ -353,6 +357,23 @@ onMounted(load);
                   </td>
                   <td class="text-right">
                     {{ formatCurrency(qrisPayment.amount) }}
+                  </td>
+                </tr>
+                <!-- QRIS Bank Detail -->
+                <tr
+                  v-for="bank in qrisBankDetail"
+                  :key="bank.bankName"
+                  class="bg-info/5"
+                >
+                  <td class="pl-6 text-xs text-base-content/60">
+                    <span class="mr-1 text-base-content/30">&rsaquo;</span>
+                    {{ bank.bankName }}
+                    <span class="badge badge-xs badge-ghost ml-1"
+                      >{{ bank.transactionCount }}x</span
+                    >
+                  </td>
+                  <td class="text-right text-xs text-info font-medium">
+                    {{ formatCurrency(bank.total) }}
                   </td>
                 </tr>
                 <!-- Other non-cash (e_wallet, bank_transfer, etc.) -->
