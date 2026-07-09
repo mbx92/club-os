@@ -311,6 +311,7 @@ async function getRevenueReport(req, res, next) {
         [fn('SUM', col('Transaction.tax')), 'tax'],
         [fn('SUM', col('Transaction.voucherDiscount')), 'discount'],
         [fn('SUM', col('Transaction.totalAmount')), 'total'],
+        [fn('SUM', col('Transaction.roundingAmount')), 'rounding'],
         [fn('COUNT', col('Transaction.id')), 'transactionCount']
       ],
       group: [literal(`DATE_TRUNC('${groupBy}', "Transaction"."createdAt")`), 'transactionType'],
@@ -333,6 +334,7 @@ async function getRevenueReport(req, res, next) {
         [fn('SUM', col('Transaction.subtotal')), 'subtotal'],
         [fn('SUM', col('Transaction.tax')), 'tax'],
         [fn('SUM', col('Transaction.totalAmount')), 'total'],
+        [fn('SUM', col('Transaction.roundingAmount')), 'rounding'],
         [fn('COUNT', col('Transaction.id')), 'transactionCount']
       ],
       group: ['transactionType'],
@@ -395,6 +397,7 @@ async function getRevenueReport(req, res, next) {
       return sum + gross;
     }, 0);
     const totalNetRevenue = revenueByModule.reduce((sum, m) => sum + parseFloat(m.total || 0), 0);
+    const totalRounding = revenueByModule.reduce((sum, m) => sum + parseFloat(m.rounding || 0), 0);
     const totalTransactions = revenueByModule.reduce((sum, m) => sum + parseInt(m.transactionCount || 0), 0);
     const avgTransactionValue = totalTransactions > 0 ? totalGrossRevenue / totalTransactions : 0;
 
@@ -404,6 +407,7 @@ async function getRevenueReport(req, res, next) {
         summary: {
           totalRevenue: parseFloat(totalGrossRevenue.toFixed(2)),
           netRevenue: parseFloat(totalNetRevenue.toFixed(2)),
+          totalRounding: parseFloat(totalRounding.toFixed(2)),
           totalTransactions,
           avgTransactionValue: parseFloat(avgTransactionValue.toFixed(2)),
           cashExpenseDeduction: 0,
