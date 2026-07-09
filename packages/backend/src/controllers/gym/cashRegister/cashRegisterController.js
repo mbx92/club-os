@@ -1108,8 +1108,8 @@ function buildCashierReport(cashierTrx, cashExpenses, allExpenses, session) {
     });
   });
 
-  // J: Grand Total = E + F + G + I  (rounding is informational only, not added to total)
-  const grandTotal = parseFloat((netSales + serviceCharge + tax + tipping).toFixed(2));
+  // J: Grand Total = E + F + G + H + I  (rounding included — it reflects actual cash received)
+  const grandTotal = parseFloat((netSales + serviceCharge + tax + rounding + tipping).toFixed(2));
 
   // Payment method breakdown (transaksi regular saja — compliment trx punya totalAmount = 0)
   // Includes sub-detail per bank/provider from paymentDetails
@@ -3039,7 +3039,7 @@ exports.diagnoseReport = async (req, res, next) => {
       const serviceCharge = cashierTrx.reduce((s, t) => s + parseFloat(t.serviceCharge || 0), 0);
       const tax          = cashierTrx.reduce((s, t) => s + parseFloat(t.tax            || 0), 0);
       const rounding     = cashierTrx.reduce((s, t) => s + parseFloat(t.roundingAmount || 0), 0);
-      const grandTotal   = netSales + serviceCharge + tax; // rounding is informational only
+      const grandTotal   = parseFloat((netSales + serviceCharge + tax + rounding).toFixed(2));
 
       const bd = {};
       cashierTrx.forEach(t => {
