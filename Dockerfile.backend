@@ -11,6 +11,9 @@ COPY packages/frontend/package.json packages/frontend/package-lock.json ./packag
 COPY --from=postgres_tools /usr/lib/postgresql/17 /usr/lib/postgresql/17
 COPY --from=postgres_tools /usr/lib/x86_64-linux-gnu/libpq.so* /usr/lib/x86_64-linux-gnu/
 
+# Register PostgreSQL shared libraries so pg_dump can find libpq.so and friends at runtime
+RUN echo "/usr/lib/postgresql/17/lib" > /etc/ld.so.conf.d/postgresql.conf && ldconfig
+
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates default-mysql-client \
   && rm -rf /var/lib/apt/lists/*
