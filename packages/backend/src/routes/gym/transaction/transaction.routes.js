@@ -122,6 +122,16 @@ router.post('/:id/refund-items',
 );
 
 /**
+ * @route   PUT /api/transactions/:id/payment
+ * @desc    Change payment method on a transaction (correction)
+ * @access  Private — requires 'update' permission on 'Transaction'
+ */
+router.put('/:id/payment',
+  authorize('update', 'Transaction'),
+  transactionController.updateTransactionPaymentMethod
+);
+
+/**
  * @route   POST /api/transactions/:id/pre-print
  * @name    transactions.prePrintPayment
  * @desc    Pre-print payment receipt (bill/invoice) to thermal printer

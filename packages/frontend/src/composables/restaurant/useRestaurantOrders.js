@@ -194,6 +194,31 @@ export function useRestaurantOrders() {
   }
 
   /**
+   * Update payment method on an order
+   * PUT /restaurant/orders/:id/payment
+   * @param {string} orderId - Order ID
+   * @param {string} paymentMethod - New payment method
+   * @param {string} bankName - Bank name (optional, for bank transfer/credit card/debit card)
+   */
+  const updateOrderPaymentMethod = async (orderId, paymentMethod, bankName = '') => {
+    loading.value = true
+    error.value = null
+    try {
+      const body = { paymentMethod }
+      if (bankName) body.bankName = bankName
+      const response = await api.put(`/restaurant/orders/${orderId}/payment`, body)
+      showSuccess(response.message || 'Metode pembayaran berhasil diubah')
+      return response.data || response
+    } catch (err) {
+      error.value = err.message
+      handleError(err, 'Gagal mengubah metode pembayaran')
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
    * Add item to order
    * @param {string} orderId - Order ID
    * @param {Object} itemData - Item data
@@ -860,6 +885,7 @@ export function useRestaurantOrders() {
     getOrderById,
     createOrder,
     updateOrderStatus,
+    updateOrderPaymentMethod,
     addItemToOrder,
     completeOrder,
     // Voucher & Direct Order

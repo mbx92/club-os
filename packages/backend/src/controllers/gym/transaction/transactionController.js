@@ -646,6 +646,12 @@ exports.getAllTransactions = async (req, res) => {
           as: 'payments',
           attributes: ['id', 'paymentMethod', 'amount', 'paymentDate', 'status'],
           required: false
+        },
+        {
+          model: Member,
+          as: 'member',
+          attributes: ['id', 'firstName', 'lastName'],
+          required: false
         }
       ],
       order: [[safeSortBy, safeSortOrder]],
@@ -2363,6 +2369,117 @@ exports.splitBillByItem = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Gagal split transaksi',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Update payment method on a transaction
+ * PUT /api/v1/transactions/:id/payment
+ */
+exports.updateTransactionPaymentMethod = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user.tenantId;
+    const { paymentMethod, bankName } = req.body;
+
+    if (!paymentMethod || typeof paymentMethod !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'paymentMethod is required',
+        code: 'PAYMENT_METHOD_REQUIRED'
+      });
+    }
+
+    const transaction = await Transaction.findOne({
+      where: { id, tenantId }
+    });
+
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        message: 'Transaction not found',
+        code: 'TRANSACTION_NOT_FOUND'
+      });
+    }
+
+    if (['cancelled', 'refunded'].includes(transaction.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot change payment method on a cancelled or refunded transaction',
+        code: 'INVALID_TRANSACTION_STATUS'
+      });
+    }
+
+    const normalizedMethod = normalizePaymentMethod(paymentMethod);
+
+    const payments = await TransactionPayment.findAll({
+      where: { transactionId: id }
+    });
+
+    if (!payments.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'No payment records found for this transaction',
+        code: 'NO_PAYMENTS'
+      });
+    }
+
+    const oldMethod = payments[0].paymentMethod;
+
+    for (const payment of payments) {
+      const updateData = {
+        paymentMethod: normalizedMethod,
+        notes: appendAuditNote(payment.notes, 'PAYMENT_CHANGED',
+          `${payment.paymentMethod} → ${normalizedMethod} by ${req.user.firstName || req.user.email || req.user.id}`
+        )
+      };
+
+      // If bank name is provided, store it in paymentDetails
+      if (bankName && typeof bankName === 'string' && bankName.trim()) {
+        updateData.paymentDetails = {
+          ...(payment.paymentDetails || {}),
+          bank: bankName.trim()
+        };
+      }
+
+      await payment.update(updateData);
+    }
+
+    logAudit({
+      action: 'UPDATE_PAYMENT_METHOD',
+      user: req.user,
+      tenant: { name: req.user.tenant?.name || 'Unknown' },
+      request: req,
+      response: { statusCode: 200 },
+      executionTime: 0,
+      details: {
+        transactionId: id,
+        transactionNumber: transaction.transactionNumber,
+        oldMethod,
+        newMethod: normalizedMethod,
+        bankName: bankName || null
+      }
+    });
+
+    const updatedTransaction = await Transaction.findByPk(id, {
+      include: [
+        { model: TransactionPayment, as: 'payments', attributes: ['id', 'paymentMethod', 'amount', 'paymentDate', 'status'] },
+        { model: TransactionItem, as: 'transactionItems', attributes: ['id', 'itemType', 'itemId', 'itemName', 'quantity', 'unitPrice', 'subtotal', 'total'], required: false }
+      ]
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Metode pembayaran berhasil diubah',
+      data: updatedTransaction
+    });
+  } catch (error) {
+    console.error('Error updating payment method:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update payment method',
       error: error.message
     });
   }

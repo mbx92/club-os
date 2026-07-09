@@ -22,7 +22,8 @@ const {
   StockMovement,
   Voucher,
   VoucherUsage,
-  Tenant
+  Tenant,
+  Member
 } = require('../../../models');
 const { Op } = require('sequelize');
 const { createError } = require('../../../utils/errorCodes');
@@ -425,6 +426,18 @@ const getAllOrders = async (req, res, next) => {
           model: User,
           as: 'createdByUser',
           attributes: ['id', 'firstName', 'lastName', 'email']
+        },
+        {
+          model: TransactionPayment,
+          as: 'payments',
+          attributes: ['id', 'paymentMethod', 'amount', 'paymentDate', 'status'],
+          required: false
+        },
+        {
+          model: Member,
+          as: 'member',
+          attributes: ['id', 'firstName', 'lastName'],
+          required: false
         }
       ],
       order: [['createdAt', 'DESC']],
@@ -1103,6 +1116,92 @@ const updateOrderStatus = async (req, res, next) => {
     });
   } catch (error) {
     await t.rollback();
+    next(error);
+  }
+};
+
+/**
+ * Change payment method on a restaurant order (correction)
+ * PUT /api/v1/restaurant/orders/:id/payment
+ */
+const updateOrderPaymentMethod = async (req, res, next) => {
+  try {
+    const { tenantId, isSuperAdmin } = req.user;
+    const { id } = req.params;
+    const { paymentMethod, bankName } = req.body;
+
+    if (!paymentMethod || typeof paymentMethod !== 'string') {
+      throw createError('VALIDATION_ERROR', 'paymentMethod is required');
+    }
+
+    const where = {
+      id,
+      transactionType: 'restaurant'
+    };
+    if (!isSuperAdmin) {
+      where.tenantId = tenantId;
+    }
+
+    const order = await Transaction.findOne({
+      where,
+      include: [{ model: TransactionPayment, as: 'payments' }]
+    });
+
+    if (!order) {
+      throw createError('NOT_FOUND', 'Order not found');
+    }
+
+    if (['cancelled', 'refunded'].includes(order.status)) {
+      throw createError('VALIDATION_ERROR', 'Cannot change payment method on a cancelled or refunded order');
+    }
+
+    const normalizedMethod = normalizePaymentMethod(paymentMethod);
+
+    const payments = order.payments || [];
+    if (!payments.length) {
+      throw createError('VALIDATION_ERROR', 'No payment records found for this order');
+    }
+
+    const oldMethod = payments[0].paymentMethod;
+
+    for (const payment of payments) {
+      const entry = `[PAYMENT_CHANGED ${new Date().toISOString()}] ${payment.paymentMethod} → ${normalizedMethod} by ${req.user.firstName || req.user.email || req.user.id}`;
+      const updateData = {
+        paymentMethod: normalizedMethod,
+        notes: payment.notes ? `${payment.notes}\n${entry}` : entry
+      };
+
+      if (bankName && typeof bankName === 'string' && bankName.trim()) {
+        updateData.paymentDetails = {
+          ...(payment.paymentDetails || {}),
+          bank: bankName.trim()
+        };
+      }
+
+      await payment.update(updateData);
+    }
+
+    logger.logInfo('Order payment method changed', {
+      action: 'UPDATE_ORDER_PAYMENT_METHOD',
+      orderId: id,
+      orderNumber: order.transactionNumber,
+      oldMethod,
+      newMethod: normalizedMethod,
+      bankName: bankName || null,
+      tenantId,
+      userId: req.user.id,
+    });
+
+    res.json({
+      success: true,
+      message: 'Metode pembayaran berhasil diubah',
+      data: {
+        id: order.id,
+        transactionNumber: order.transactionNumber,
+        paymentMethod: normalizedMethod
+      }
+    });
+  } catch (error) {
     next(error);
   }
 };
@@ -4205,5 +4304,7 @@ module.exports = {
   getQueueStreamStats,
   // Table management
   moveTable,
-  transferItems
+  transferItems,
+  // Payment correction
+  updateOrderPaymentMethod
 };

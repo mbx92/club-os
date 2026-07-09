@@ -198,6 +198,17 @@ router.put('/:id/status',
 );
 
 /**
+ * @route PUT /api/v1/restaurant/orders/:id/payment
+ * @desc Change payment method on an order (correction)
+ * @access Private - requires 'create' or 'update' permission on 'Transaction'
+ * @body {String} paymentMethod - New payment method (cash, credit_card, debit_card, bank_transfer, qris, e_wallet)
+ */
+router.put('/:id/payment',
+  authorizePosWrite,
+  orderController.updateOrderPaymentMethod
+);
+
+/**
  * @route POST /api/v1/restaurant/orders/:id/transfer-items
  * @desc Transfer specific items (full or partial qty) from this order to the active order
  *       on the target table. If the target table has no active order, a new one is created.

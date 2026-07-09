@@ -9,7 +9,9 @@ import {
   IconAlertTriangle,
   IconX,
   IconRefresh,
+  IconPencil,
 } from '@tabler/icons-vue'
+import { BANK_OPTIONS, BANK_SELECTION_PAYMENT_METHODS } from '@/utils/paymentBanks'
 
 const props = defineProps({
   module: {
@@ -27,6 +29,7 @@ const {
   loading: gymLoading,
   fetchTransactions,
   cancelTransaction,
+  updatePaymentMethod,
 } = useTransactions()
 
 const {
@@ -37,6 +40,7 @@ const {
   totalItems,
   fetchOrders,
   updateOrderStatus,
+  updateOrderPaymentMethod,
 } = useRestaurantOrders()
 
 const loading = computed(() => (isGym.value ? gymLoading.value : restaurantLoading.value))
@@ -53,6 +57,27 @@ const cancelModal = ref(false)
 const cancelNotes = ref('')
 const cancelTarget = ref(null)
 const cancelling = ref(false)
+
+// ── Payment change modal ──
+const paymentModal = ref(false)
+const paymentTarget = ref(null)
+const selectedPayment = ref('')
+const bankName = ref('')
+const changingPayment = ref(false)
+
+const paymentMethodOptions = [
+  { value: 'cash', label: 'Tunai' },
+  { value: 'credit_card', label: 'Kartu Kredit' },
+  { value: 'debit_card', label: 'Kartu Debit' },
+  { value: 'bank_transfer', label: 'Transfer Bank' },
+  { value: 'qris', label: 'QRIS' },
+  { value: 'e_wallet', label: 'E-Wallet' },
+  { value: 'compliment', label: 'Gratis' },
+]
+
+const requiresBankSelection = computed(() =>
+  BANK_SELECTION_PAYMENT_METHODS.includes(selectedPayment.value)
+)
 
 function formatLocalDate(date) {
   const y = date.getFullYear()
@@ -112,6 +137,29 @@ const statusLabel = (s) => {
     refunded: 'Direfund',
   }
   return map[String(s || '').toLowerCase()] || s || '-'
+}
+
+const paymentLabel = (method) => {
+  const map = {
+    cash: 'Tunai',
+    credit_card: 'Kartu Kredit',
+    debit_card: 'Kartu Debit',
+    bank_transfer: 'Transfer Bank',
+    qris: 'QRIS',
+    e_wallet: 'E-Wallet',
+    compliment: 'Gratis',
+    card: 'Kartu',
+    ewallet: 'E-Wallet',
+    transfer: 'Transfer Bank',
+  }
+  return map[String(method || '').toLowerCase()] || (method || '').replace(/_/g, ' ')
+}
+
+const paymentMethods = (item) => {
+  const payments = item?.payments || []
+  if (!payments.length) return '-'
+  const methods = [...new Set(payments.map(p => p.paymentMethod).filter(Boolean))]
+  return methods.map(m => paymentLabel(m)).join(', ')
 }
 
 const applyDatePreset = (preset) => {
@@ -230,6 +278,54 @@ const submitCancel = async () => {
     cancelling.value = false
   }
 }
+
+const currentPaymentMethod = computed(() => {
+  const item = paymentTarget.value
+  if (!item?.payments?.length) return '-'
+  const methods = [...new Set(item.payments.map(p => p.paymentMethod).filter(Boolean))]
+  return methods.map(m => paymentLabel(m)).join(', ')
+})
+
+const openPaymentModal = (item) => {
+  paymentTarget.value = item
+  const firstMethod = item?.payments?.[0]?.paymentMethod
+  selectedPayment.value = firstMethod || 'cash'
+  bankName.value = item?.payments?.[0]?.paymentDetails?.bank || ''
+  paymentModal.value = true
+}
+
+const closePaymentModal = () => {
+  paymentModal.value = false
+  paymentTarget.value = null
+  selectedPayment.value = ''
+  bankName.value = ''
+}
+
+const submitPaymentChange = async () => {
+  if (!paymentTarget.value?.id) return
+  if (!selectedPayment.value) return
+  if (requiresBankSelection.value && !bankName.value) return
+
+  changingPayment.value = true
+  try {
+    if (isGym.value) {
+      await updatePaymentMethod(paymentTarget.value.id, selectedPayment.value, bankName.value)
+    } else {
+      await updateOrderPaymentMethod(paymentTarget.value.id, selectedPayment.value, bankName.value)
+    }
+    closePaymentModal()
+    await load()
+  } finally {
+    changingPayment.value = false
+  }
+}
+
+// Reset bankName when switching to a method that doesn't require bank
+watch(selectedPayment, (method) => {
+  if (!BANK_SELECTION_PAYMENT_METHODS.includes(method)) {
+    bankName.value = ''
+  }
+})
 
 let searchTimer
 const onSearchInput = () => {
@@ -350,6 +446,7 @@ onMounted(() => {
               <th>{{ isGym ? 'No. Transaksi' : 'No. Order' }}</th>
               <th>Pelanggan</th>
               <th v-if="!isGym">Meja</th>
+              <th>Pembayaran</th>
               <th>Total</th>
               <th>Status</th>
               <th class="text-right">Aksi</th>
@@ -361,22 +458,34 @@ onMounted(() => {
                 <td class="text-xs">{{ formatDateTime(tx.transactionDate || tx.createdAt) }}</td>
                 <td class="font-mono text-xs">{{ tx.transactionNumber || tx.id?.slice(0, 8) }}</td>
                 <td class="text-xs">
-                  <span v-if="tx.customerName || tx.memberName">{{ tx.customerName || tx.memberName }}</span>
+                  <span v-if="tx.member?.firstName || tx.customerName || tx.memberName">
+                    {{ tx.member ? `${tx.member.firstName} ${tx.member.lastName || ''}`.trim() : (tx.customerName || tx.memberName) }}
+                  </span>
                   <span v-else class="italic text-base-content/40">Walk-in</span>
                 </td>
+                <td class="text-xs">{{ paymentMethods(tx) }}</td>
                 <td class="font-semibold text-sm">{{ formatCurrency(tx.totalAmount || tx.amount) }}</td>
                 <td>
                   <span class="badge badge-xs" :class="statusBadgeClass(tx.status)">{{ statusLabel(tx.status) }}</span>
                 </td>
                 <td class="text-right">
-                  <button
-                    v-if="canCancelGym(tx)"
-                    class="btn btn-warning btn-xs btn-labeled"
-                    @click="openCancelModal(tx)"
-                  >
-                    <IconX class="w-3 h-3" />
-                    Batal
-                  </button>
+                  <div v-if="canCancelGym(tx)" class="flex justify-end gap-1">
+                    <button
+                      class="btn btn-warning btn-xs btn-labeled"
+                      @click="openCancelModal(tx)"
+                    >
+                      <IconX class="w-3 h-3" />
+                      Batal
+                    </button>
+                    <button
+                      class="btn btn-ghost btn-xs btn-labeled"
+                      @click="openPaymentModal(tx)"
+                      title="Ubah metode pembayaran"
+                    >
+                      <IconPencil class="w-3 h-3" />
+                      Ubah
+                    </button>
+                  </div>
                   <span v-else class="text-xs text-base-content/40">—</span>
                 </td>
               </tr>
@@ -387,23 +496,35 @@ onMounted(() => {
                 <td class="text-xs">{{ formatDateTime(order.createdAt) }}</td>
                 <td class="font-mono text-xs">{{ order.transactionNumber || order.id?.slice(0, 8) }}</td>
                 <td class="text-xs">
-                  <span v-if="order.customerName">{{ order.customerName }}</span>
+                  <span v-if="order.member?.firstName || order.customerName">
+                    {{ order.member ? `${order.member.firstName} ${order.member.lastName || ''}`.trim() : order.customerName }}
+                  </span>
                   <span v-else class="italic text-base-content/40">Walk-in</span>
                 </td>
                 <td class="text-xs">{{ order.table?.tableNumber || '-' }}</td>
+                <td class="text-xs">{{ paymentMethods(order) }}</td>
                 <td class="font-semibold text-sm">{{ formatCurrency(order.totalAmount) }}</td>
                 <td>
                   <span class="badge badge-xs" :class="statusBadgeClass(order.status)">{{ statusLabel(order.status) }}</span>
                 </td>
                 <td class="text-right">
-                  <button
-                    v-if="canCancelRestaurant(order)"
-                    class="btn btn-warning btn-xs btn-labeled"
-                    @click="openCancelModal(order)"
-                  >
-                    <IconX class="w-3 h-3" />
-                    Batal
-                  </button>
+                  <div v-if="canCancelRestaurant(order)" class="flex justify-end gap-1">
+                    <button
+                      class="btn btn-warning btn-xs btn-labeled"
+                      @click="openCancelModal(order)"
+                    >
+                      <IconX class="w-3 h-3" />
+                      Batal
+                    </button>
+                    <button
+                      class="btn btn-ghost btn-xs btn-labeled"
+                      @click="openPaymentModal(order)"
+                      title="Ubah metode pembayaran"
+                    >
+                      <IconPencil class="w-3 h-3" />
+                      Ubah
+                    </button>
+                  </div>
                   <span v-else class="text-xs text-base-content/40">—</span>
                 </td>
               </tr>
@@ -480,6 +601,68 @@ onMounted(() => {
         </div>
       </div>
       <form method="dialog" class="modal-backdrop" @click="closeCancelModal"><button>close</button></form>
+    </dialog>
+  </Teleport>
+
+  <!-- Payment method change modal -->
+  <Teleport to="body">
+    <dialog :open="paymentModal" class="modal modal-bottom sm:modal-middle">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg mb-1">Ubah Metode Pembayaran</h3>
+        <p class="text-sm text-base-content/60 mb-4 font-mono">
+          {{ paymentTarget?.transactionNumber || paymentTarget?.id?.slice(0, 8) }}
+        </p>
+
+        <div class="alert alert-info mb-4 text-sm">
+          <IconAlertTriangle class="w-5 h-5 shrink-0" />
+          <span>
+            Metode pembayaran saat ini: <strong>{{ currentPaymentMethod }}</strong>
+          </span>
+        </div>
+
+        <div class="form-control mb-4">
+          <label class="label pb-1">
+            <span class="label-text font-medium">Metode Pembayaran Baru</span>
+          </label>
+          <select
+            v-model="selectedPayment"
+            class="select select-bordered select-sm w-full"
+          >
+            <option v-for="opt in paymentMethodOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
+
+        <div v-if="requiresBankSelection" class="form-control mb-4">
+          <label class="label pb-1">
+            <span class="label-text font-medium">Nama Bank <span class="text-error">*</span></span>
+          </label>
+          <select
+            v-model="bankName"
+            class="select select-bordered select-sm w-full"
+            :class="{ 'select-error': requiresBankSelection && !bankName }"
+          >
+            <option value="">-- Pilih Bank --</option>
+            <option v-for="bank in BANK_OPTIONS" :key="bank.value" :value="bank.value">
+              {{ bank.label }}
+            </option>
+          </select>
+        </div>
+
+        <div class="modal-action mt-0 gap-2">
+          <button class="btn btn-ghost btn-sm" :disabled="changingPayment" @click="closePaymentModal">Batal</button>
+          <button
+            class="btn btn-primary btn-xs btn-labeled min-h-7 h-7 px-3 text-xs"
+            :disabled="changingPayment || !selectedPayment || (requiresBankSelection && !bankName)"
+            @click="submitPaymentChange"
+          >
+            <span v-if="changingPayment" class="loading loading-spinner loading-xs" />
+            Simpan
+          </button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop" @click="closePaymentModal"><button>close</button></form>
     </dialog>
   </Teleport>
 </template>

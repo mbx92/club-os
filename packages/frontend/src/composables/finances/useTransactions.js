@@ -116,6 +116,30 @@ export function useTransactions() {
   }
 
   /**
+   * Update payment method — PUT /transactions/:id/payment
+   * @param {string} id - Transaction ID
+   * @param {string} paymentMethod - New payment method
+   * @param {string} bankName - Bank name (optional, for bank transfer/credit card/debit card)
+   */
+  const updatePaymentMethod = async (id, paymentMethod, bankName = '') => {
+    loading.value = true
+    try {
+      const body = { paymentMethod }
+      if (bankName) body.bankName = bankName
+      const response = await api.put(`/transactions/${id}/payment`, body)
+      if (response.success !== false) {
+        showSuccess(response.message || 'Metode pembayaran berhasil diubah')
+        return response
+      }
+    } catch (err) {
+      handleError(err, 'Gagal mengubah metode pembayaran')
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
    * Full refund — POST /transactions/:id/refund
    * @param {string} id
    * @param {string} notes
@@ -172,5 +196,6 @@ export function useTransactions() {
     cancelTransaction,
     refundTransaction,
     refundTransactionItems,
+    updatePaymentMethod,
   }
 }

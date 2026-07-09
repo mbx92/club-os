@@ -380,6 +380,7 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/transactions/:id/refund-items': { subject: 'Transaction', actions: ['cancel'] },
   '/transactions/:id/pre-print': { subject: 'Transaction', actions: ['read'] },
   '/transactions/:id/split-bill': { subject: 'Transaction', actions: ['update'] },
+  '/transactions/:id/payment': { subject: 'Transaction', actions: ['update'] },
   '/transactions/combined': { subject: 'Transaction', actions: ['create'] },
   
   
@@ -461,7 +462,7 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/restaurant/orders/merge': { subject: 'Transaction', actions: ['create', 'update'] },
   '/restaurant/orders/queue/:id/status': { subject: 'Transaction', actions: ['create', 'update'] },
   '/restaurant/orders/queue/:id/call': { subject: 'Transaction', actions: ['create', 'update'] },
-  '/restaurant/orders/:id/payment': { subject: 'Transaction', actions: ['create'] },
+  '/restaurant/orders/:id/payment': { subject: 'Transaction', actions: ['create', 'update'] },
   '/restaurant/orders/:id/split': { subject: 'Transaction', actions: ['create', 'update'] },
   '/restaurant/orders/:id/merge': { subject: 'Transaction', actions: ['create', 'update'] },
   '/restaurant/orders/:id/void': { subject: 'Transaction', actions: ['delete'] },
