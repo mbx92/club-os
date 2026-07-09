@@ -941,13 +941,28 @@ exports.getShiftReport = async (req, res, next) => {
     const totalSalesGym   = response.reportGym?.grandTotal || 0;
     const totalSales      = totalSalesResto + totalSalesGym;
     const grandTotal      = parseFloat((totalSales - cashExpensesWithPettyCash).toFixed(2));
-    // cash-only breakdown (untuk info saldo laci kas)
+
+    // cash-only breakdown (dari payment methods — sudah termasuk rounding)
     const cashSalesResto  = response.reportCashier?.paymentMethods?.cash?.amount || 0;
     const cashSalesGym    = response.reportGym?.paymentCash || 0;
-    // non-cash breakdown (untuk balancing dengan laporan revenue)
-    const nonCashSalesResto = parseFloat((totalSalesResto - cashSalesResto).toFixed(2));
-    const nonCashSalesGym   = parseFloat((totalSalesGym - cashSalesGym).toFixed(2));
-    const totalNonCash      = parseFloat((nonCashSalesResto + nonCashSalesGym).toFixed(2));
+
+    // non-cash breakdown — dihitung langsung dari payment methods (bukan residual)
+    const nonCashSalesResto = parseFloat(
+      Object.entries(response.reportCashier?.paymentMethods || {})
+        .filter(([k]) => k !== 'cash' && k !== 'compliment')
+        .reduce((s, [, v]) => s + (v.amount || 0), 0)
+        .toFixed(2)
+    );
+    const nonCashSalesGym = parseFloat(
+      Object.entries(response.reportGym?.paymentMethods || {})
+        .filter(([k]) => k !== 'cash' && k !== 'compliment')
+        .reduce((s, [, v]) => s + (v.amount || 0), 0)
+        .toFixed(2)
+    );
+    const totalNonCash = parseFloat((nonCashSalesResto + nonCashSalesGym).toFixed(2));
+
+    // rounding (selisih pembulatan resto)
+    const roundingResto = parseFloat((response.reportCashier?.H_rounding || 0).toFixed(2));
 
     response.cashSummary = {
       totalSalesResto:  parseFloat(totalSalesResto.toFixed(2)),
@@ -955,14 +970,16 @@ exports.getShiftReport = async (req, res, next) => {
       totalSales:       parseFloat(totalSales.toFixed(2)),
       pengeluaran:      parseFloat(cashExpensesWithPettyCash.toFixed(2)),
       grandTotal,
-      // cash-only portion per modul (untuk perhitungan saldo laci kas)
+      // cash-only portion per modul (termasuk rounding — uang fisik di laci)
       cashSalesResto:   parseFloat(cashSalesResto.toFixed(2)),
       cashSalesGym:     parseFloat(cashSalesGym.toFixed(2)),
       cashGrandTotal:   parseFloat((cashSalesResto + cashSalesGym - cashExpensesWithPettyCash).toFixed(2)),
-      // non-cash portion per modul (untuk balancing laporan revenue)
+      // non-cash portion per modul (dari payment methods, bukan residual)
       nonCashSalesResto,
       nonCashSalesGym,
       totalNonCash,
+      // rounding (selisih pembulatan resto)
+      roundingResto,
     };
 
     return res.json({ success: true, data: response });
@@ -1117,8 +1134,8 @@ function buildCashierReport(cashierTrx, cashExpenses, allExpenses, session) {
     });
   });
 
-  // J: Grand Total = E + F + G + H + I  (rounding included — it reflects actual cash received)
-  const grandTotal = parseFloat((netSales + serviceCharge + tax + rounding + tipping).toFixed(2));
+  // J: Grand Total = E + F + G + I  (rounding excluded — shown separately)
+  const grandTotal = parseFloat((netSales + serviceCharge + tax + tipping).toFixed(2));
 
   // Payment method breakdown (transaksi regular saja — compliment trx punya totalAmount = 0)
   // Includes sub-detail per bank/provider from paymentDetails
@@ -1924,13 +1941,29 @@ exports.getDailyReport = async (req, res, next) => {
     const dailyTotalSalesGym   = response.reportGym?.grandTotal || 0;
     const dailyTotalSales      = dailyTotalSalesResto + dailyTotalSalesGym;
     const dailyGrandTotal      = parseFloat((dailyTotalSales - dayCashExpensesWithPettyCash).toFixed(2));
-    // cash-only breakdown (untuk info saldo laci kas)
+
+    // cash-only breakdown (dari payment methods — sudah termasuk rounding)
     const dailyCashSalesResto  = response.reportCashier?.paymentMethods?.cash?.amount || 0;
     const dailyCashSalesGym    = response.reportGym?.paymentCash || 0;
-    // non-cash breakdown (untuk balancing dengan laporan revenue)
-    const dailyNonCashSalesResto = parseFloat((dailyTotalSalesResto - dailyCashSalesResto).toFixed(2));
-    const dailyNonCashSalesGym   = parseFloat((dailyTotalSalesGym - dailyCashSalesGym).toFixed(2));
-    const dailyTotalNonCash      = parseFloat((dailyNonCashSalesResto + dailyNonCashSalesGym).toFixed(2));
+
+    // non-cash breakdown — dihitung langsung dari payment methods (bukan residual)
+    // karena cash amount sudah termasuk rounding, sedangkan J_grandTotal tidak
+    const dailyNonCashSalesResto = parseFloat(
+      Object.entries(response.reportCashier?.paymentMethods || {})
+        .filter(([k]) => k !== 'cash' && k !== 'compliment')
+        .reduce((s, [, v]) => s + (v.amount || 0), 0)
+        .toFixed(2)
+    );
+    const dailyNonCashSalesGym = parseFloat(
+      Object.entries(response.reportGym?.paymentMethods || {})
+        .filter(([k]) => k !== 'cash' && k !== 'compliment')
+        .reduce((s, [, v]) => s + (v.amount || 0), 0)
+        .toFixed(2)
+    );
+    const dailyTotalNonCash = parseFloat((dailyNonCashSalesResto + dailyNonCashSalesGym).toFixed(2));
+
+    // rounding (selisih pembulatan — tidak masuk revenue, tapi masuk cash drawer)
+    const dailyRoundingResto = parseFloat((response.reportCashier?.H_rounding || 0).toFixed(2));
 
     response.cashSummary = {
       totalSalesResto:  parseFloat(dailyTotalSalesResto.toFixed(2)),
@@ -1938,14 +1971,16 @@ exports.getDailyReport = async (req, res, next) => {
       totalSales:       parseFloat(dailyTotalSales.toFixed(2)),
       pengeluaran:      parseFloat(dayCashExpensesWithPettyCash.toFixed(2)),
       grandTotal:       dailyGrandTotal,
-      // cash-only portion per modul (untuk perhitungan saldo laci kas)
+      // cash-only portion per modul (termasuk rounding — uang fisik di laci)
       cashSalesResto:   parseFloat(dailyCashSalesResto.toFixed(2)),
       cashSalesGym:     parseFloat(dailyCashSalesGym.toFixed(2)),
       cashGrandTotal:   parseFloat((dailyCashSalesResto + dailyCashSalesGym - dayCashExpensesWithPettyCash).toFixed(2)),
-      // non-cash portion per modul (untuk balancing laporan revenue)
+      // non-cash portion per modul (dari payment methods, bukan residual)
       nonCashSalesResto: dailyNonCashSalesResto,
       nonCashSalesGym:   dailyNonCashSalesGym,
       totalNonCash:      dailyTotalNonCash,
+      // rounding (selisih pembulatan resto)
+      roundingResto:     dailyRoundingResto,
     };
 
     return res.json({ success: true, data: response });
@@ -3048,7 +3083,7 @@ exports.diagnoseReport = async (req, res, next) => {
       const serviceCharge = cashierTrx.reduce((s, t) => s + parseFloat(t.serviceCharge || 0), 0);
       const tax          = cashierTrx.reduce((s, t) => s + parseFloat(t.tax            || 0), 0);
       const rounding     = cashierTrx.reduce((s, t) => s + parseFloat(t.roundingAmount || 0), 0);
-      const grandTotal   = parseFloat((netSales + serviceCharge + tax + rounding).toFixed(2));
+      const grandTotal   = parseFloat((netSales + serviceCharge + tax).toFixed(2)); // rounding excluded — shown separately
 
       const bd = {};
       cashierTrx.forEach(t => {
