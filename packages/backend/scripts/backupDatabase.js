@@ -152,13 +152,17 @@ function backupPostgreSQL(filename) {
     
     exec(command, { env: pgEnv }, (error, stdout, stderr) => {
       if (error) {
-        error.code = 'NATIVE_BACKUP_FAILED';
-        console.error('❌ Backup failed:', error.message);
-        return reject(error);
+        const pgError = new Error(`pg_dump gagal: ${stderr || error.message}`);
+        pgError.code = 'NATIVE_BACKUP_FAILED';
+        pgError.originalMessage = error.message;
+        pgError.stderr = stderr;
+        console.error('❌ Backup failed (pg_dump stderr):', stderr || '(no stderr)');
+        console.error('❌ Backup failed (exec error):', error.message);
+        return reject(pgError);
       }
       
       if (stderr) {
-        console.warn('⚠️ Warnings:', stderr);
+        console.warn('⚠️ pg_dump warnings:', stderr);
       }
       
       // Check if file was created and has content

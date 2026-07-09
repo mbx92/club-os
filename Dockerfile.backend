@@ -21,6 +21,7 @@ COPY . .
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV PATH="/usr/lib/postgresql/17/bin:${PATH}"
 
 RUN chmod +x /app/docker-entrypoint.sh \
   && mkdir -p /app/backups /app/packages/backend/public /app/packages/backend/uploads /app/packages/backend/logs \

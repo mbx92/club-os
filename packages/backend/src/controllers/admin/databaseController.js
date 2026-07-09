@@ -181,7 +181,8 @@ async function createDatabaseBackup(req, res, next) {
       logger.warn('Native backup failed, using Sequelize backup', {
         userId: req.user.id,
         targetTenantId: backupOptions.targetTenantId,
-        error: err.message
+        error: err.message,
+        pgStderr: err.stderr || null,
       });
       
       result = await createSequelizeBackup(backupOptions);
