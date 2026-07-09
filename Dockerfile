@@ -27,6 +27,10 @@ ENV PORT=3000
 COPY --from=builder /app /app
 COPY --from=builder /app/packages/frontend/dist /app/packages/backend/public
 
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends postgresql-client \
+  && rm -rf /var/lib/apt/lists/*
+
 RUN chmod +x /app/docker-entrypoint.sh \
   && mkdir -p /app/packages/backend/public /app/packages/backend/uploads /app/packages/backend/logs
 
