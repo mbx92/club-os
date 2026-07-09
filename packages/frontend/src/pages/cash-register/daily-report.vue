@@ -760,40 +760,70 @@ const shiftStatusBadge = (status) =>
           </div>
           <table class="table table-sm text-sm">
             <tbody>
+              <!-- Cash breakdown -->
+              <tr class="bg-base-200/50">
+                <td colspan="2" class="text-xs font-semibold text-base-content/60 py-1">
+                  <span class="inline-block w-2 h-2 rounded-full bg-success mr-2"></span>
+                  Tunai (Cash)
+                </td>
+              </tr>
               <tr v-if="hasRestaurantCashSales" class="hover">
-                <td>Cash Penjualan Resto</td>
+                <td class="pl-4">Cash Penjualan Resto</td>
                 <td class="text-right font-medium">
                   {{ formatCurrency(cashSummary.cashSalesResto ?? 0) }}
                 </td>
               </tr>
               <tr class="hover">
-                <td>Cash Penjualan Gym</td>
+                <td class="pl-4">Cash Penjualan Gym</td>
                 <td class="text-right font-medium">
                   {{ formatCurrency(cashSummary.cashSalesGym ?? 0) }}
                 </td>
               </tr>
-              <!-- <tr class="bg-base-200/50 font-semibold">
-                <td>Total Cash Penjualan</td>
-                <td class="text-right">
-                  {{ formatCurrency(cashSummary.totalCashSales ?? 0) }}
+              <tr class="bg-success/5 font-semibold">
+                <td class="pl-4">Subtotal Cash</td>
+                <td class="text-right text-success">
+                  {{ formatCurrency((cashSummary.cashSalesResto ?? 0) + (cashSummary.cashSalesGym ?? 0)) }}
                 </td>
-              </tr> -->
-              <!-- <tr class="hover">
-                <td class="text-error">Pengeluaran</td>
-                <td class="text-right font-medium text-error">
-                  -{{ formatCurrency(cashSummary.pengeluaran ?? 0) }}
+              </tr>
+              <!-- Non-Cash breakdown -->
+              <tr class="bg-base-200/50">
+                <td colspan="2" class="text-xs font-semibold text-base-content/60 py-1">
+                  <span class="inline-block w-2 h-2 rounded-full bg-info mr-2"></span>
+                  Non-Tunai (QRIS, Transfer, Kartu, dll)
                 </td>
-              </tr> -->
+              </tr>
+              <tr v-if="(cashSummary.nonCashSalesResto ?? 0) > 0" class="hover">
+                <td class="pl-4">Non-Cash Penjualan Resto</td>
+                <td class="text-right font-medium">
+                  {{ formatCurrency(cashSummary.nonCashSalesResto ?? 0) }}
+                </td>
+              </tr>
+              <tr v-if="(cashSummary.nonCashSalesGym ?? 0) > 0" class="hover">
+                <td class="pl-4">Non-Cash Penjualan Gym</td>
+                <td class="text-right font-medium">
+                  {{ formatCurrency(cashSummary.nonCashSalesGym ?? 0) }}
+                </td>
+              </tr>
+              <tr class="bg-info/5 font-semibold">
+                <td class="pl-4">Subtotal Non-Cash</td>
+                <td class="text-right text-info">
+                  {{ formatCurrency(cashSummary.totalNonCash ?? 0) }}
+                </td>
+              </tr>
+              <!-- Balance: Revenue = Cash + Non-Cash -->
+              <tr class="bg-base-200/30">
+                <td class="text-xs text-base-content/60 pl-4">
+                  <IconCircleCheck class="w-3 h-3 inline mr-1" />
+                  Total Revenue = Cash + Non-Cash
+                </td>
+                <td class="text-right font-bold">
+                  {{ formatCurrency(cashSummary.totalSales ?? 0) }}
+                </td>
+              </tr>
               <tr v-if="(reportCashier?.R_complimentTotal ?? 0) > 0" class="hover">
                 <td class="text-warning">Compliment</td>
                 <td class="text-right font-medium text-warning">
                   {{ formatCurrency(reportCashier.R_complimentTotal) }}
-                </td>
-              </tr>
-              <tr class="bg-success/5 font-bold">
-                <td>Grand Total Cash</td>
-                <td class="text-right text-success">
-                  {{ formatCurrency(cashSummary.grandTotalCash ?? 0) }}
                 </td>
               </tr>
             </tbody>
@@ -928,6 +958,40 @@ const shiftStatusBadge = (status) =>
                 <td>Total Penjualan Gym</td>
                 <td class="text-right font-medium">
                   {{ formatCurrency(reportGym.grandTotal ?? 0) }}
+                </td>
+              </tr>
+              <!-- Cash vs Non-Cash breakdown -->
+              <tr v-if="cashSummary" class="bg-base-200/50">
+                <td colspan="2" class="text-xs font-semibold text-base-content/60 py-1">
+                  Breakdown Pembayaran
+                </td>
+              </tr>
+              <tr v-if="cashSummary" class="hover">
+                <td class="pl-4">
+                  <span class="inline-block w-2 h-2 rounded-full bg-success mr-2"></span>
+                  Tunai (Cash)
+                </td>
+                <td class="text-right font-medium text-success">
+                  {{ formatCurrency((cashSummary.cashSalesResto ?? 0) + (cashSummary.cashSalesGym ?? 0)) }}
+                </td>
+              </tr>
+              <tr v-if="cashSummary" class="hover">
+                <td class="pl-4">
+                  <span class="inline-block w-2 h-2 rounded-full bg-info mr-2"></span>
+                  Non-Tunai (QRIS, Transfer, Kartu, dll)
+                </td>
+                <td class="text-right font-medium text-info">
+                  {{ formatCurrency(cashSummary.totalNonCash ?? 0) }}
+                </td>
+              </tr>
+              <!-- Balance check: Revenue = Cash + Non-Cash -->
+              <tr v-if="cashSummary" class="bg-success/5">
+                <td class="pl-4 text-xs text-base-content/60">
+                  <IconCircleCheck class="w-3 h-3 inline text-success mr-1" />
+                  Total Revenue = Cash + Non-Cash
+                </td>
+                <td class="text-right font-medium">
+                  {{ formatCurrency((cashSummary.cashSalesResto ?? 0) + (cashSummary.cashSalesGym ?? 0) + (cashSummary.totalNonCash ?? 0)) }}
                 </td>
               </tr>
               <tr class="hover">

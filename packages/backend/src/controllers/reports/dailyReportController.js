@@ -197,7 +197,7 @@ async function getDailySummaryReport(req, res, next) {
     // ─── Assemble daily rows ───────────────────────────────────────────
     const totals = {
       resto: 0, service: 0, tax: 0, gym: 0,
-      totalQris: 0, totalMandiri: 0, totalBca: 0,
+      totalQris: 0, totalMandiri: 0, totalBca: 0, totalNonCash: 0,
       pengeluaranKasir: 0, totalCash: 0, actualCash: 0, selisihCash: 0,
     };
 
@@ -206,6 +206,9 @@ async function getDailySummaryReport(req, res, next) {
       const pay = paymentMap[date] || { qris: 0, mandiri: 0, bca: 0, cash: 0, other: 0 };
       const exp = expenseMap[date] || { pengeluaran: 0, keterangan: '' };
       const cr = cashRegMap[date] || null;
+
+      // Total non-cash = QRIS + Mandiri + BCA + Other (excl. compliment which is free)
+      const totalNonCash = pay.qris + pay.mandiri + pay.bca + pay.other;
 
       // Use the stored shift closing balance/difference when available so daily summary
       // matches the authoritative shift-close cash calculation.
@@ -222,6 +225,7 @@ async function getDailySummaryReport(req, res, next) {
       totals.totalQris += pay.qris;
       totals.totalMandiri += pay.mandiri;
       totals.totalBca += pay.bca;
+      totals.totalNonCash += totalNonCash;
       totals.pengeluaranKasir += exp.pengeluaran;
       totals.totalCash += totalCash;
       totals.actualCash += actualCash || 0;
@@ -236,6 +240,7 @@ async function getDailySummaryReport(req, res, next) {
         totalQris: pay.qris,
         totalMandiri: pay.mandiri,
         totalBca: pay.bca,
+        totalNonCash,
         pengeluaranKasir: exp.pengeluaran,
         keterangan: exp.keterangan,
         totalCash,
@@ -256,6 +261,7 @@ async function getDailySummaryReport(req, res, next) {
         totalQris: totals.totalQris,
         totalMandiri: totals.totalMandiri,
         totalBca: totals.totalBca,
+        totalNonCash: totals.totalNonCash,
         pengeluaranKasir: totals.pengeluaranKasir,
         totalCash: totals.totalCash,
         actualCash: totals.actualCash,
@@ -459,7 +465,7 @@ async function exportDailySummaryReport(req, res, next) {
     // ─── Sheet 1: LAPORAN HARIAN ───────────────────────────────────────
     const lhHeaders = [
       'TGL', 'RESTO', 'SERVICE', 'TAX', 'GYM',
-      'TOTAL QRIS', 'TOTAL MANDIRI', 'TOTAL BCA',
+      'TOTAL QRIS', 'TOTAL MANDIRI', 'TOTAL BCA', 'TOTAL NON CASH',
       'PENGELUARAN KASIR', 'KETERANGAN',
       'TOTAL CASH', 'ACTUAL CASH', 'SELISIH CASH',
     ];
@@ -467,7 +473,7 @@ async function exportDailySummaryReport(req, res, next) {
     for (const row of reportData.data) {
       lhData.push([
         row.tanggal, row.resto, row.service, row.tax, row.gym,
-        row.totalQris, row.totalMandiri, row.totalBca,
+        row.totalQris, row.totalMandiri, row.totalBca, row.totalNonCash,
         row.pengeluaranKasir, row.keterangan,
         row.totalCash, row.actualCash, row.selisihCash,
       ]);
@@ -475,17 +481,17 @@ async function exportDailySummaryReport(req, res, next) {
     const t = reportData.totals;
     lhData.push([
       'TOTAL', t.resto, t.service, t.tax, t.gym,
-      t.totalQris, t.totalMandiri, t.totalBca,
+      t.totalQris, t.totalMandiri, t.totalBca, t.totalNonCash,
       t.pengeluaranKasir, '', t.totalCash, t.actualCash, t.selisihCash,
     ]);
     const wsLH = XLSX.utils.aoa_to_sheet(lhData);
     wsLH['!cols'] = [
       { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 14 },
-      { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 18 }, { wch: 30 },
-      { wch: 14 }, { wch: 14 }, { wch: 14 },
+      { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 18 },
+      { wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
     ];
-    // Accounting format: cols B-I (1-8), K-M (10-12) — skip J(keterangan)
-    applyAccountingFormat(wsLH, [1,2,3,4,5,6,7,8,10,11,12], 1);
+    // Accounting format: cols B-I (1-8), J (9 = TOTAL NON CASH), K-N (10-13) — skip K(keterangan)
+    applyAccountingFormat(wsLH, [1,2,3,4,5,6,7,8,9,11,12,13], 1);
     XLSX.utils.book_append_sheet(wb, wsLH, 'LAPORAN HARIAN');
 
     // ─── Sheet 2: DETAIL TRANSAKSI ─────────────────────────────────────
@@ -652,6 +658,7 @@ async function exportDailySummaryReport(req, res, next) {
     sumData.push(['Total QRIS', t.totalQris]);
     sumData.push(['Total Mandiri', t.totalMandiri]);
     sumData.push(['Total BCA', t.totalBca]);
+    sumData.push(['Total Non Cash', t.totalNonCash]);
     sumData.push(['Pengeluaran Kasir', t.pengeluaranKasir]);
     sumData.push(['Total Cash', t.totalCash]);
     sumData.push(['Actual Cash', t.actualCash]);

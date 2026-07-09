@@ -935,6 +935,10 @@ exports.getShiftReport = async (req, res, next) => {
     // cash-only breakdown (untuk info saldo laci kas)
     const cashSalesResto  = response.reportCashier?.paymentMethods?.cash?.amount || 0;
     const cashSalesGym    = response.reportGym?.paymentCash || 0;
+    // non-cash breakdown (untuk balancing dengan laporan revenue)
+    const nonCashSalesResto = parseFloat((totalSalesResto - cashSalesResto).toFixed(2));
+    const nonCashSalesGym   = parseFloat((totalSalesGym - cashSalesGym).toFixed(2));
+    const totalNonCash      = parseFloat((nonCashSalesResto + nonCashSalesGym).toFixed(2));
 
     response.cashSummary = {
       totalSalesResto:  parseFloat(totalSalesResto.toFixed(2)),
@@ -946,6 +950,10 @@ exports.getShiftReport = async (req, res, next) => {
       cashSalesResto:   parseFloat(cashSalesResto.toFixed(2)),
       cashSalesGym:     parseFloat(cashSalesGym.toFixed(2)),
       cashGrandTotal:   parseFloat((cashSalesResto + cashSalesGym - cashExpensesWithPettyCash).toFixed(2)),
+      // non-cash portion per modul (untuk balancing laporan revenue)
+      nonCashSalesResto,
+      nonCashSalesGym,
+      totalNonCash,
     };
 
     return res.json({ success: true, data: response });
@@ -1912,6 +1920,10 @@ exports.getDailyReport = async (req, res, next) => {
     // cash-only breakdown (untuk info saldo laci kas)
     const dailyCashSalesResto  = response.reportCashier?.paymentMethods?.cash?.amount || 0;
     const dailyCashSalesGym    = response.reportGym?.paymentCash || 0;
+    // non-cash breakdown (untuk balancing dengan laporan revenue)
+    const dailyNonCashSalesResto = parseFloat((dailyTotalSalesResto - dailyCashSalesResto).toFixed(2));
+    const dailyNonCashSalesGym   = parseFloat((dailyTotalSalesGym - dailyCashSalesGym).toFixed(2));
+    const dailyTotalNonCash      = parseFloat((dailyNonCashSalesResto + dailyNonCashSalesGym).toFixed(2));
 
     response.cashSummary = {
       totalSalesResto:  parseFloat(dailyTotalSalesResto.toFixed(2)),
@@ -1923,6 +1935,10 @@ exports.getDailyReport = async (req, res, next) => {
       cashSalesResto:   parseFloat(dailyCashSalesResto.toFixed(2)),
       cashSalesGym:     parseFloat(dailyCashSalesGym.toFixed(2)),
       cashGrandTotal:   parseFloat((dailyCashSalesResto + dailyCashSalesGym - dayCashExpensesWithPettyCash).toFixed(2)),
+      // non-cash portion per modul (untuk balancing laporan revenue)
+      nonCashSalesResto: dailyNonCashSalesResto,
+      nonCashSalesGym:   dailyNonCashSalesGym,
+      totalNonCash:      dailyTotalNonCash,
     };
 
     return res.json({ success: true, data: response });
