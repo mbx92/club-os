@@ -395,6 +395,29 @@ meta:
               <span class="label-text-alt text-warning">Tidak ada dana aktif. Buat atau aktifkan fund terlebih dahulu.</span>
             </label>
           </div>
+          <!-- Vault Account (only for vault_cash) -->
+          <div v-if="payForm.paymentOption === 'vault_cash'" class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Vault Account <span class="text-error">*</span></span>
+            </label>
+            <div v-if="vaultAccountsLoading" class="flex items-center gap-2 text-sm text-base-content/60 py-2">
+              <span class="loading loading-spinner loading-xs"></span> Memuat vault account...
+            </div>
+            <select
+              v-else-if="vaultAccounts.length"
+              v-model="payForm.vaultAccountId"
+              class="select select-bordered w-full"
+              :class="{ 'select-error': !payForm.vaultAccountId }"
+            >
+              <option value="">-- Pilih Vault Account --</option>
+              <option v-for="account in vaultAccounts" :key="account.id" :value="account.id">
+                {{ account.name }} — Saldo: {{ new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(account.balance) }}
+              </option>
+            </select>
+            <label v-if="!vaultAccounts.length && !vaultAccountsLoading" class="label">
+              <span class="label-text-alt text-warning">⚠️ Belum ada vault account. Lakukan collect dari cash drawer untuk auto-create akun "Kas".</span>
+            </label>
+          </div>
           <!-- Bank Name (only for bank_transfer) -->
           <div v-if="payForm.paymentOption === 'bank_transfer'" class="form-control">
             <label class="label">
@@ -452,7 +475,7 @@ meta:
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useExpenses, useExpenseCategories, usePettyCash } from '@/composables/finances'
+import { useExpenses, useExpenseCategories, usePettyCash, useVault } from '@/composables/finances'
 import { useAuthStore } from '@/stores/auth'
 import { useDialog } from '@/composables/core/useApi'
 import { useNotification } from '@/composables/core/useNotification'
@@ -534,13 +557,14 @@ const resolvePaymentOption = (expense = null) => {
 
 const { categories, fetchCategories } = useExpenseCategories()
 const { fetchFunds: fetchPettyCashFunds } = usePettyCash()
+const { vaultAccounts, fetchVaultAccounts, accountsLoading: vaultAccountsLoading } = useVault()
 
 const dialog = useDialog()
 const expenseFormModal = ref(null)
 const confirmDialog = ref(null)
 const selectedExpense = ref(null)
 const showPayModal = ref(false)
-const payForm = ref({ paymentOption: 'vault_cash', bankName: '', paymentNotes: '', paidDate: new Date().toISOString().split('T')[0], pettyCashId: '' })
+const payForm = ref({ paymentOption: 'vault_cash', bankName: '', paymentNotes: '', paidDate: new Date().toISOString().split('T')[0], pettyCashId: '', vaultAccountId: '' })
 const payTarget = ref(null)
 const pettyCashFunds = ref([])
 const pettyCashFundsLoading = ref(false)
@@ -728,10 +752,13 @@ const handleMarkAsPaid = (expense) => {
     paymentNotes: '',
     paidDate: new Date().toISOString().split('T')[0],
     pettyCashId: '',
+    vaultAccountId: expense?.vaultAccountId || '',
   }
-  // Pre-load petty cash funds if needed
+  // Pre-load funds if needed
   if (payForm.value.paymentOption === 'petty_cash') {
     loadPettyCashFunds()
+  } else if (payForm.value.paymentOption === 'vault_cash') {
+    fetchVaultAccounts({ isActive: 'true' })
   }
   showPayModal.value = true
 }
@@ -740,6 +767,13 @@ const submitMarkAsPaid = async () => {
   // Validate petty_cash requires a fund selection
   if (payForm.value.paymentOption === 'petty_cash' && !payForm.value.pettyCashId) {
     processingError.value = 'Pilih dana petty cash yang akan digunakan.'
+    showProcessingModal.value = true
+    return
+  }
+
+  // Validate vault_cash requires a vault account selection
+  if (payForm.value.paymentOption === 'vault_cash' && !payForm.value.vaultAccountId) {
+    processingError.value = 'Pilih vault account sumber dana.'
     showProcessingModal.value = true
     return
   }
@@ -758,6 +792,9 @@ const submitMarkAsPaid = async () => {
     }
     if (payForm.value.paymentOption === 'petty_cash') {
       payload.pettyCashId = payForm.value.pettyCashId
+    }
+    if (payForm.value.paymentOption === 'vault_cash' && payForm.value.vaultAccountId) {
+      payload.vaultAccountId = payForm.value.vaultAccountId
     }
     if (payForm.value.paymentOption === 'bank_transfer' && payForm.value.bankName) {
       payload.bankName = payForm.value.bankName
@@ -822,7 +859,8 @@ const handleDelete = async (expense) => {
 onMounted(async () => {
   await Promise.all([
     loadExpenses(),
-    fetchCategories({ isActive: true })
+    fetchCategories({ isActive: true }),
+    fetchVaultAccounts({ isActive: 'true' }).catch(() => null),
   ])
 })
 </script>
