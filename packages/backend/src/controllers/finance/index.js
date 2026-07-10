@@ -1,3 +1,4 @@
+const accountController = require('./accountController');
 const expenseController = require('./expenseController');
 const expenseCategoryController = require('./expenseCategoryController');
 const incomeController = require('./incomeController');
@@ -11,6 +12,7 @@ const pettyCashController = require('./pettyCashController');
 const supplierController = require('./supplierController');
 
 module.exports = {
+  ...accountController,
   ...expenseController,
   ...expenseCategoryController,
   ...incomeController,

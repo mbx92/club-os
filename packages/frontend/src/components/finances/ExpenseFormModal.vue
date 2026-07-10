@@ -187,10 +187,10 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="form-control">
             <label class="label">
-              <span class="label-text font-medium">Payment Method</span>
+              <span class="label-text font-medium">Sumber Dana</span>
             </label>
             <select v-model="formData.paymentOption" class="select select-bordered w-full">
-              <option value="">Select payment method</option>
+              <option value="">Pilih sumber dana</option>
               <option v-for="option in paymentOptions" :key="option.value" :value="option.value">
                 {{ option.label }}
               </option>
@@ -208,8 +208,30 @@
           </div>
         </div>
 
-        <!-- Bank Name + Payment Notes + Vault Account -->
+        <!-- Bank Name + Payment Notes + Vault Account + Finance Account -->
         <div v-if="formData.paymentOption" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div v-if="formData.paymentOption === 'from_account'" class="form-control md:col-span-2">
+            <label class="label">
+              <span class="label-text font-medium">Akun Sumber Dana <span class="text-error">*</span></span>
+            </label>
+            <div v-if="financeAccountsLoading" class="flex items-center gap-2 text-sm text-base-content/60 py-2">
+              <span class="loading loading-spinner loading-xs"></span> Memuat akun...
+            </div>
+            <select
+              v-else
+              v-model="formData.accountId"
+              class="select select-bordered w-full"
+              :class="{ 'select-error': errors.accountId }"
+            >
+              <option value="">Pilih akun</option>
+              <option v-for="account in financeAccounts" :key="account.id" :value="String(account.id)">
+                {{ account.name }}{{ account.bankName ? ` (${account.bankName})` : '' }} — {{ formatCurrency(account.balance) }}
+              </option>
+            </select>
+            <label v-if="errors.accountId" class="label">
+              <span class="label-text-alt text-error">{{ errors.accountId }}</span>
+            </label>
+          </div>
           <div v-if="formData.paymentOption === 'vault_cash'" class="form-control">
             <label class="label">
               <span class="label-text font-medium">Vault Account <span class="text-error">*</span></span>
@@ -381,7 +403,13 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import CurrencyInput from '@/components/shared/CurrencyInput.vue'
-import { useSuppliers, useVault } from '@/composables/finances'
+import { useSuppliers, useVault, useAccounts } from '@/composables/finances'
+import {
+  EXPENSE_PAYMENT_OPTION_MAP,
+  EXPENSE_PAYMENT_OPTIONS,
+  resolveExpensePaymentOption,
+  paymentMethodFromAccount,
+} from '@/utils/expensePayment'
 
 const props = defineProps({
   expense: {
@@ -414,38 +442,20 @@ const tagsInput = ref('')
 
 const { suppliers: supplierList, fetchSuppliers } = useSuppliers()
 const { vaultAccounts, fetchVaultAccounts, accountsLoading: vaultAccountsLoading } = useVault()
+const { accounts: financeAccounts, fetchAccounts: fetchFinanceAccounts, loading: financeAccountsLoading } = useAccounts()
 const vendorMode = ref('select') // 'select' | 'manual'
 
-const PAYMENT_OPTION_MAP = {
-  cash_drawer_cash: { paymentMethod: 'cash', fundSource: 'cash_drawer' },
-  vault_cash: { paymentMethod: 'cash', fundSource: 'vault' },
-  petty_cash: { paymentMethod: 'petty_cash' },
-  bank_transfer: { paymentMethod: 'bank_transfer', fundSource: 'bank' },
-}
+const PAYMENT_OPTION_MAP = EXPENSE_PAYMENT_OPTION_MAP
 
 const paymentOptions = computed(() => {
   if (props.isCashier) {
     return [{ value: 'cash_drawer_cash', label: 'Tunai' }]
   }
-
-  return [
-    { value: 'cash_drawer_cash', label: 'Tunai / Laci Kasir' },
-    { value: 'vault_cash', label: 'Vault / Brankas' },
-    { value: 'petty_cash', label: 'Petty Cash (Modal Awal)' },
-    { value: 'bank_transfer', label: 'Transfer Bank' },
-  ]
+  return EXPENSE_PAYMENT_OPTIONS
 })
 
-const resolvePaymentOption = (expense = null) => {
-  if (!expense?.paymentMethod) {
-    return props.isCashier ? 'cash_drawer_cash' : 'vault_cash'
-  }
-
-  if (expense.paymentMethod === 'petty_cash') return 'petty_cash'
-  if (expense.paymentMethod === 'bank_transfer') return 'bank_transfer'
-  if (expense.paymentMethod === 'cash' && expense.fundSource === 'vault') return 'vault_cash'
-  return 'cash_drawer_cash'
-}
+const resolvePaymentOption = (expense = null) =>
+  resolveExpensePaymentOption(expense, { isCashier: props.isCashier })
 
 const formData = ref({
   title: '',
@@ -463,6 +473,7 @@ const formData = ref({
   bankName: '',
   paymentNotes: '',
   vaultAccountId: '',
+  accountId: '',
   status: 'draft',
   notes: '',
   isRecurring: false,
@@ -528,6 +539,10 @@ const validate = () => {
     errors.value.vaultAccountId = 'Pilih vault account sumber dana'
   }
 
+  if (formData.value.paymentOption === 'from_account' && !formData.value.accountId) {
+    errors.value.accountId = 'Pilih akun sumber dana'
+  }
+
   return Object.keys(errors.value).length === 0
 }
 
@@ -544,16 +559,32 @@ const handleSubmit = () => {
 
   const paymentConfig = PAYMENT_OPTION_MAP[submitData.paymentOption]
   if (paymentConfig) {
-    submitData.paymentMethod = paymentConfig.paymentMethod
-    if (paymentConfig.fundSource) {
-      submitData.fundSource = paymentConfig.fundSource
+    if (submitData.paymentOption === 'from_account') {
+      const selectedAccount = financeAccounts.value.find(a => String(a.id) === String(submitData.accountId))
+      submitData.paymentMethod = paymentMethodFromAccount(selectedAccount)
+      submitData.fundSource = 'account'
+      if (selectedAccount?.bankName) submitData.bankName = selectedAccount.bankName
+      delete submitData.vaultAccountId
     } else {
-      delete submitData.fundSource
+      submitData.paymentMethod = paymentConfig.paymentMethod
+      if (paymentConfig.fundSource) {
+        submitData.fundSource = paymentConfig.fundSource
+      } else {
+        delete submitData.fundSource
+      }
+      delete submitData.accountId
+      if (submitData.paymentOption !== 'vault_cash') {
+        delete submitData.vaultAccountId
+      }
     }
   }
 
   delete submitData.paymentOption
-  
+  // Strip associations / read-only fields that may come from edit spread
+  ;['id', 'expenseNumber', 'category', 'location', 'creator', 'approver', 'account', 'vaultAccount', 'tenant', 'createdAt', 'updatedAt', 'approvedAt', 'approvedBy', 'createdBy', 'totalAmount', 'version'].forEach((key) => {
+    delete submitData[key]
+  })
+
   // Remove empty fields
   Object.keys(submitData).forEach(key => {
     if (submitData[key] === '' || submitData[key] === null) {
@@ -590,17 +621,32 @@ const open = (expense = null) => {
   // Fetch active suppliers for dropdown
   fetchSuppliers({ isActive: 'true', limit: 200, sortBy: 'name', sortOrder: 'ASC' })
   fetchVaultAccounts({ isActive: 'true' })
+  fetchFinanceAccounts({ isActive: 'true' })
 
   if (expense) {
     formData.value = {
-      ...expense,
+      title: expense.title || '',
+      description: expense.description || '',
+      categoryId: expense.categoryId || '',
+      locationId: expense.locationId || '',
+      amount: expense.amount ?? 0,
+      taxAmount: expense.taxAmount ?? 0,
+      expenseDate: expense.expenseDate?.split?.('T')?.[0] || expense.expenseDate || '',
+      dueDate: expense.dueDate?.split?.('T')?.[0] || expense.dueDate || '',
+      vendor: expense.vendor || '',
       supplierId: expense.supplierId || '',
+      referenceNumber: expense.referenceNumber || '',
       paymentOption: resolvePaymentOption(expense),
+      bankName: expense.bankName || '',
+      paymentNotes: expense.paymentNotes || '',
       vaultAccountId: expense.vaultAccountId || '',
-      expenseDate: expense.expenseDate?.split('T')[0] || '',
-      dueDate: expense.dueDate?.split('T')[0] || '',
-      recurringEndDate: expense.recurringEndDate?.split('T')[0] || '',
-      tags: expense.tags || []
+      accountId: expense.accountId ? String(expense.accountId) : '',
+      status: ['draft', 'pending'].includes(expense.status) ? expense.status : 'pending',
+      notes: expense.notes || '',
+      isRecurring: !!expense.isRecurring,
+      recurringFrequency: expense.recurringFrequency || '',
+      recurringEndDate: expense.recurringEndDate?.split?.('T')?.[0] || expense.recurringEndDate || '',
+      tags: expense.tags || [],
     }
     tagsInput.value = expense.tags ? expense.tags.join(', ') : ''
     // If editing: if has supplierId → use select mode, else manual
@@ -622,6 +668,7 @@ const open = (expense = null) => {
       bankName: '',
       paymentNotes: '',
       vaultAccountId: '',
+      accountId: '',
       status: 'draft',
       notes: '',
       isRecurring: false,

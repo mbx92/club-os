@@ -1,3 +1,4 @@
+const accountRoutes = require('./account.routes');
 const vaultRoutes = require('./vault.routes');
 const expenseRoutes = require('./expense.routes');
 const expenseCategoryRoutes = require('./expenseCategory.routes');
@@ -12,6 +13,7 @@ const supplierRoutes = require('./supplier.routes');
 const shareholderRoutes = require('./shareholder.routes');
 
 module.exports = {
+  accountRoutes,
   expenseRoutes,
   expenseCategoryRoutes,
   incomeRoutes,

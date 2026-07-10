@@ -31,8 +31,16 @@ const PAYMENT_METHOD_CATALOG = [
   { key: 'compliment', label: 'Gratis (Compliment)', enabled: true, requiresBank: false, isSystem: true },
 ];
 
+const BANK_CATALOG = [
+  { key: 'BCA', label: 'BCA', enabled: true, isSystem: true },
+  { key: 'MANDIRI', label: 'MANDIRI', enabled: true, isSystem: true },
+];
+
 const buildDefaultPaymentMethods = () =>
   PAYMENT_METHOD_CATALOG.map((method) => ({ ...method }));
+
+const buildDefaultBanks = () =>
+  BANK_CATALOG.map((bank) => ({ ...bank }));
 
 const DEFAULT_TRANSACTION_SETTINGS = {
   taxEnable: false,
@@ -57,6 +65,7 @@ const DEFAULT_TRANSACTION_SETTINGS = {
     enabledGateways: [],
     paymentTimeout: 60,
     paymentMethods: buildDefaultPaymentMethods(),
+    banks: buildDefaultBanks(),
     midtransConfig: {
       apiKey: '',
       clientKey: '',
@@ -392,10 +401,14 @@ async function getPaymentConfiguration(tenantId) {
   const paymentMethods = Array.isArray(paymentConfig.paymentMethods) && paymentConfig.paymentMethods.length
     ? paymentConfig.paymentMethods
     : buildDefaultPaymentMethods();
+  const banks = Array.isArray(paymentConfig.banks) && paymentConfig.banks.length
+    ? paymentConfig.banks
+    : buildDefaultBanks();
   
   return {
     ...paymentConfig,
     paymentMethods,
+    banks,
     midtransConfig: {
       ...paymentConfig.midtransConfig,
       apiKey: paymentConfig.midtransConfig?.apiKey ? '***MASKED***' : '',
@@ -431,6 +444,10 @@ async function updatePaymentConfiguration(tenantId, paymentConfig) {
     validatePaymentMethods(paymentConfig.paymentMethods);
   }
 
+  if (paymentConfig.banks) {
+    validateBanks(paymentConfig.banks);
+  }
+
   await updateTransactionSettings(tenantId, { payment: paymentConfig });
   return getPaymentConfiguration(tenantId);
 }
@@ -445,6 +462,34 @@ async function getPaymentMethodsConfiguration(tenantId) {
   const settings = await getTransactionSettings(tenantId);
   const methods = settings.payment?.paymentMethods;
   return Array.isArray(methods) && methods.length ? methods : buildDefaultPaymentMethods();
+}
+
+/**
+ * Get configured banks for a tenant
+ *
+ * @param {string} tenantId
+ * @returns {Promise<Array<object>>}
+ */
+async function getBanksConfiguration(tenantId) {
+  const settings = await getTransactionSettings(tenantId);
+  const banks = settings.payment?.banks;
+  return Array.isArray(banks) && banks.length ? banks : buildDefaultBanks();
+}
+
+/**
+ * Resolve enabled bank keys for validation / dropdowns
+ *
+ * @param {string} tenantId
+ * @returns {Promise<Set<string>>}
+ */
+async function getEnabledBankKeys(tenantId) {
+  const banks = await getBanksConfiguration(tenantId);
+  return new Set(
+    banks
+      .filter((bank) => bank.enabled !== false)
+      .map((bank) => String(bank.key || '').trim().toUpperCase())
+      .filter(Boolean)
+  );
 }
 
 /**
@@ -667,6 +712,10 @@ function validateTransactionSettings(settings) {
     validatePaymentMethods(settings.payment.paymentMethods);
   }
 
+  if (settings.payment?.banks) {
+    validateBanks(settings.payment.banks);
+  }
+
   // Validate invoice numbering
   if (settings.invoice?.startingInvoiceNumber !== undefined) {
     const startNum = parseInt(settings.invoice.startingInvoiceNumber);
@@ -713,6 +762,41 @@ function validatePaymentMethods(paymentMethods) {
   }
 }
 
+function validateBanks(banks) {
+  if (!Array.isArray(banks)) {
+    throw createError('VALIDATION_ERROR', 'banks must be an array', 400);
+  }
+
+  const seen = new Set();
+
+  for (const bank of banks) {
+    const key = String(bank?.key || '').trim().toUpperCase();
+    const label = String(bank?.label || '').trim();
+
+    if (!key) {
+      throw createError('VALIDATION_ERROR', 'Each bank must have a key', 400);
+    }
+
+    if (!/^[A-Z][A-Z0-9_]*$/.test(key)) {
+      throw createError(
+        'VALIDATION_ERROR',
+        `Invalid bank key "${key}". Use uppercase letters/numbers/underscore (e.g. BCA, MANDIRI, BRI).`,
+        400
+      );
+    }
+
+    if (!label) {
+      throw createError('VALIDATION_ERROR', `Bank "${key}" must have a label`, 400);
+    }
+
+    if (seen.has(key)) {
+      throw createError('VALIDATION_ERROR', `Duplicate bank key "${key}"`, 400);
+    }
+
+    seen.add(key);
+  }
+}
+
 module.exports = {
   // Main functions
   getTransactionSettings,
@@ -732,6 +816,8 @@ module.exports = {
   updatePaymentConfiguration,
   getPaymentMethodsConfiguration,
   getEnabledPaymentMethodKeys,
+  getBanksConfiguration,
+  getEnabledBankKeys,
   getDiscountConfiguration,
   updateDiscountConfiguration,
   getShippingConfiguration,
@@ -743,5 +829,7 @@ module.exports = {
   // Defaults
   DEFAULT_TRANSACTION_SETTINGS,
   PAYMENT_METHOD_CATALOG,
+  BANK_CATALOG,
   buildDefaultPaymentMethods,
+  buildDefaultBanks,
 };

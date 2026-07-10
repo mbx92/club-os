@@ -23,6 +23,9 @@ const { generateTransactionNumber } = require('../../../services/invoiceNumberSe
 const transactionSettingsService = require('../../../services/transactionSettingsService');
 const voucherService = require('../../../services/voucherService');
 const receiptPrinterService = require('../../../services/receiptPrinterService');
+const accountService = require('../../../services/accountService');
+const { getTenantTimezone } = require('../../../utils/tenantTimezone');
+const { recordPaymentInflow } = require('../../finance/vaultController');
 
 /**
  * Get all walk-in active services (memberId IS NULL)
@@ -662,19 +665,60 @@ async function purchaseServices(req, res, next) {
     await Promise.all(itemPromises);
 
     // Create TransactionPayments
-    const paymentPromises = normalizedPaymentMethods.map(pm =>
-      TransactionPayment.create({
-        transactionId: transaction.id,
-        paymentMethod: normalizePaymentMethod(pm.method),
-        amount: pm.amount,
-        currency,
-        status: 'completed',
-        paidAt: new Date(),
-        paymentDetails: pm.paymentDetails || {},
-      }, { transaction: t })
+    const createdPayments = await Promise.all(
+      normalizedPaymentMethods.map(pm =>
+        TransactionPayment.create({
+          transactionId: transaction.id,
+          paymentMethod: normalizePaymentMethod(pm.method),
+          amount: pm.amount,
+          currency,
+          status: 'completed',
+          paidAt: new Date(),
+          paymentDetails: pm.paymentDetails || {},
+          createdBy: req.user.id,
+        }, { transaction: t })
+      )
     );
 
-    await Promise.all(paymentPromises);
+    // Vault inflow + Account auto-credit for non-cash payments (best-effort)
+    for (const payment of createdPayments) {
+      await recordPaymentInflow({
+        tenantId: effectiveTenantId,
+        locationId: null,
+        paymentMethod: payment.paymentMethod,
+        amount: payment.amount,
+        paymentDetails: payment.paymentDetails || {},
+        referenceType: 'transaction',
+        referenceId: transaction.id,
+        referenceNumber: transaction.transactionNumber,
+        createdBy: req.user.id,
+        dbTransaction: t,
+      }).catch(err => {
+        logger.logError('Failed to record vault payment_inflow from service purchase', {
+          action: 'VAULT_PAYMENT_INFLOW_ERROR',
+          userId: req.user.id,
+          tenantId: effectiveTenantId,
+          paymentMethod: payment.paymentMethod,
+          amount: payment.amount,
+          error: err.message,
+        });
+      });
+
+      await accountService.creditFromPayment(payment, {
+        tenantId: effectiveTenantId,
+        timezone: getTenantTimezone(req),
+        performedBy: req.user.id,
+      }, t).catch(err => {
+        logger.logError('Failed to auto-credit Account from service purchase', {
+          action: 'ACCOUNT_CREDIT_ERROR',
+          userId: req.user.id,
+          tenantId: effectiveTenantId,
+          paymentId: payment.id,
+          paymentMethod: payment.paymentMethod,
+          error: err.message,
+        });
+      });
+    }
 
     // Create VoucherUsage record for audit trail (using centralized service)
     if (voucherId) {

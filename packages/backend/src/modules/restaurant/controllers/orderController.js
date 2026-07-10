@@ -33,6 +33,8 @@ const { normalizePaymentMethod } = require('../../../utils/paymentMethodNormaliz
 const transactionSettingsService = require('../../../services/transactionSettingsService');
 const logger = require('../../../utils/logger');
 const { recordPaymentInflow } = require('../../../controllers/finance/vaultController');
+const accountService = require('../../../services/accountService');
+const { getTenantTimezone } = require('../../../utils/tenantTimezone');
 const { can } = require('../../../utils/rbac');
 const { hasFeature } = require('../../../middlewares/featureGateMiddleware');
 
@@ -798,9 +800,10 @@ const createOrder = async (req, res, next) => {
     const paymentStatus = orderStatus === 'completed' ? 'completed' : 'pending';
 
     // Create payment records if payments provided
+    const createdPayments = [];
     if (payments.length > 0) {
       for (const payment of payments) {
-        await TransactionPayment.create({
+        const createdPayment = await TransactionPayment.create({
           transactionId: order.id,
           tenantId,
           paymentMethod: normalizePaymentMethod(payment.method || 'cash'),
@@ -812,17 +815,18 @@ const createOrder = async (req, res, next) => {
           notes: payment.notes || null,
           createdBy: req.user.id,
         }, { transaction: t });
+        createdPayments.push(createdPayment);
       }
     }
 
-      // Record vault inflow for non-cash completed payments (takeaway/delivery)
+      // Record vault inflow + Account auto-credit for non-cash completed payments
       if (paymentStatus === 'completed') {
-        for (const payment of payments) {
+        for (const payment of createdPayments) {
           await recordPaymentInflow({
             tenantId,
             locationId: order.locationId || locationId || null,
-            paymentMethod: normalizePaymentMethod(payment.method || 'cash'),
-            amount: parseFloat(payment.amount || 0),
+            paymentMethod: payment.paymentMethod,
+            amount: payment.amount,
             paymentDetails: payment.paymentDetails || {},
             referenceType: 'order',
             referenceId: order.id,
@@ -835,7 +839,22 @@ const createOrder = async (req, res, next) => {
               userId: req.user.id,
               tenantId,
               orderId: order.id,
-              paymentMethod: payment.method,
+              paymentMethod: payment.paymentMethod,
+              error: err.message,
+            });
+          });
+
+          await accountService.creditFromPayment(payment, {
+            tenantId,
+            timezone: getTenantTimezone(req),
+            performedBy: req.user.id,
+          }, t).catch(err => {
+            logger.logError('Failed to auto-credit Account from createOrder', {
+              action: 'ACCOUNT_CREDIT_ERROR',
+              userId: req.user.id,
+              tenantId,
+              paymentId: payment.id,
+              paymentMethod: payment.paymentMethod,
               error: err.message,
             });
           });
@@ -1899,6 +1918,7 @@ const completeOrder = async (req, res, next) => {
     });
 
     // Create payment records if payments provided
+    const createdPayments = [];
     if (payments && Array.isArray(payments) && payments.length > 0) {
       let totalPaid = 0;
 
@@ -1906,7 +1926,7 @@ const completeOrder = async (req, res, next) => {
         const paymentAmount = parseFloat(payment.amount);
         totalPaid += paymentAmount;
 
-        await TransactionPayment.create({
+        const createdPayment = await TransactionPayment.create({
           transactionId: order.id,
           paymentMethod: normalizePaymentMethod(payment.method),
           amount: paymentAmount,
@@ -1915,15 +1935,16 @@ const completeOrder = async (req, res, next) => {
           paymentDetails: payment.paymentDetails || {},
           createdBy: userId
         }, { transaction: t });
+        createdPayments.push(createdPayment);
       }
 
-      // Record vault inflow for non-cash payments
-      for (const payment of payments) {
+      // Record vault inflow + Account auto-credit for non-cash payments
+      for (const payment of createdPayments) {
         await recordPaymentInflow({
           tenantId,
           locationId: order.locationId || null,
-          paymentMethod: normalizePaymentMethod(payment.method),
-          amount: parseFloat(payment.amount),
+          paymentMethod: payment.paymentMethod,
+          amount: payment.amount,
           paymentDetails: payment.paymentDetails || {},
           referenceType: 'order',
           referenceId: order.id,
@@ -1936,7 +1957,22 @@ const completeOrder = async (req, res, next) => {
             userId,
             tenantId,
             orderId: order.id,
-            paymentMethod: payment.method,
+            paymentMethod: payment.paymentMethod,
+            error: err.message,
+          });
+        });
+
+        await accountService.creditFromPayment(payment, {
+          tenantId,
+          timezone: getTenantTimezone(req),
+          performedBy: userId,
+        }, t).catch(err => {
+          logger.logError('Failed to auto-credit Account from completeOrder', {
+            action: 'ACCOUNT_CREDIT_ERROR',
+            userId,
+            tenantId,
+            paymentId: payment.id,
+            paymentMethod: payment.paymentMethod,
             error: err.message,
           });
         });
@@ -2712,8 +2748,9 @@ const createDirectOrder = async (req, res, next) => {
     }
 
     // Create payment records
+    const createdPayments = [];
     for (const payment of payments) {
-      await TransactionPayment.create({
+      const createdPayment = await TransactionPayment.create({
         transactionId: order.id,
         paymentMethod: normalizePaymentMethod(payment.method),
         amount: parseFloat(payment.amount),
@@ -2722,15 +2759,16 @@ const createDirectOrder = async (req, res, next) => {
         notes: payment.reference || null,
         createdBy: userId
       }, { transaction: t });
+      createdPayments.push(createdPayment);
     }
 
-    // Record vault inflow for non-cash payments
-    for (const payment of payments) {
+    // Record vault inflow + Account auto-credit for non-cash payments
+    for (const payment of createdPayments) {
       await recordPaymentInflow({
         tenantId,
         locationId: order.locationId || null,
-        paymentMethod: normalizePaymentMethod(payment.method),
-        amount: parseFloat(payment.amount),
+        paymentMethod: payment.paymentMethod,
+        amount: payment.amount,
         paymentDetails: payment.paymentDetails || {},
         referenceType: 'order',
         referenceId: order.id,
@@ -2743,7 +2781,22 @@ const createDirectOrder = async (req, res, next) => {
           userId,
           tenantId,
           orderId: order.id,
-          paymentMethod: payment.method,
+          paymentMethod: payment.paymentMethod,
+          error: err.message,
+        });
+      });
+
+      await accountService.creditFromPayment(payment, {
+        tenantId,
+        timezone: getTenantTimezone(req),
+        performedBy: userId,
+      }, t).catch(err => {
+        logger.logError('Failed to auto-credit Account from createDirectOrder', {
+          action: 'ACCOUNT_CREDIT_ERROR',
+          userId,
+          tenantId,
+          paymentId: payment.id,
+          paymentMethod: payment.paymentMethod,
           error: err.message,
         });
       });

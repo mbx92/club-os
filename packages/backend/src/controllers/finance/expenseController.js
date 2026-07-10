@@ -8,12 +8,14 @@
  * @module controllers/finance/expenseController
  */
 
-const { Expense, ExpenseCategory, User, Location, PettyCash, PettyCashTransaction, VaultAccount, CashMutation, sequelize } = require('../../models');
+const { Expense, ExpenseCategory, User, Location, PettyCash, PettyCashTransaction, VaultAccount, CashMutation, Account, sequelize } = require('../../models');
 const { Op, Transaction: SequelizeTransaction } = require('sequelize');
 const logger = require('../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../utils/requestHelper');
 const { generateUniqueSequence, withRetry } = require('../../utils/concurrency');
 const { buildOptionalDateRangeFilter } = require('../../utils/dateRange');
+const accountService = require('../../services/accountService');
+const { getTenantTimezone } = require('../../utils/tenantTimezone');
 
 /**
  * Create new expense
@@ -45,6 +47,7 @@ async function createExpense(req, res, next) {
     pettyCashId,
     fundSource,
     vaultAccountId,
+    accountId = null,
   } = req.body;
 
   // Validasi: jika langsung paid dengan petty_cash, pettyCashId wajib
@@ -62,6 +65,15 @@ async function createExpense(req, res, next) {
       success: false,
       code: 'VALIDATION_ERROR',
       message: 'vaultAccountId wajib disertakan saat fundSource adalah vault'
+    });
+  }
+
+  // Validasi: account wajib jika fundSource = account dan langsung paid
+  if (status === 'paid' && fundSource === 'account' && !accountId) {
+    return res.status(400).json({
+      success: false,
+      code: 'VALIDATION_ERROR',
+      message: 'accountId wajib disertakan saat fundSource adalah account'
     });
   }
 
@@ -120,6 +132,7 @@ async function createExpense(req, res, next) {
           attachments,
           fundSource: fundSource || null,
           vaultAccountId: vaultAccountId || null,
+          accountId: accountId || null,
           createdBy: userId
         }, { transaction });
 
@@ -218,10 +231,50 @@ async function createExpense(req, res, next) {
           }, { transaction });
         }
 
+        // Jika langsung paid dari akun keuangan, debit Account
+        if (status === 'paid' && accountId) {
+          const { Account } = require('../../models');
+          const financeAccount = await Account.findOne({
+            where: { id: accountId, tenantId, isActive: true },
+            lock: transaction.LOCK.UPDATE,
+            transaction,
+          });
+          if (!financeAccount) {
+            await transaction.rollback();
+            return { accountNotFound: true };
+          }
+          const expenseAmount = parseFloat(amount) + parseFloat(taxAmount);
+          if (parseFloat(financeAccount.balance) < expenseAmount) {
+            await transaction.rollback();
+            return {
+              accountInsufficientBalance: true,
+              currentBalance: financeAccount.balance,
+              needed: expenseAmount,
+              accountName: financeAccount.name,
+            };
+          }
+          await accountService.debitFromExpense(
+            {
+              id: expense.id,
+              title: expense.title,
+              description: expense.description,
+              expenseNumber: expense.expenseNumber,
+              accountId,
+              totalAmount: expenseAmount,
+              amount: expense.amount,
+              expenseDate,
+            },
+            { tenantId, timezone: getTenantTimezone(req), performedBy: userId },
+            transaction
+          );
+        }
+
         await transaction.commit();
         return { expense, expenseNumber, pctTransaction, vaultMutation };
       } catch (err) {
-        await transaction.rollback();
+        if (!transaction.finished) {
+          await transaction.rollback();
+        }
         throw err;
       }
     }, 3, 150, 'CREATE_EXPENSE');
@@ -266,6 +319,22 @@ async function createExpense(req, res, next) {
       });
     }
 
+    if (result.accountNotFound) {
+      return res.status(404).json({
+        success: false,
+        code: 'ACCOUNT_NOT_FOUND',
+        message: 'Akun keuangan tidak ditemukan atau tidak aktif'
+      });
+    }
+
+    if (result.accountInsufficientBalance) {
+      return res.status(400).json({
+        success: false,
+        code: 'INSUFFICIENT_BALANCE',
+        message: `Saldo akun ${result.accountName || ''} tidak cukup. Saldo: ${result.currentBalance}, dibutuhkan: ${result.needed}`
+      });
+    }
+
     const { expense, expenseNumber, pctTransaction, vaultMutation } = result;
 
     // Fetch with associations
@@ -273,7 +342,9 @@ async function createExpense(req, res, next) {
       include: [
         { model: ExpenseCategory, as: 'category' },
         { model: Location, as: 'location' },
-        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName', 'email'] }
+        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: Account, as: 'account', attributes: ['id', 'name', 'type', 'bankName', 'paymentMethod', 'balance'] },
+        { model: VaultAccount, as: 'vaultAccount', attributes: ['id', 'name', 'balance'] },
       ]
     });
 
@@ -380,7 +451,9 @@ async function getAllExpenses(req, res, next) {
         { model: ExpenseCategory, as: 'category' },
         { model: Location, as: 'location' },
         { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: User, as: 'approver', attributes: ['id', 'firstName', 'lastName', 'email'] }
+        { model: User, as: 'approver', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: Account, as: 'account', attributes: ['id', 'name', 'type', 'bankName', 'paymentMethod', 'balance'] },
+        { model: VaultAccount, as: 'vaultAccount', attributes: ['id', 'name', 'balance'] },
       ]
     });
 
@@ -428,7 +501,9 @@ async function getExpenseById(req, res, next) {
         { model: ExpenseCategory, as: 'category' },
         { model: Location, as: 'location' },
         { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: User, as: 'approver', attributes: ['id', 'firstName', 'lastName', 'email'] }
+        { model: User, as: 'approver', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: Account, as: 'account', attributes: ['id', 'name', 'type', 'bankName', 'paymentMethod', 'balance'] },
+        { model: VaultAccount, as: 'vaultAccount', attributes: ['id', 'name', 'balance'] },
       ]
     });
 
@@ -495,7 +570,7 @@ async function updateExpense(req, res, next) {
     }
 
     // Clean up empty strings for UUID, enum, and date fields
-    const fieldsToClean = ['locationId', 'recurringFrequency', 'recurringEndDate', 'vendor', 'referenceNumber', 'notes', 'paymentMethod', 'bankName', 'paymentNotes', 'dueDate'];
+    const fieldsToClean = ['locationId', 'recurringFrequency', 'recurringEndDate', 'vendor', 'referenceNumber', 'notes', 'paymentMethod', 'bankName', 'paymentNotes', 'dueDate', 'accountId', 'vaultAccountId', 'fundSource'];
     fieldsToClean.forEach(field => {
       if (updateData[field] === '') {
         updateData[field] = null;
@@ -518,7 +593,9 @@ async function updateExpense(req, res, next) {
         { model: ExpenseCategory, as: 'category' },
         { model: Location, as: 'location' },
         { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: User, as: 'approver', attributes: ['id', 'firstName', 'lastName', 'email'] }
+        { model: User, as: 'approver', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: Account, as: 'account', attributes: ['id', 'name', 'type', 'bankName', 'paymentMethod', 'balance'] },
+        { model: VaultAccount, as: 'vaultAccount', attributes: ['id', 'name', 'balance'] },
       ]
     });
 
@@ -698,7 +775,7 @@ async function markExpenseAsPaid(req, res, next) {
   try {
     const { tenantId, isSuperAdmin, id: userId } = req.user;
     const { id } = req.params;
-    const { paymentMethod, fundSource, bankName, paymentNotes, paidDate = new Date(), pettyCashId, vaultAccountId } = req.body;
+    const { paymentMethod, fundSource, bankName, paymentNotes, paidDate = new Date(), pettyCashId, vaultAccountId, accountId = null } = req.body;
 
     // Validasi: petty_cash harus menyertakan pettyCashId
     if (paymentMethod === 'petty_cash' && !pettyCashId) {
@@ -745,8 +822,33 @@ async function markExpenseAsPaid(req, res, next) {
       });
     }
 
+    const resolvedFundSource = fundSource || expense.fundSource || null;
+    const resolvedAccountId = accountId || expense.accountId || null;
+    const resolvedVaultAccountId = vaultAccountId || expense.vaultAccountId || null;
+
+    // Validasi: account wajib jika fundSource = account
+    if (resolvedFundSource === 'account' && !resolvedAccountId) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        code: 'VALIDATION_ERROR',
+        message: 'accountId wajib disertakan saat fundSource adalah account'
+      });
+    }
+
+    if (resolvedFundSource === 'vault' && !resolvedVaultAccountId) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        code: 'VALIDATION_ERROR',
+        message: 'vaultAccountId wajib disertakan saat fundSource adalah vault'
+      });
+    }
+
     // --- Petty Cash deduction ---
     let pctTransaction = null;
+    let vaultMutation = null;
+
     if (paymentMethod === 'petty_cash') {
       const pettyCash = await PettyCash.findOne({
         where: { id: pettyCashId, tenantId, status: 'active' },
@@ -810,19 +912,120 @@ async function markExpenseAsPaid(req, res, next) {
     }
     // ----------------------------
 
+    // --- Vault deduction ---
+    if (resolvedFundSource === 'vault' && resolvedVaultAccountId) {
+      const vaultAccount = await VaultAccount.findOne({
+        where: { id: resolvedVaultAccountId, tenantId, isActive: true },
+        lock: transaction.LOCK.UPDATE,
+        transaction
+      });
+
+      if (!vaultAccount) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          code: 'VAULT_ACCOUNT_NOT_FOUND',
+          message: 'Akun vault tidak ditemukan atau tidak aktif'
+        });
+      }
+
+      const expenseAmount = parseFloat(expense.totalAmount);
+      const balanceBefore = parseFloat(vaultAccount.balance || 0);
+
+      if (balanceBefore < expenseAmount) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          code: 'VAULT_INSUFFICIENT_BALANCE',
+          message: `Saldo vault ${vaultAccount.name} tidak cukup. Saldo: ${balanceBefore}, dibutuhkan: ${expenseAmount}`
+        });
+      }
+
+      const balanceAfter = balanceBefore - expenseAmount;
+      await vaultAccount.update({ balance: balanceAfter }, { transaction });
+
+      vaultMutation = await CashMutation.create({
+        tenantId,
+        sourceVaultAccountId: vaultAccount.id,
+        sourceAccount: vaultAccount.name,
+        amount: expenseAmount,
+        mutationType: 'vault_expense',
+        referenceType: 'Expense',
+        referenceId: expense.id,
+        referenceNumber: expense.expenseNumber,
+        status: 'posted',
+        mutationDate: paidDate
+          ? new Date(paidDate).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0],
+        notes: 'Pembayaran expense: ' + expense.title,
+        createdBy: userId,
+      }, { transaction });
+    }
+    // ----------------------------
+
+    // Validate finance account exists + sufficient balance before debit
+    if (resolvedAccountId) {
+      const { Account } = require('../../models');
+      const financeAccount = await Account.findOne({
+        where: { id: resolvedAccountId, tenantId, isActive: true },
+        lock: transaction.LOCK.UPDATE,
+        transaction,
+      });
+      if (!financeAccount) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          code: 'ACCOUNT_NOT_FOUND',
+          message: 'Akun keuangan tidak ditemukan atau tidak aktif',
+        });
+      }
+      const expenseAmount = parseFloat(expense.totalAmount);
+      if (parseFloat(financeAccount.balance) < expenseAmount) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          code: 'INSUFFICIENT_BALANCE',
+          message: `Saldo akun ${financeAccount.name} tidak cukup. Saldo: ${financeAccount.balance}, dibutuhkan: ${expenseAmount}`,
+        });
+      }
+    }
+
     await expense.update({
       status: 'paid',
       paymentMethod,
-      bankName: bankName || null,
-      paymentNotes: paymentNotes || null,
-      paidDate
+      bankName: bankName || expense.bankName || null,
+      paymentNotes: paymentNotes || expense.paymentNotes || null,
+      paidDate,
+      fundSource: resolvedFundSource,
+      ...(resolvedVaultAccountId ? { vaultAccountId: resolvedVaultAccountId } : {}),
+      ...(resolvedAccountId ? { accountId: resolvedAccountId } : {}),
     }, { transaction });
+
+    // Debit Account within the same transaction (must succeed or whole pay rolls back)
+    if (resolvedAccountId) {
+      await accountService.debitFromExpense(
+        {
+          id: expense.id,
+          title: expense.title,
+          description: expense.description,
+          expenseNumber: expense.expenseNumber,
+          accountId: resolvedAccountId,
+          totalAmount: expense.totalAmount,
+          amount: expense.amount,
+          expenseDate: paidDate,
+        },
+        { tenantId, timezone: getTenantTimezone(req), performedBy: userId },
+        transaction
+      );
+    }
 
     await transaction.commit();
 
     const paidExpense = await Expense.findByPk(id, {
       include: [
-        { model: ExpenseCategory, as: 'category' }
+        { model: ExpenseCategory, as: 'category' },
+        { model: Account, as: 'account', attributes: ['id', 'name', 'type', 'bankName', 'paymentMethod', 'balance'] },
+        { model: VaultAccount, as: 'vaultAccount', attributes: ['id', 'name', 'balance'] },
       ]
     });
 
@@ -852,12 +1055,15 @@ async function markExpenseAsPaid(req, res, next) {
       amount: expense.totalAmount,
       paymentMethod,
       pettyCashId: pettyCashId || null,
+      accountId: resolvedAccountId,
       ip: getClientIp(req),
       userAgent: getUserAgent(req)
     });
 
   } catch (error) {
-    await transaction.rollback();
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
     logger.logError('Error marking expense as paid', {
       action: 'PAY_EXPENSE_ERROR',
       userId: req.user.id,

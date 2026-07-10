@@ -4,7 +4,8 @@ import { useServicePlans } from '@/composables/gym/service-management'
 import { useTransactions } from '@/composables/gym/transactions'
 import { useCurrency } from '@/composables/core/useCurrency'
 import { usePaymentMethods } from '@/composables/shared/usePaymentMethods'
-import { BANK_OPTIONS, buildPaymentBankPayload } from '@/utils/paymentBanks'
+import { buildPaymentBankPayload } from '@/utils/paymentBanks'
+import { usePaymentBanks } from '@/composables/shared/usePaymentBanks'
 import {
   IconShoppingBag,
   IconCash,
@@ -20,6 +21,7 @@ const { fetchPlans } = useServicePlans()
 const { createAddonTransaction, loading } = useTransactions()
 const { formatCurrency } = useCurrency()
 const { availableMethods: availablePaymentMethods, getMethodLabel, methodRequiresBank } = usePaymentMethods()
+const { bankOptions } = usePaymentBanks()
 
 const selectedMethodRequiresBank = computed(() =>
   methodRequiresBank(selectedPaymentMethod.value)
@@ -268,7 +270,7 @@ defineExpose({ openModal })
         >
           <option value="">-- Pilih Bank --</option>
           <option
-            v-for="bank in BANK_OPTIONS"
+            v-for="bank in bankOptions"
             :key="bank.value"
             :value="bank.value"
           >

@@ -19,6 +19,8 @@ const voucherService = require('../../../services/voucherService');
 const transactionSettingsService = require('../../../services/transactionSettingsService');
 const receiptPrinterService = require('../../../services/receiptPrinterService');
 const { recordPaymentInflow } = require('../../../controllers/finance/vaultController');
+const accountService = require('../../../services/accountService');
+const { getTenantTimezone } = require('../../../utils/tenantTimezone');
 const logger = require('../../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../../utils/requestHelper');
 const { createError } = require('../../../utils/errorCodes');
@@ -447,6 +449,22 @@ exports.createTransaction = async (req, res) => {
           error: err.message,
         });
         // Don't fail the transaction if vault recording fails
+      });
+
+      // Auto-credit matching Account (best-effort — does not fail the transaction)
+      await accountService.creditFromPayment(payment, {
+        tenantId,
+        timezone: getTenantTimezone(req),
+        performedBy: req.user.id,
+      }, transaction).catch(err => {
+        logger.logError('Failed to auto-credit Account from payment', {
+          action: 'ACCOUNT_CREDIT_ERROR',
+          userId: req.user.id,
+          tenantId,
+          paymentId: payment.id,
+          paymentMethod: payment.paymentMethod,
+          error: err.message,
+        });
       });
     }
     

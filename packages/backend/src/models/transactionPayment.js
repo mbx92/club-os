@@ -59,6 +59,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: {}
     },
+    accountId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      comment: 'Linked Account for non-cash payments (auto-matched or manually set)',
+    },
     createdBy: {
       type: DataTypes.UUID,
       allowNull: true,
@@ -108,16 +113,17 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   TransactionPayment.associate = function(models) {
-    // Association with Transaction
     TransactionPayment.belongsTo(models.Transaction, {
       foreignKey: 'transactionId',
       as: 'transaction'
     });
-
-    // Association with User (who created the payment)
     TransactionPayment.belongsTo(models.User, {
       foreignKey: 'createdBy',
       as: 'creator'
+    });
+    TransactionPayment.belongsTo(models.Account, {
+      foreignKey: 'accountId',
+      as: 'account'
     });
   };
 

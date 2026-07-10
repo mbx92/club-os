@@ -35,6 +35,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'vaultAccountId',
         as: 'vaultAccount'
       });
+      Expense.belongsTo(models.Account, {
+        foreignKey: 'accountId',
+        as: 'account'
+      });
     }
   }
 
@@ -119,6 +123,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: true,
       comment: 'Vault account used when fundSource = vault'
+    },
+    accountId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      comment: 'Linked Account — used for auto-debit when expense is paid',
     },
     bankName: {
       type: DataTypes.STRING,

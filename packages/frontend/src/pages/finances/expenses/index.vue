@@ -364,13 +364,36 @@ meta:
           <!-- Payment Method -->
           <div class="form-control">
             <label class="label">
-              <span class="label-text font-medium">Payment Method</span>
+              <span class="label-text font-medium">Sumber Dana</span>
             </label>
             <select v-model="payForm.paymentOption" class="select select-bordered w-full">
               <option v-for="option in paymentOptions" :key="option.value" :value="option.value">
                 {{ option.label }}
               </option>
             </select>
+          </div>
+          <!-- Finance Account Selection -->
+          <div v-if="payForm.paymentOption === 'from_account'" class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Akun Sumber Dana <span class="text-error">*</span></span>
+            </label>
+            <div v-if="financeAccountsLoading" class="flex items-center gap-2 text-sm text-base-content/60 py-2">
+              <span class="loading loading-spinner loading-xs"></span> Memuat akun...
+            </div>
+            <select
+              v-else
+              v-model="payForm.accountId"
+              class="select select-bordered w-full"
+              :class="{ 'select-error': !payForm.accountId }"
+            >
+              <option value="">-- Pilih Akun --</option>
+              <option v-for="account in financeAccounts" :key="account.id" :value="String(account.id)">
+                {{ account.name }}{{ account.bankName ? ` (${account.bankName})` : '' }} — Saldo: {{ new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(account.balance) }}
+              </option>
+            </select>
+            <label v-if="!financeAccounts.length && !financeAccountsLoading" class="label">
+              <span class="label-text-alt text-warning">Belum ada akun. Buat di menu Finances → Akun.</span>
+            </label>
           </div>
           <!-- Petty Cash Fund Selection -->
           <div v-if="payForm.paymentOption === 'petty_cash'" class="form-control">
@@ -475,13 +498,19 @@ meta:
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useExpenses, useExpenseCategories, usePettyCash, useVault } from '@/composables/finances'
+import { useExpenses, useExpenseCategories, usePettyCash, useVault, useAccounts } from '@/composables/finances'
 import { useAuthStore } from '@/stores/auth'
 import { useDialog } from '@/composables/core/useApi'
 import { useNotification } from '@/composables/core/useNotification'
 import { useDebounceFn } from '@vueuse/core'
 import ExpenseFormModal from '@/components/finances/ExpenseFormModal.vue'
 import DialogConfirm from '@/components/shared/DialogConfirm.vue'
+import {
+  EXPENSE_PAYMENT_OPTION_MAP,
+  EXPENSE_PAYMENT_OPTIONS,
+  resolveExpensePaymentOption,
+  paymentMethodFromAccount,
+} from '@/utils/expensePayment'
 import {
   IconPlus,
   IconTag,
@@ -524,47 +553,37 @@ const isAdmin = computed(() => {
   return authStore.user?.isSuperAdmin === true || ['admin', 'manager', 'owner'].includes(roleName.value)
 })
 
-const PAYMENT_OPTION_MAP = {
-  cash_drawer_cash: { paymentMethod: 'cash', fundSource: 'cash_drawer' },
-  vault_cash: { paymentMethod: 'cash', fundSource: 'vault' },
-  petty_cash: { paymentMethod: 'petty_cash' },
-  bank_transfer: { paymentMethod: 'bank_transfer', fundSource: 'bank' },
-}
+const PAYMENT_OPTION_MAP = EXPENSE_PAYMENT_OPTION_MAP
 
 const paymentOptions = computed(() => {
   if (isCashier.value) {
     return [{ value: 'cash_drawer_cash', label: 'Tunai' }]
   }
-
-  return [
-    { value: 'cash_drawer_cash', label: 'Tunai / Laci Kasir' },
-    { value: 'vault_cash', label: 'Vault / Brankas' },
-    { value: 'petty_cash', label: 'Petty Cash (Modal Awal)' },
-    { value: 'bank_transfer', label: 'Transfer Bank' },
-  ]
+  return EXPENSE_PAYMENT_OPTIONS
 })
 
-const resolvePaymentOption = (expense = null) => {
-  if (!expense?.paymentMethod) {
-    return isCashier.value ? 'cash_drawer_cash' : 'vault_cash'
-  }
-
-  if (expense.paymentMethod === 'petty_cash') return 'petty_cash'
-  if (expense.paymentMethod === 'bank_transfer') return 'bank_transfer'
-  if (expense.paymentMethod === 'cash' && expense.fundSource === 'vault') return 'vault_cash'
-  return 'cash_drawer_cash'
-}
+const resolvePaymentOption = (expense = null) =>
+  resolveExpensePaymentOption(expense, { isCashier: isCashier.value }) || (isCashier.value ? 'cash_drawer_cash' : 'from_account')
 
 const { categories, fetchCategories } = useExpenseCategories()
 const { fetchFunds: fetchPettyCashFunds } = usePettyCash()
 const { vaultAccounts, fetchVaultAccounts, accountsLoading: vaultAccountsLoading } = useVault()
+const { accounts: financeAccounts, fetchAccounts: fetchFinanceAccounts, loading: financeAccountsLoading } = useAccounts()
 
 const dialog = useDialog()
 const expenseFormModal = ref(null)
 const confirmDialog = ref(null)
 const selectedExpense = ref(null)
 const showPayModal = ref(false)
-const payForm = ref({ paymentOption: 'vault_cash', bankName: '', paymentNotes: '', paidDate: new Date().toISOString().split('T')[0], pettyCashId: '', vaultAccountId: '' })
+const payForm = ref({
+  paymentOption: 'from_account',
+  bankName: '',
+  paymentNotes: '',
+  paidDate: new Date().toISOString().split('T')[0],
+  pettyCashId: '',
+  vaultAccountId: '',
+  accountId: '',
+})
 const payTarget = ref(null)
 const pettyCashFunds = ref([])
 const pettyCashFundsLoading = ref(false)
@@ -741,6 +760,12 @@ watch(() => payForm.value.paymentOption, (val) => {
   if (val === 'petty_cash' && !pettyCashFunds.value.length) {
     loadPettyCashFunds()
   }
+  if (val === 'from_account' && !financeAccounts.value.length) {
+    fetchFinanceAccounts({ isActive: 'true' })
+  }
+  if (val === 'vault_cash') {
+    fetchVaultAccounts({ isActive: 'true' })
+  }
 })
 
 const handleMarkAsPaid = (expense) => {
@@ -748,17 +773,20 @@ const handleMarkAsPaid = (expense) => {
   pettyCashResult.value = null
   payForm.value = {
     paymentOption: resolvePaymentOption(expense),
-    bankName: '',
-    paymentNotes: '',
+    bankName: expense?.bankName || '',
+    paymentNotes: expense?.paymentNotes || '',
     paidDate: new Date().toISOString().split('T')[0],
     pettyCashId: '',
     vaultAccountId: expense?.vaultAccountId || '',
+    accountId: expense?.accountId ? String(expense.accountId) : '',
   }
   // Pre-load funds if needed
   if (payForm.value.paymentOption === 'petty_cash') {
     loadPettyCashFunds()
   } else if (payForm.value.paymentOption === 'vault_cash') {
     fetchVaultAccounts({ isActive: 'true' })
+  } else if (payForm.value.paymentOption === 'from_account') {
+    fetchFinanceAccounts({ isActive: 'true' })
   }
   showPayModal.value = true
 }
@@ -778,13 +806,22 @@ const submitMarkAsPaid = async () => {
     return
   }
 
+  if (payForm.value.paymentOption === 'from_account' && !payForm.value.accountId) {
+    processingError.value = 'Pilih akun sumber dana.'
+    showProcessingModal.value = true
+    return
+  }
+
   processingError.value = null
   processingMessage.value = 'Sedang memproses pembayaran, harap tunggu...'
   showProcessingModal.value = true
   try {
-    const paymentConfig = PAYMENT_OPTION_MAP[payForm.value.paymentOption] || PAYMENT_OPTION_MAP.vault_cash
+    const paymentConfig = PAYMENT_OPTION_MAP[payForm.value.paymentOption] || PAYMENT_OPTION_MAP.from_account
+    const selectedAccount = financeAccounts.value.find(a => String(a.id) === String(payForm.value.accountId))
     const payload = {
-      paymentMethod: paymentConfig.paymentMethod,
+      paymentMethod: payForm.value.paymentOption === 'from_account'
+        ? paymentMethodFromAccount(selectedAccount)
+        : paymentConfig.paymentMethod,
       paidDate: payForm.value.paidDate,
     }
     if (paymentConfig.fundSource) {
@@ -795,6 +832,10 @@ const submitMarkAsPaid = async () => {
     }
     if (payForm.value.paymentOption === 'vault_cash' && payForm.value.vaultAccountId) {
       payload.vaultAccountId = payForm.value.vaultAccountId
+    }
+    if (payForm.value.paymentOption === 'from_account' && payForm.value.accountId) {
+      payload.accountId = payForm.value.accountId
+      if (selectedAccount?.bankName) payload.bankName = selectedAccount.bankName
     }
     if (payForm.value.paymentOption === 'bank_transfer' && payForm.value.bankName) {
       payload.bankName = payForm.value.bankName

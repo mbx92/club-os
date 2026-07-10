@@ -41,6 +41,7 @@ const {
 
 // Finance module routes
 const { 
+  accountRoutes,
   expenseRoutes, 
   expenseCategoryRoutes, 
   incomeRoutes,
@@ -96,6 +97,7 @@ router.use('/vouchers', voucherRoutes);
 router.use('/dashboard', mainDashboardRoutes);
 
 // Finance module
+router.use('/finance/accounts', accountRoutes);
 router.use('/finance/dashboard', financeDashboardRoutes);
 router.use('/finance/expenses', expenseRoutes);
 router.use('/finance/expense-categories', expenseCategoryRoutes);

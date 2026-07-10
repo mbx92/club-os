@@ -7,7 +7,8 @@ import { usePaymentMethods } from '@/composables/shared/usePaymentMethods'
 import { useVouchers } from '@/composables/gym/voucher-management'
 import { useTransactionSettings } from '@/composables/shared/useTransactionSettings'
 import CurrencyInput from '@/components/shared/CurrencyInput.vue'
-import { BANK_OPTIONS, buildPaymentBankPayload } from '@/utils/paymentBanks'
+import { buildPaymentBankPayload } from '@/utils/paymentBanks'
+import { usePaymentBanks } from '@/composables/shared/usePaymentBanks'
 
 const props = defineProps({
   show: {
@@ -89,6 +90,7 @@ const selectVoucherFromDropdown = async (voucher) => {
 }
 
 const { paymentOptions, defaultPaymentMethod, methodRequiresBank } = usePaymentMethods()
+const { bankOptions } = usePaymentBanks()
 
 const selectedMethodRequiresBank = computed(() =>
   methodRequiresBank(paymentMethod.value)
@@ -534,7 +536,7 @@ const quickAmounts = computed(() => {
           >
             <option value="">-- Pilih Bank --</option>
             <option
-              v-for="bank in BANK_OPTIONS"
+              v-for="bank in bankOptions"
               :key="bank.value"
               :value="bank.value"
             >

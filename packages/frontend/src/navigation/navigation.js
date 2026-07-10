@@ -737,6 +737,14 @@ export const navigation = [
         subject: "PettyCash",
       },
       {
+        label: "Akun",
+        to: "/finances/accounts",
+        icon: "credit-card",
+        menuKey: "finances.accounts",
+        action: "read",
+        subject: "Account",
+      },
+      {
         label: "Vault",
         to: "/finances/vault",
         icon: "building-bank",

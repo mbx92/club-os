@@ -6,7 +6,8 @@ import { useVouchers } from '@/composables/gym/voucher-management'
 import { useTransactionSettings } from '@/composables/shared/useTransactionSettings'
 import { usePaymentMethods } from '@/composables/shared/usePaymentMethods'
 import CurrencyInput from '@/components/shared/CurrencyInput.vue'
-import { BANK_OPTIONS, buildPaymentBankPayload } from '@/utils/paymentBanks'
+import { buildPaymentBankPayload } from '@/utils/paymentBanks'
+import { usePaymentBanks } from '@/composables/shared/usePaymentBanks'
 import { getProductBasePrice, getVariantEffectivePrice } from '@/utils/restaurantPricing'
 
 const props = defineProps({
@@ -139,6 +140,7 @@ const resetVoucherState = (shouldEmit = false) => {
 }
 
 const { paymentOptions, defaultPaymentMethod, methodRequiresBank } = usePaymentMethods()
+const { bankOptions } = usePaymentBanks()
 
 const selectedMethodRequiresBank = computed(() =>
   methodRequiresBank(paymentMethod.value)
@@ -586,7 +588,7 @@ const handlePrintPreReceipt = () => {
           >
             <option value="">-- Pilih Bank --</option>
             <option
-              v-for="bank in BANK_OPTIONS"
+              v-for="bank in bankOptions"
               :key="bank.value"
               :value="bank.value"
             >

@@ -146,5 +146,6 @@ export function usePaymentMethods() {
     isMethodEnabled,
     methodRequiresBank,
     loadPaymentMethods,
+    applyPaymentMethods,
   }
 }

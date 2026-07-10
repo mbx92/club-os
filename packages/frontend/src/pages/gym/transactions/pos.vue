@@ -481,7 +481,7 @@ meta:
                   >
                     <option value="">-- Pilih Bank --</option>
                     <option
-                      v-for="bank in BANK_OPTIONS"
+                      v-for="bank in bankOptions"
                       :key="bank.value"
                       :value="bank.value"
                     >
@@ -901,7 +901,8 @@ import { useCurrency } from '@/composables/core/useCurrency'
 import { usePaymentMethods } from '@/composables/shared/usePaymentMethods'
 import { useAuthStore } from '@/stores/auth'
 import { useNotification } from '@/composables/core/useNotification'
-import { BANK_OPTIONS, buildPaymentBankPayload } from '@/utils/paymentBanks'
+import { buildPaymentBankPayload } from '@/utils/paymentBanks'
+import { usePaymentBanks } from '@/composables/shared/usePaymentBanks'
 import CurrencyInput from '@/components/shared/CurrencyInput.vue'
 import ToastNotification from '@/components/shared/ToastNotification.vue'
 import RestaurantProcessingModal from '@/components/restaurant/shared/RestaurantProcessingModal.vue'
@@ -931,6 +932,7 @@ const { members, loading: membersLoading, fetchMembers, createMember } = useMemb
 const { vouchers: availableVouchers, loading: vouchersLoading, fetchVouchers, validateVoucher } = useVouchers()
 const { formatCurrency } = useCurrency()
 const { availableMethods: availablePaymentMethods, getMethodLabel, defaultPaymentMethod, loadPaymentMethods, methodRequiresBank } = usePaymentMethods()
+const { bankOptions, loadBanks } = usePaymentBanks()
 
 const selectedMethodRequiresBank = computed(() =>
   methodRequiresBank(selectedPaymentMethod.value)
@@ -1782,7 +1784,7 @@ watch(selectedPaymentMethod, (newMethod) => {
 
 // Lifecycle
 onMounted(async () => {
-  await loadPaymentMethods()
+  await Promise.all([loadPaymentMethods(), loadBanks()])
 
   // Load service plans
   await fetchPlans({

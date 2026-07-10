@@ -671,6 +671,97 @@
           </div>
         </div>
 
+        <!-- Banks Section -->
+        <div class="space-y-4">
+          <h3 class="text-lg font-semibold border-b pb-2">Banks</h3>
+
+          <div class="alert alert-info">
+            <IconInfoCircle class="w-5 h-5" />
+            <span>Daftar bank yang muncul di dropdown POS, billing, dan akun keuangan. Nonaktifkan bank yang tidak dipakai.</span>
+          </div>
+
+          <div class="overflow-x-auto rounded-box border border-base-300">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Aktif</th>
+                  <th>Key</th>
+                  <th>Label</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(bank, index) in form.transaction.payment.banks"
+                  :key="bank.key"
+                >
+                  <td>
+                    <input
+                      v-model="bank.enabled"
+                      type="checkbox"
+                      class="checkbox checkbox-primary checkbox-sm"
+                    />
+                  </td>
+                  <td class="font-mono text-xs">{{ bank.key }}</td>
+                  <td>
+                    <input
+                      v-model="bank.label"
+                      type="text"
+                      class="input input-bordered input-sm w-full max-w-xs"
+                    />
+                  </td>
+                  <td>
+                    <button
+                      v-if="!bank.isSystem"
+                      type="button"
+                      class="btn btn-ghost btn-xs text-error"
+                      @click="removeBank(index)"
+                    >
+                      Hapus
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="rounded-box border border-base-300 bg-base-200/40 p-4">
+            <p class="mb-3 text-xs font-semibold text-base-content/60">Tambah Bank</p>
+            <div class="flex flex-col gap-3 md:flex-row md:items-end">
+              <div class="form-control w-full flex-col md:flex-1">
+                <label class="label py-1">
+                  <span class="label-text text-xs font-semibold">Key (huruf besar)</span>
+                </label>
+                <input
+                  v-model="newBank.key"
+                  type="text"
+                  placeholder="BRI"
+                  class="input input-bordered input-sm w-full uppercase"
+                  @input="newBank.key = newBank.key.toUpperCase()"
+                />
+              </div>
+              <div class="form-control w-full flex-col md:flex-1">
+                <label class="label py-1">
+                  <span class="label-text text-xs font-semibold">Label</span>
+                </label>
+                <input
+                  v-model="newBank.label"
+                  type="text"
+                  placeholder="BRI"
+                  class="input input-bordered input-sm w-full"
+                />
+              </div>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline w-full shrink-0 md:w-auto"
+                @click="addBank"
+              >
+                Tambah Bank
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Actions -->
         <div class="card-actions justify-end pt-4">
           <button
@@ -702,11 +793,16 @@ import { useApi } from "@/composables/core/useApi";
 import { useNotification } from "@/composables/core/useNotification";
 import { useTenantSettings } from "@/composables/admin/useTenantSettings";
 import { buildDefaultPaymentMethods } from "@/utils/paymentMethods";
+import { buildDefaultBanks } from "@/utils/paymentBanks";
+import { usePaymentMethods } from "@/composables/shared/usePaymentMethods";
+import { usePaymentBanks } from "@/composables/shared/usePaymentBanks";
 import { IconCreditCard, IconDeviceFloppy, IconEye, IconInfoCircle } from "@tabler/icons-vue";
 
 const api = useApi();
 const { showSuccess, handleError } = useNotification();
 const { tenantSettings, fetchTenantSettings, patchTenantSettings } = useTenantSettings();
+const { applyPaymentMethods } = usePaymentMethods();
+const { applyBanks } = usePaymentBanks();
 
 const loading = ref(false);
 const saving = ref(false);
@@ -735,6 +831,7 @@ const defaultForm = () => ({
       enabledGateways: [],
       paymentTimeout: 60,
       paymentMethods: buildDefaultPaymentMethods(),
+      banks: buildDefaultBanks(),
       midtransConfig: {
         apiKey: "",
         clientKey: "",
@@ -776,6 +873,7 @@ const defaultForm = () => ({
 const form = ref(defaultForm());
 const original = ref(null);
 const newPaymentMethod = ref({ key: "", label: "" });
+const newBank = ref({ key: "", label: "" });
 
 const mergePaymentMethods = (paymentConfig = {}) => {
   const defaults = buildDefaultPaymentMethods();
@@ -787,6 +885,32 @@ const mergePaymentMethods = (paymentConfig = {}) => {
 
   const storedKeys = new Set(stored.map((method) => method.key));
   const merged = stored.map((method) => ({ ...method }));
+
+  for (const fallback of defaults) {
+    if (!storedKeys.has(fallback.key)) {
+      merged.push({ ...fallback, enabled: false });
+    }
+  }
+
+  return merged;
+};
+
+const mergeBanks = (paymentConfig = {}) => {
+  const defaults = buildDefaultBanks();
+  const stored = paymentConfig.banks;
+
+  if (!Array.isArray(stored) || stored.length === 0) {
+    return defaults;
+  }
+
+  const storedKeys = new Set(stored.map((bank) => String(bank.key || "").toUpperCase()));
+  const merged = stored.map((bank) => ({
+    ...bank,
+    key: String(bank.key || "").trim().toUpperCase(),
+    label: bank.label || bank.key,
+    enabled: bank.enabled !== false,
+    isSystem: bank.isSystem === true,
+  }));
 
   for (const fallback of defaults) {
     if (!storedKeys.has(fallback.key)) {
@@ -809,6 +933,7 @@ const mergeTransactionSettings = (apiTx = {}) => {
       ...defaultTx.payment,
       ...apiTx.payment,
       paymentMethods: mergePaymentMethods(apiTx.payment),
+      banks: mergeBanks(apiTx.payment),
       midtransConfig: { ...defaultTx.payment.midtransConfig, ...apiTx.payment?.midtransConfig },
       stripeConfig: { ...defaultTx.payment.stripeConfig, ...apiTx.payment?.stripeConfig },
     },
@@ -851,6 +976,41 @@ const addPaymentMethod = () => {
 
 const removePaymentMethod = (index) => {
   form.value.transaction.payment.paymentMethods.splice(index, 1);
+};
+
+const addBank = () => {
+  const key = newBank.value.key.trim().toUpperCase().replace(/\s+/g, "_");
+  const label = newBank.value.label.trim() || key;
+
+  if (!key || !/^[A-Z][A-Z0-9_]*$/.test(key)) {
+    handleError(new Error("Key bank harus huruf besar, contoh: BCA, BRI, BNI"), "Key tidak valid");
+    return;
+  }
+
+  if (!form.value.transaction.payment.banks) {
+    form.value.transaction.payment.banks = buildDefaultBanks();
+  }
+
+  const exists = form.value.transaction.payment.banks.some(
+    (bank) => String(bank.key).toUpperCase() === key
+  );
+  if (exists) {
+    handleError(new Error(`Bank "${key}" sudah ada`), "Bank duplikat");
+    return;
+  }
+
+  form.value.transaction.payment.banks.push({
+    key,
+    label,
+    enabled: true,
+    isSystem: false,
+  });
+
+  newBank.value = { key: "", label: "" };
+};
+
+const removeBank = (index) => {
+  form.value.transaction.payment.banks.splice(index, 1);
 };
 
 const discountOrderOption = ref("PERCENTAGE_FIRST,FIXED_AMOUNT_SECOND");
@@ -939,6 +1099,8 @@ const handleSubmit = async () => {
   try {
     const payload = { transaction: form.value.transaction };
     await patchTenantSettings(payload, "Transaction settings updated successfully");
+    applyPaymentMethods(form.value.transaction.payment.paymentMethods);
+    applyBanks(form.value.transaction.payment.banks);
     original.value = JSON.parse(JSON.stringify(form.value));
     await fetchTenantSettings();
   } catch (err) {

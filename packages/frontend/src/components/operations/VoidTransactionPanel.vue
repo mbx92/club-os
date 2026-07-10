@@ -10,7 +10,8 @@ import {
   IconX,
   IconRefresh,
 } from '@tabler/icons-vue'
-import { BANK_OPTIONS, BANK_SELECTION_PAYMENT_METHODS } from '@/utils/paymentBanks'
+import { BANK_SELECTION_PAYMENT_METHODS } from '@/utils/paymentBanks'
+import { usePaymentBanks } from '@/composables/shared/usePaymentBanks'
 
 const props = defineProps({
   module: {
@@ -63,6 +64,7 @@ const paymentTarget = ref(null)
 const selectedPayment = ref('')
 const bankName = ref('')
 const changingPayment = ref(false)
+const { bankOptions } = usePaymentBanks()
 
 const paymentMethodOptions = [
   { value: 'cash', label: 'Tunai' },
@@ -645,7 +647,7 @@ onMounted(() => {
             :class="{ 'select-error': requiresBankSelection && !bankName }"
           >
             <option value="">-- Pilih Bank --</option>
-            <option v-for="bank in BANK_OPTIONS" :key="bank.value" :value="bank.value">
+            <option v-for="bank in bankOptions" :key="bank.value" :value="bank.value">
               {{ bank.label }}
             </option>
           </select>
