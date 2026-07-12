@@ -386,84 +386,14 @@ meta:
               class="select select-bordered w-full"
               :class="{ 'select-error': !payForm.accountId }"
             >
-              <option value="">-- Pilih Akun --</option>
-              <option v-for="account in financeAccounts" :key="account.id" :value="String(account.id)">
+              <option value="">-- Pilih Akun (Tunai / Bank) --</option>
+              <option v-for="account in expenseAccounts" :key="account.id" :value="String(account.id)">
                 {{ account.name }}{{ account.bankName ? ` (${account.bankName})` : '' }} — Saldo: {{ new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(account.balance) }}
               </option>
             </select>
-            <label v-if="!financeAccounts.length && !financeAccountsLoading" class="label">
-              <span class="label-text-alt text-warning">Belum ada akun. Buat di menu Finances → Akun.</span>
+            <label v-if="!expenseAccounts.length && !financeAccountsLoading" class="label">
+              <span class="label-text-alt text-warning">Belum ada akun Tunai atau Bank. Buat di menu Finances → Akun.</span>
             </label>
-          </div>
-          <!-- Petty Cash Fund Selection -->
-          <div v-if="payForm.paymentOption === 'petty_cash'" class="form-control">
-            <label class="label">
-              <span class="label-text font-medium">Dana Petty Cash <span class="text-error">*</span></span>
-            </label>
-            <div v-if="pettyCashFundsLoading" class="flex items-center gap-2 text-sm text-base-content/60 py-2">
-              <span class="loading loading-spinner loading-xs"></span> Memuat daftar fund...
-            </div>
-            <select
-              v-else
-              v-model="payForm.pettyCashId"
-              class="select select-bordered w-full"
-              :class="{ 'select-error': !payForm.pettyCashId }"
-            >
-              <option value="">-- Pilih Dana --</option>
-              <option v-for="fund in pettyCashFunds" :key="fund.id" :value="fund.id">
-                {{ fund.name }} — Saldo: {{ new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(fund.balance) }}
-              </option>
-            </select>
-            <label v-if="!pettyCashFunds.length && !pettyCashFundsLoading" class="label">
-              <span class="label-text-alt text-warning">Tidak ada dana aktif. Buat atau aktifkan fund terlebih dahulu.</span>
-            </label>
-          </div>
-          <!-- Vault Account (only for vault_cash) -->
-          <div v-if="payForm.paymentOption === 'vault_cash'" class="form-control">
-            <label class="label">
-              <span class="label-text font-medium">Vault Account <span class="text-error">*</span></span>
-            </label>
-            <div v-if="vaultAccountsLoading" class="flex items-center gap-2 text-sm text-base-content/60 py-2">
-              <span class="loading loading-spinner loading-xs"></span> Memuat vault account...
-            </div>
-            <select
-              v-else-if="vaultAccounts.length"
-              v-model="payForm.vaultAccountId"
-              class="select select-bordered w-full"
-              :class="{ 'select-error': !payForm.vaultAccountId }"
-            >
-              <option value="">-- Pilih Vault Account --</option>
-              <option v-for="account in vaultAccounts" :key="account.id" :value="account.id">
-                {{ account.name }} — Saldo: {{ new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(account.balance) }}
-              </option>
-            </select>
-            <label v-if="!vaultAccounts.length && !vaultAccountsLoading" class="label">
-              <span class="label-text-alt text-warning">⚠️ Belum ada vault account. Lakukan collect dari cash drawer untuk auto-create akun "Kas".</span>
-            </label>
-          </div>
-          <!-- Bank Name (only for bank_transfer) -->
-          <div v-if="payForm.paymentOption === 'bank_transfer'" class="form-control">
-            <label class="label">
-              <span class="label-text font-medium">Nama Bank</span>
-            </label>
-            <input
-              v-model="payForm.bankName"
-              type="text"
-              class="input input-bordered w-full"
-              placeholder="Contoh: BCA, Mandiri, BRI"
-            />
-          </div>
-          <!-- Payment Notes -->
-          <div v-if="payForm.paymentOption === 'bank_transfer'" class="form-control">
-            <label class="label">
-              <span class="label-text font-medium">Catatan Pembayaran</span>
-            </label>
-            <input
-              v-model="payForm.paymentNotes"
-              type="text"
-              class="input input-bordered w-full"
-              placeholder="Contoh: Transfer dari rek 123456789"
-            />
           </div>
           <!-- Paid Date -->
           <div class="form-control">
@@ -498,18 +428,18 @@ meta:
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useExpenses, useExpenseCategories, usePettyCash, useVault, useAccounts } from '@/composables/finances'
+import { useExpenses, useExpenseCategories, useAccounts } from '@/composables/finances'
 import { useAuthStore } from '@/stores/auth'
 import { useDialog } from '@/composables/core/useApi'
-import { useNotification } from '@/composables/core/useNotification'
 import { useDebounceFn } from '@vueuse/core'
 import ExpenseFormModal from '@/components/finances/ExpenseFormModal.vue'
 import DialogConfirm from '@/components/shared/DialogConfirm.vue'
 import {
   EXPENSE_PAYMENT_OPTION_MAP,
-  EXPENSE_PAYMENT_OPTIONS,
+  getExpensePaymentOptions,
   resolveExpensePaymentOption,
   paymentMethodFromAccount,
+  filterExpenseAccounts,
 } from '@/utils/expensePayment'
 import {
   IconPlus,
@@ -540,7 +470,6 @@ const {
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { showInfo } = useNotification()
 const getRoleName = (role) => {
   if (!role) return ''
   if (typeof role === 'string') return role.toLowerCase()
@@ -555,19 +484,14 @@ const isAdmin = computed(() => {
 
 const PAYMENT_OPTION_MAP = EXPENSE_PAYMENT_OPTION_MAP
 
-const paymentOptions = computed(() => {
-  if (isCashier.value) {
-    return [{ value: 'cash_drawer_cash', label: 'Tunai' }]
-  }
-  return EXPENSE_PAYMENT_OPTIONS
-})
+const paymentOptions = computed(() => getExpensePaymentOptions({ isCashier: isCashier.value }))
+
+const expenseAccounts = computed(() => filterExpenseAccounts(financeAccounts.value))
 
 const resolvePaymentOption = (expense = null) =>
   resolveExpensePaymentOption(expense, { isCashier: isCashier.value }) || (isCashier.value ? 'cash_drawer_cash' : 'from_account')
 
 const { categories, fetchCategories } = useExpenseCategories()
-const { fetchFunds: fetchPettyCashFunds } = usePettyCash()
-const { vaultAccounts, fetchVaultAccounts, accountsLoading: vaultAccountsLoading } = useVault()
 const { accounts: financeAccounts, fetchAccounts: fetchFinanceAccounts, loading: financeAccountsLoading } = useAccounts()
 
 const dialog = useDialog()
@@ -577,17 +501,11 @@ const selectedExpense = ref(null)
 const showPayModal = ref(false)
 const payForm = ref({
   paymentOption: 'from_account',
-  bankName: '',
   paymentNotes: '',
   paidDate: new Date().toISOString().split('T')[0],
-  pettyCashId: '',
-  vaultAccountId: '',
   accountId: '',
 })
 const payTarget = ref(null)
-const pettyCashFunds = ref([])
-const pettyCashFundsLoading = ref(false)
-const pettyCashResult = ref(null) // stores { transactionNumber, balanceBefore, balanceAfter } after pay
 const showProcessingModal = ref(false)
 const processingMessage = ref('Transaksi Anda sedang diproses, harap tunggu...')
 const processingError = ref(null)
@@ -744,68 +662,27 @@ const handleApprove = async (expense) => {
   }
 }
 
-const loadPettyCashFunds = async () => {
-  pettyCashFundsLoading.value = true
-  try {
-    const res = await fetchPettyCashFunds({ status: 'active', limit: 50 })
-    pettyCashFunds.value = res.data || []
-  } catch {
-    pettyCashFunds.value = []
-  } finally {
-    pettyCashFundsLoading.value = false
-  }
-}
-
 watch(() => payForm.value.paymentOption, (val) => {
-  if (val === 'petty_cash' && !pettyCashFunds.value.length) {
-    loadPettyCashFunds()
-  }
   if (val === 'from_account' && !financeAccounts.value.length) {
     fetchFinanceAccounts({ isActive: 'true' })
-  }
-  if (val === 'vault_cash') {
-    fetchVaultAccounts({ isActive: 'true' })
   }
 })
 
 const handleMarkAsPaid = (expense) => {
   payTarget.value = expense
-  pettyCashResult.value = null
   payForm.value = {
     paymentOption: resolvePaymentOption(expense),
-    bankName: expense?.bankName || '',
     paymentNotes: expense?.paymentNotes || '',
     paidDate: new Date().toISOString().split('T')[0],
-    pettyCashId: '',
-    vaultAccountId: expense?.vaultAccountId || '',
     accountId: expense?.accountId ? String(expense.accountId) : '',
   }
-  // Pre-load funds if needed
-  if (payForm.value.paymentOption === 'petty_cash') {
-    loadPettyCashFunds()
-  } else if (payForm.value.paymentOption === 'vault_cash') {
-    fetchVaultAccounts({ isActive: 'true' })
-  } else if (payForm.value.paymentOption === 'from_account') {
+  if (payForm.value.paymentOption === 'from_account') {
     fetchFinanceAccounts({ isActive: 'true' })
   }
   showPayModal.value = true
 }
 
 const submitMarkAsPaid = async () => {
-  // Validate petty_cash requires a fund selection
-  if (payForm.value.paymentOption === 'petty_cash' && !payForm.value.pettyCashId) {
-    processingError.value = 'Pilih dana petty cash yang akan digunakan.'
-    showProcessingModal.value = true
-    return
-  }
-
-  // Validate vault_cash requires a vault account selection
-  if (payForm.value.paymentOption === 'vault_cash' && !payForm.value.vaultAccountId) {
-    processingError.value = 'Pilih vault account sumber dana.'
-    showProcessingModal.value = true
-    return
-  }
-
   if (payForm.value.paymentOption === 'from_account' && !payForm.value.accountId) {
     processingError.value = 'Pilih akun sumber dana.'
     showProcessingModal.value = true
@@ -817,7 +694,7 @@ const submitMarkAsPaid = async () => {
   showProcessingModal.value = true
   try {
     const paymentConfig = PAYMENT_OPTION_MAP[payForm.value.paymentOption] || PAYMENT_OPTION_MAP.from_account
-    const selectedAccount = financeAccounts.value.find(a => String(a.id) === String(payForm.value.accountId))
+    const selectedAccount = expenseAccounts.value.find(a => String(a.id) === String(payForm.value.accountId))
     const payload = {
       paymentMethod: payForm.value.paymentOption === 'from_account'
         ? paymentMethodFromAccount(selectedAccount)
@@ -827,28 +704,14 @@ const submitMarkAsPaid = async () => {
     if (paymentConfig.fundSource) {
       payload.fundSource = paymentConfig.fundSource
     }
-    if (payForm.value.paymentOption === 'petty_cash') {
-      payload.pettyCashId = payForm.value.pettyCashId
-    }
-    if (payForm.value.paymentOption === 'vault_cash' && payForm.value.vaultAccountId) {
-      payload.vaultAccountId = payForm.value.vaultAccountId
-    }
     if (payForm.value.paymentOption === 'from_account' && payForm.value.accountId) {
       payload.accountId = payForm.value.accountId
       if (selectedAccount?.bankName) payload.bankName = selectedAccount.bankName
     }
-    if (payForm.value.paymentOption === 'bank_transfer' && payForm.value.bankName) {
-      payload.bankName = payForm.value.bankName
-    }
     if (payForm.value.paymentNotes) {
       payload.paymentNotes = payForm.value.paymentNotes
     }
-    const result = await markAsPaid(payTarget.value.id, payload)
-    pettyCashResult.value = result?.pettyCash || null
-    if (pettyCashResult.value) {
-      const fmt = (v) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(v || 0)
-      showInfo(`Petty Cash: ${fmt(pettyCashResult.value.balanceBefore)} → ${fmt(pettyCashResult.value.balanceAfter)} (${pettyCashResult.value.transactionNumber})`, 5000)
-    }
+    await markAsPaid(payTarget.value.id, payload)
     showPayModal.value = false
     await loadExpenses()
     showProcessingModal.value = false
@@ -901,7 +764,7 @@ onMounted(async () => {
   await Promise.all([
     loadExpenses(),
     fetchCategories({ isActive: true }),
-    fetchVaultAccounts({ isActive: 'true' }).catch(() => null),
+    fetchFinanceAccounts({ isActive: 'true' }).catch(() => null),
   ])
 })
 </script>

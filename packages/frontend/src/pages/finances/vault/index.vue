@@ -355,7 +355,7 @@ onMounted(async () => {
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div>
         <h1 class="text-3xl font-bold">Vault / Brankas</h1>
-        <p class="text-base-content/60 mt-1">Pantau saldo vault dan cash drawer yang belum diambil. Riwayat mutasi tersedia di halaman terpisah.</p>
+        <p class="text-base-content/60 mt-1">Pantau saldo vault dan cash drawer yang belum diambil. Setoran dari laci akan settle ke akun tunai. Riwayat mutasi tersedia di halaman terpisah.</p>
       </div>
       <div class="flex items-center gap-2">
         <button class="btn btn-outline btn-sm" @click="goToMutations">
@@ -472,6 +472,11 @@ onMounted(async () => {
                   {{ account.name }} ({{ account.accountType }}) - {{ formatCurrency(account.balance) }}
                 </option>
               </select>
+              <label class="label">
+                <span class="label-text-alt text-base-content/50">
+                  Uang tunai di laci kasir terpisah dari akun tunai. Collect/setor akan mencatat settlement ke akun keuangan tipe Tunai (jika sudah dibuat).
+                </span>
+              </label>
             </div>
           </div>
         </div>

@@ -7,7 +7,7 @@ meta:
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAccounts } from '@/composables/finances'
 import { useNotification } from '@/composables/core/useNotification'
 import DialogConfirm from '@/components/shared/DialogConfirm.vue'
@@ -25,11 +25,22 @@ import {
   IconChevronRight,
   IconEye,
   IconEyeOff,
+  IconInfoCircle,
+  IconX,
 } from '@tabler/icons-vue'
 
 const router = useRouter()
+const route = useRoute()
 const confirmDialog = ref(null)
 const { showWarning } = useNotification()
+const showDeprecatedBanner = ref(route.query.deprecated === 'petty-cash')
+
+const dismissDeprecatedBanner = () => {
+  showDeprecatedBanner.value = false
+  const query = { ...route.query }
+  delete query.deprecated
+  router.replace({ path: route.path, query })
+}
 
 const {
   accounts,
@@ -92,11 +103,11 @@ const emptyForm = () => ({
 const form = ref(emptyForm())
 
 const accountKindOptions = [
-  { value: 'cash', label: 'Tunai / Cash', hint: 'Akun kas tunai — bisa dipilih sebagai sumber dana di expenses' },
+  { value: 'cash', label: 'Tunai / Cash', hint: 'Ledger kas settled — saldo bertambah saat setoran dari laci kasir (bukan saat pembayaran POS)' },
   { value: 'bank', label: 'Bank (BCA / Mandiri / ...)', hint: 'Semua QRIS, transfer, kartu dengan bank details masuk ke akun ini' },
   { value: 'e_wallet', label: 'E-Wallet', hint: 'GoPay, OVO, DANA tanpa bank details' },
   { value: 'payment_gateway', label: 'Payment Gateway', hint: 'Midtrans, Stripe, dll' },
-  { value: 'petty_cash', label: 'Petty Cash / Modal', hint: 'Dana kas kecil / modal' },
+  { value: 'petty_cash', label: 'Petty Cash / Modal', hint: 'Dana kas kecil / modal — ganti modul Petty Cash lama' },
   { value: 'custom', label: 'Lainnya', hint: 'Akun custom tanpa auto-match' },
 ]
 
@@ -253,12 +264,26 @@ onMounted(async () => {
 <template>
   <div class="container mx-auto px-4 py-8 max-w-6xl space-y-6">
 
+    <div v-if="showDeprecatedBanner" class="alert alert-info shadow-sm">
+      <IconInfoCircle class="w-5 h-5 shrink-0" />
+      <div class="text-sm">
+        <div class="font-medium">Modul Petty Cash sudah tidak digunakan</div>
+        <div class="opacity-80">
+          Gunakan akun tipe <strong>Petty Cash / Modal</strong> di halaman ini sebagai sumber dana modal.
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm btn-square" @click="dismissDeprecatedBanner">
+        <IconX class="w-4 h-4" />
+      </button>
+    </div>
+
     <!-- Header -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div>
         <h1 class="text-3xl font-bold">Akun Keuangan</h1>
         <p class="text-base-content/60 mt-1">
           Satu akun per bank. Semua QRIS, transfer, dan kartu dengan bank details otomatis masuk ke akun bank tersebut.
+          Modal / kas kecil pakai tipe Petty Cash di sini.
         </p>
       </div>
       <div class="flex items-center gap-2">

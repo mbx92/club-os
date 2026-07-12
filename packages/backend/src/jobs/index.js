@@ -6,8 +6,10 @@
 
 const cleanupExpiredReports = require('./cleanupExpiredReports');
 const hikvisionSyncJob = require('./hikvisionSyncJob');
+const accountSettlementJob = require('./accountSettlementJob');
 
 module.exports = {
   cleanupExpiredReports,
-  hikvisionSyncJob
+  hikvisionSyncJob,
+  accountSettlementJob,
 };

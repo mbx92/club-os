@@ -14,8 +14,8 @@ const OUTFLOW_TYPES = new Set([
   'outflow', 'transfer_out', 'adjustment_debit',
 ]);
 
-// Payment methods that should NOT be auto-matched to an Account
-// (they are handled by CashRegisterSession or VaultAccount instead)
+// Payment methods that should NOT be auto-matched to an Account on payment.
+// Cash stays in the cash drawer until collected/settled into Account type=cash.
 const EXCLUDED_PAYMENT_METHODS = new Set(['cash', 'compliment']);
 
 // ─── Auto-match ─────────────────────────────────────────────────────────────
@@ -216,8 +216,43 @@ async function processPendingSettlements(tenantId, timezone = 'Asia/Makassar') {
     count++;
   }
 
-  logger.info('Pending settlements processed', { tenantId, count });
+  if (count > 0) {
+    logger.logInfo('Pending settlements processed', { action: 'PROCESS_SETTLEMENTS', tenantId, count });
+  }
   return count;
+}
+
+/**
+ * Process due pending settlements for every tenant that has any.
+ * Used by the nightly cron job.
+ *
+ * @returns {Promise<{tenantsProcessed: number, settled: number}>}
+ */
+async function processAllPendingSettlements() {
+  const { Tenant } = require('../models');
+
+  const rows = await AccountEntry.findAll({
+    where: { status: 'pending_settlement' },
+    attributes: ['tenantId'],
+    group: ['tenantId'],
+    raw: true,
+  });
+
+  const tenantIds = [...new Set(rows.map((r) => r.tenantId).filter(Boolean))];
+
+  let settled = 0;
+  for (const tenantId of tenantIds) {
+    let timezone = 'Asia/Makassar';
+    try {
+      const tenant = await Tenant.findByPk(tenantId, { attributes: ['id', 'settings'] });
+      timezone = tenant?.settings?.timezone || timezone;
+    } catch {
+      // keep default
+    }
+    settled += await processPendingSettlements(tenantId, timezone);
+  }
+
+  return { tenantsProcessed: tenantIds.length, settled };
 }
 
 // ─── TransactionPayment auto-credit ──────────────────────────────────────────
@@ -332,6 +367,87 @@ async function debitFromExpense(expense, opts, t = null) {
   }, t);
 }
 
+/**
+ * Find the active cash (tunai) Account for a tenant.
+ * @param {string} tenantId
+ * @param {object} [t]
+ * @returns {Promise<Account|null>}
+ */
+async function findCashAccount(tenantId, t = null) {
+  return Account.findOne({
+    where: { tenantId, type: 'cash', isActive: true },
+    order: [['sortOrder', 'ASC'], ['createdAt', 'ASC']],
+    transaction: t || undefined,
+  });
+}
+
+/**
+ * Settle cash from the cash drawer into the finance cash Account.
+ * Called when cash is collected from a closed shift (drawer → setoran).
+ * POS cash itself never credits Account — only this settlement does.
+ *
+ * @param {object} opts
+ * @param {string} opts.tenantId
+ * @param {number} opts.amount
+ * @param {string} [opts.accountId]        Preferred cash Account; falls back to findCashAccount
+ * @param {string} [opts.entryDate]
+ * @param {string} [opts.description]
+ * @param {string} [opts.referenceType]    e.g. CashMutation / CashRegisterSession
+ * @param {string} [opts.referenceId]
+ * @param {string} [opts.performedBy]
+ * @param {string} [opts.timezone]
+ * @param {object} [t]
+ * @returns {Promise<{entry: AccountEntry, account: Account}|null>}
+ */
+async function creditFromCashCollect(opts, t = null) {
+  const {
+    tenantId,
+    amount,
+    accountId = null,
+    entryDate,
+    description,
+    referenceType = 'CashMutation',
+    referenceId = null,
+    performedBy,
+    timezone,
+  } = opts;
+
+  const cashAmount = parseFloat(amount);
+  if (!tenantId || !cashAmount || cashAmount <= 0) return null;
+
+  let account = null;
+  if (accountId) {
+    account = await Account.findOne({
+      where: { id: accountId, tenantId, type: 'cash', isActive: true },
+      transaction: t || undefined,
+    });
+  }
+  if (!account) {
+    account = await findCashAccount(tenantId, t);
+  }
+  if (!account) {
+    logger.logInfo('No cash Account configured — skip drawer settlement credit', {
+      action: 'CASH_COLLECT_NO_ACCOUNT',
+      tenantId,
+      amount: cashAmount,
+    });
+    return null;
+  }
+
+  return createEntry({
+    accountId: account.id,
+    tenantId,
+    type: 'settlement',
+    amount: cashAmount,
+    referenceType,
+    referenceId,
+    description: description || 'Setoran kas dari laci kasir',
+    entryDate,
+    performedBy,
+    timezone,
+  }, t);
+}
+
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
 /**
@@ -377,10 +493,13 @@ async function recalculateBalance(accountId) {
 
 module.exports = {
   findMatchingAccount,
+  findCashAccount,
   createEntry,
   creditFromPayment,
+  creditFromCashCollect,
   debitFromExpense,
   processPendingSettlements,
+  processAllPendingSettlements,
   recalculateBalance,
   EXCLUDED_PAYMENT_METHODS,
 };

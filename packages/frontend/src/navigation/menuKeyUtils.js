@@ -12,6 +12,8 @@ const LEGACY_MENU_KEY_MAP = {
   logs: 'settings',
   psychology: null,
   'restaurant.pos': 'restaurant.floor-plan-pos',
+  // Petty Cash module deprecated — remap to Accounts
+  'finances.petty-cash': 'finances.accounts',
 }
 
 /** Flatten ALL_MENU_KEYS tree into a flat array of all valid keys */
@@ -58,7 +60,9 @@ const SUBJECT_MENU_MAP = {
   Expense: ['finances.expenses'],
   ExpenseCategory: ['finances.expenses'],
   Supplier: ['finances.expenses'],
-  PettyCash: ['finances.petty-cash'],
+  // PettyCash module deprecated — use Account instead
+  PettyCash: ['finances.accounts'],
+  Account: ['finances.accounts'],
   CashFlow: ['finances.cash-flow'],
   FinancialReport: ['finances.reports', 'finances.shareholders'],
   Voucher: ['vouchers'],

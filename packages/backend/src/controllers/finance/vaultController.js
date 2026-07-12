@@ -28,6 +28,8 @@ const logger = require('../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../utils/requestHelper');
 const { buildInclusiveDateRange } = require('../../utils/dateRange');
 const { generateUniqueSequence, withRetry } = require('../../utils/concurrency');
+const accountService = require('../../services/accountService');
+const { getTenantTimezone } = require('../../utils/tenantTimezone');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -686,9 +688,27 @@ async function collectToVault(req, res, next) {
           return { error: 'Tidak ada session yang bisa di-collect (semua sudah penuh atau saldo 0)' };
         }
 
-        // Update vault account balance
+        // Update vault account balance (operational vault storage)
         const newBalance = parseFloat(destVaultAccount.balance || 0) + totalAmount;
         await destVaultAccount.update({ balance: newBalance }, { transaction });
+
+        // Settle into finance cash Account (akun tunai) — separate from cash drawer.
+        // POS cash never credits Account; this collect/setoran is the settlement step.
+        const timezone = getTenantTimezone(req);
+        const accountEntries = [];
+        for (const cashMutation of mutations) {
+          const settled = await accountService.creditFromCashCollect({
+            tenantId,
+            amount: cashMutation.amount,
+            entryDate: mutationDate,
+            description: `Setoran kas dari laci — ${cashMutation.referenceNumber || cashMutation.mutationNumber}`,
+            referenceType: 'CashMutation',
+            referenceId: cashMutation.id,
+            performedBy: userId,
+            timezone,
+          }, transaction);
+          if (settled?.entry) accountEntries.push(settled.entry);
+        }
 
         await transaction.commit();
 
@@ -702,7 +722,12 @@ async function collectToVault(req, res, next) {
           ],
         });
 
-        return { mutations: createdMutations, totalAmount, vaultAccount: destVaultAccount };
+        return {
+          mutations: createdMutations,
+          totalAmount,
+          vaultAccount: destVaultAccount,
+          accountEntries,
+        };
       } catch (err) {
         await transaction.rollback();
         throw err;
@@ -733,6 +758,8 @@ async function collectToVault(req, res, next) {
           name: destVaultAccount.name,
           balance: parseFloat(destVaultAccount.balance),
         },
+        cashAccountSettled: (result.accountEntries || []).length > 0,
+        accountEntries: result.accountEntries || [],
       },
     });
   } catch (error) {

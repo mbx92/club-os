@@ -55,9 +55,10 @@ const DEFAULT_ROLE_PERMISSIONS = {
       RestaurantStock: ALL,
       Transaction: ALL_WITH_CANCEL,
       ActiveService: ALL,
-      PettyCash: ALL,
+      Account: ALL,
     },
     menuAccess: getMenuAccessForRole('manager'),
+
     uiFlags: {
       canManageUsers: false,
       canManageRoles: false,
@@ -84,7 +85,6 @@ const DEFAULT_ROLE_PERMISSIONS = {
       Voucher: READ_CREATE_UPDATE,
       Dashboard: READ_ONLY,
       CashRegisterSession: ALL,
-      PettyCash: ['read', 'update'],
       HikvisionDevice: READ_ONLY,
       StaffAttendance: READ_ONLY,
       EmployeeSchedule: READ_ONLY,

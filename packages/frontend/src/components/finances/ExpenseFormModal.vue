@@ -208,69 +208,31 @@
           </div>
         </div>
 
-        <!-- Bank Name + Payment Notes + Vault Account + Finance Account -->
-        <div v-if="formData.paymentOption" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div v-if="formData.paymentOption === 'from_account'" class="form-control md:col-span-2">
-            <label class="label">
-              <span class="label-text font-medium">Akun Sumber Dana <span class="text-error">*</span></span>
-            </label>
-            <div v-if="financeAccountsLoading" class="flex items-center gap-2 text-sm text-base-content/60 py-2">
-              <span class="loading loading-spinner loading-xs"></span> Memuat akun...
-            </div>
-            <select
-              v-else
-              v-model="formData.accountId"
-              class="select select-bordered w-full"
-              :class="{ 'select-error': errors.accountId }"
-            >
-              <option value="">Pilih akun</option>
-              <option v-for="account in financeAccounts" :key="account.id" :value="String(account.id)">
-                {{ account.name }}{{ account.bankName ? ` (${account.bankName})` : '' }} — {{ formatCurrency(account.balance) }}
-              </option>
-            </select>
-            <label v-if="errors.accountId" class="label">
-              <span class="label-text-alt text-error">{{ errors.accountId }}</span>
-            </label>
+        <!-- Account selector (only when paying from finance account) -->
+        <div v-if="formData.paymentOption === 'from_account'" class="form-control">
+          <label class="label">
+            <span class="label-text font-medium">Akun Sumber Dana <span class="text-error">*</span></span>
+          </label>
+          <div v-if="financeAccountsLoading" class="flex items-center gap-2 text-sm text-base-content/60 py-2">
+            <span class="loading loading-spinner loading-xs"></span> Memuat akun...
           </div>
-          <div v-if="formData.paymentOption === 'vault_cash'" class="form-control">
-            <label class="label">
-              <span class="label-text font-medium">Vault Account <span class="text-error">*</span></span>
-            </label>
-            <div v-if="vaultAccountsLoading" class="flex items-center gap-2 text-sm text-base-content/60 py-2">
-              <span class="loading loading-spinner loading-xs"></span> Memuat vault account...
-            </div>
-            <select v-else-if="vaultAccounts.length" v-model="formData.vaultAccountId" class="select select-bordered w-full">
-              <option value="">Pilih vault account</option>
-              <option v-for="account in vaultAccounts" :key="account.id" :value="account.id">
-                {{ account.name }} — {{ formatCurrency(account.balance) }}
-              </option>
-            </select>
-            <div v-else class="text-sm text-warning py-2">
-              ⚠️ Belum ada vault account. Lakukan collect dari cash drawer untuk auto-create akun "Kas".
-            </div>
-          </div>
-          <div v-if="formData.paymentOption === 'bank_transfer'" class="form-control">
-            <label class="label">
-              <span class="label-text font-medium">Nama Bank</span>
-            </label>
-            <input
-              v-model="formData.bankName"
-              type="text"
-              class="input input-bordered w-full"
-              placeholder="Contoh: BCA, Mandiri, BRI"
-            />
-          </div>
-          <div v-if="formData.paymentOption === 'bank_transfer'" class="form-control">
-            <label class="label">
-              <span class="label-text font-medium">Catatan Pembayaran</span>
-            </label>
-            <input
-              v-model="formData.paymentNotes"
-              type="text"
-              class="input input-bordered w-full"
-              placeholder="Contoh: Transfer dari rek 123456789"
-            />
-          </div>
+          <select
+            v-else
+            v-model="formData.accountId"
+            class="select select-bordered w-full"
+            :class="{ 'select-error': errors.accountId }"
+          >
+            <option value="">Pilih akun (Tunai / Bank)</option>
+            <option v-for="account in expenseAccounts" :key="account.id" :value="String(account.id)">
+              {{ account.name }}{{ account.bankName ? ` (${account.bankName})` : '' }} — {{ formatCurrency(account.balance) }}
+            </option>
+          </select>
+          <label v-if="!expenseAccounts.length && !financeAccountsLoading" class="label">
+            <span class="label-text-alt text-warning">Belum ada akun Tunai atau Bank. Buat di menu Finances → Akun.</span>
+          </label>
+          <label v-if="errors.accountId" class="label">
+            <span class="label-text-alt text-error">{{ errors.accountId }}</span>
+          </label>
         </div>
 
         <!-- Description -->
@@ -403,12 +365,13 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import CurrencyInput from '@/components/shared/CurrencyInput.vue'
-import { useSuppliers, useVault, useAccounts } from '@/composables/finances'
+import { useSuppliers, useAccounts } from '@/composables/finances'
 import {
   EXPENSE_PAYMENT_OPTION_MAP,
-  EXPENSE_PAYMENT_OPTIONS,
+  getExpensePaymentOptions,
   resolveExpensePaymentOption,
   paymentMethodFromAccount,
+  filterExpenseAccounts,
 } from '@/utils/expensePayment'
 
 const props = defineProps({
@@ -441,18 +404,14 @@ const errors = ref({})
 const tagsInput = ref('')
 
 const { suppliers: supplierList, fetchSuppliers } = useSuppliers()
-const { vaultAccounts, fetchVaultAccounts, accountsLoading: vaultAccountsLoading } = useVault()
 const { accounts: financeAccounts, fetchAccounts: fetchFinanceAccounts, loading: financeAccountsLoading } = useAccounts()
 const vendorMode = ref('select') // 'select' | 'manual'
 
 const PAYMENT_OPTION_MAP = EXPENSE_PAYMENT_OPTION_MAP
 
-const paymentOptions = computed(() => {
-  if (props.isCashier) {
-    return [{ value: 'cash_drawer_cash', label: 'Tunai' }]
-  }
-  return EXPENSE_PAYMENT_OPTIONS
-})
+const paymentOptions = computed(() => getExpensePaymentOptions({ isCashier: props.isCashier }))
+
+const expenseAccounts = computed(() => filterExpenseAccounts(financeAccounts.value))
 
 const resolvePaymentOption = (expense = null) =>
   resolveExpensePaymentOption(expense, { isCashier: props.isCashier })
@@ -535,10 +494,6 @@ const validate = () => {
     errors.value.recurringFrequency = 'Frequency is required for recurring expenses'
   }
 
-  if (formData.value.paymentOption === 'vault_cash' && !formData.value.vaultAccountId) {
-    errors.value.vaultAccountId = 'Pilih vault account sumber dana'
-  }
-
   if (formData.value.paymentOption === 'from_account' && !formData.value.accountId) {
     errors.value.accountId = 'Pilih akun sumber dana'
   }
@@ -560,22 +515,18 @@ const handleSubmit = () => {
   const paymentConfig = PAYMENT_OPTION_MAP[submitData.paymentOption]
   if (paymentConfig) {
     if (submitData.paymentOption === 'from_account') {
-      const selectedAccount = financeAccounts.value.find(a => String(a.id) === String(submitData.accountId))
+      const selectedAccount = expenseAccounts.value.find(a => String(a.id) === String(submitData.accountId))
       submitData.paymentMethod = paymentMethodFromAccount(selectedAccount)
       submitData.fundSource = 'account'
       if (selectedAccount?.bankName) submitData.bankName = selectedAccount.bankName
       delete submitData.vaultAccountId
     } else {
+      // cash_drawer_cash (cashier)
       submitData.paymentMethod = paymentConfig.paymentMethod
-      if (paymentConfig.fundSource) {
-        submitData.fundSource = paymentConfig.fundSource
-      } else {
-        delete submitData.fundSource
-      }
+      submitData.fundSource = paymentConfig.fundSource
       delete submitData.accountId
-      if (submitData.paymentOption !== 'vault_cash') {
-        delete submitData.vaultAccountId
-      }
+      delete submitData.vaultAccountId
+      delete submitData.bankName
     }
   }
 
@@ -620,7 +571,6 @@ const onSupplierSelect = (event) => {
 const open = (expense = null) => {
   // Fetch active suppliers for dropdown
   fetchSuppliers({ isActive: 'true', limit: 200, sortBy: 'name', sortOrder: 'ASC' })
-  fetchVaultAccounts({ isActive: 'true' })
   fetchFinanceAccounts({ isActive: 'true' })
 
   if (expense) {
@@ -639,7 +589,7 @@ const open = (expense = null) => {
       paymentOption: resolvePaymentOption(expense),
       bankName: expense.bankName || '',
       paymentNotes: expense.paymentNotes || '',
-      vaultAccountId: expense.vaultAccountId || '',
+      vaultAccountId: '',
       accountId: expense.accountId ? String(expense.accountId) : '',
       status: ['draft', 'pending'].includes(expense.status) ? expense.status : 'pending',
       notes: expense.notes || '',
@@ -696,9 +646,7 @@ watch(() => formData.value.isRecurring, (newVal) => {
 })
 
 watch(() => props.isCashier, (newVal) => {
-  if (newVal) {
-    formData.value.paymentOption = 'cash_drawer_cash'
-  }
+  formData.value.paymentOption = newVal ? 'cash_drawer_cash' : 'from_account'
 })
 
 defineExpose({

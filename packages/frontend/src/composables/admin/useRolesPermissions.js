@@ -60,7 +60,9 @@ export const useRolesPermissions = () => {
       { name: 'ExpenseCategory', label: 'Expense Categories', module: 'finances', actions: CRUD },
       { name: 'CashFlow', label: 'Cash Flow', module: 'finances', actions: RO },
       { name: 'FinancialReport', label: 'Financial Reports', module: 'reports', actions: CRUD },
-      { name: 'PettyCash', label: 'Petty Cash', module: 'finances', actions: CRUD },
+      { name: 'Account', label: 'Akun Keuangan', module: 'finances', actions: CRUD },
+      // PettyCash deprecated — kept for legacy role data only; use Account
+      { name: 'PettyCash', label: 'Petty Cash (deprecated)', module: 'finances', actions: CRUD },
       { name: 'Supplier', label: 'Suppliers', module: 'finances', actions: CRUD },
       { name: 'Invoice', label: 'Invoices', module: 'finances', actions: CRUD },
       { name: 'Payment', label: 'Payments', module: 'finances', actions: CRUD },

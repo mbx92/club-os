@@ -17,7 +17,7 @@ const ADMIN_MENU_ACCESS = [
   'restaurant', 'restaurant.dashboard', 'restaurant.categories', 'restaurant.products', 'restaurant.locations', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.stock', 'restaurant.reports',
   'vouchers',
   'back-office', 'back-office.attendance', 'back-office.attendance-report', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
-  'finances', 'finances.dashboard', 'finances.incomes', 'finances.income-categories', 'finances.expenses', 'finances.expense-categories', 'finances.cash-flow', 'finances.petty-cash', 'finances.vault', 'finances.analytics', 'finances.transactions', 'finances.shareholders', 'finances.reports',
+  'finances', 'finances.dashboard', 'finances.incomes', 'finances.income-categories', 'finances.expenses', 'finances.expense-categories', 'finances.cash-flow', 'finances.accounts', 'finances.vault', 'finances.analytics', 'finances.transactions', 'finances.shareholders', 'finances.reports',
   'reports', 'reports.revenue', 'reports.attendance', 'reports.member-stats', 'reports.member-reports', 'reports.service-reports', 'reports.product-reports', 'reports.staff-reports', 'reports.forecasting',
   'subscription', 'subscription.plans', 'subscription.subscriptions', 'subscription.tenants', 'subscription.billing',
   'settings',
@@ -30,7 +30,7 @@ const MANAGER_MENU_ACCESS = [
   'restaurant', 'restaurant.dashboard', 'restaurant.categories', 'restaurant.products', 'restaurant.locations', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.stock', 'restaurant.reports',
   'vouchers',
   'back-office', 'back-office.attendance', 'back-office.attendance-report', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
-  'finances', 'finances.dashboard', 'finances.incomes', 'finances.income-categories', 'finances.expenses', 'finances.expense-categories', 'finances.cash-flow', 'finances.petty-cash', 'finances.vault', 'finances.analytics', 'finances.transactions', 'finances.shareholders', 'finances.reports',
+  'finances', 'finances.dashboard', 'finances.incomes', 'finances.income-categories', 'finances.expenses', 'finances.expense-categories', 'finances.cash-flow', 'finances.accounts', 'finances.vault', 'finances.analytics', 'finances.transactions', 'finances.shareholders', 'finances.reports',
   'reports', 'reports.revenue', 'reports.attendance', 'reports.member-stats', 'reports.member-reports', 'reports.service-reports', 'reports.product-reports', 'reports.staff-reports', 'reports.forecasting',
   'settings',
 ];
@@ -42,7 +42,7 @@ const CASHIER_MENU_ACCESS = [
   'restaurant', 'restaurant.dashboard', 'restaurant.products', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions',
   'vouchers',
   'back-office', 'back-office.attendance', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
-  'finances', 'finances.expenses', 'finances.petty-cash',
+  'finances', 'finances.expenses',
 ];
 
 const TRAINER_MENU_ACCESS = [
@@ -98,8 +98,11 @@ const SUBJECT_MENU_MAP = {
   Expense: ['finances.expenses'],
   ExpenseCategory: ['finances.expenses'],
   Supplier: ['finances.expenses'],
-  PettyCash: ['finances.petty-cash'],
+  // PettyCash module deprecated — use Account (incl. type=petty_cash) instead
+  PettyCash: ['finances.accounts'],
+  Account: ['finances.accounts'],
   CashFlow: ['finances.cash-flow'],
+
   FinancialReport: ['finances.reports', 'finances.shareholders'],
   Voucher: ['vouchers'],
   Subscription: ['subscription'],

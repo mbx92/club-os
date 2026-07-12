@@ -6,9 +6,15 @@ const { Model } = require('sequelize');
  * Account — financial account that mirrors a real-world bank account,
  * e-wallet, or petty cash fund.
  *
- * Cash (tunai) flows through CashRegisterSession (cash drawer) and
- * VaultAccount (vault) which remain unchanged. This model covers:
- *   - cash     : Tunai / kas (expense source & manual balance; POS cash still uses cash drawer)
+ * Cash flow (tunai) — two separate compartments:
+ *   1. CashRegisterSession (cash drawer) — holds POS cash during the shift
+ *   2. Account type=cash (akun tunai) — finance ledger for settled cash
+ *
+ * POS cash payments NEVER auto-credit Account. Settlement happens when
+ * cash is collected from the drawer and deposited to the cash Account
+ * (via vault collect → creditFromCashCollect).
+ *
+ * Other types:
  *   - bank     : Transfer BCA, QRIS BCA, Debit Mandiri, etc.
  *   - e_wallet : GoPay, OVO, DANA (standalone, not bank-linked)
  *   - payment_gateway : Midtrans, Stripe virtual wallets
@@ -22,7 +28,7 @@ const { Model } = require('sequelize');
  * Settlement: non-cash payments may not arrive on the same day (e.g.
  * QRIS typically settles T+1). settlementDays = 0 means record
  * immediately; > 0 means create a 'pending_settlement' entry that
- * matures after N days.
+ * matures after N days. Cash settlement is the drawer→akun tunai collect.
  */
 
 module.exports = (sequelize, DataTypes) => {

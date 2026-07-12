@@ -729,14 +729,6 @@ export const navigation = [
         subject: "Expense",
       },
       {
-        label: "Petty Cash",
-        to: "/finances/petty-cash",
-        icon: "wallet",
-        menuKey: "finances.petty-cash",
-        action: "read",
-        subject: "PettyCash",
-      },
-      {
         label: "Akun",
         to: "/finances/accounts",
         icon: "credit-card",

@@ -5,6 +5,7 @@ const cleanupExpiredReports = require('../jobs/cleanupExpiredReports');
 const hikvisionSyncJob = require('../jobs/hikvisionSyncJob');
 const attendanceRegenerationJob = require('../jobs/attendanceRegenerationJob');
 const overnightFixJob = require('../jobs/overnightFixJob');
+const accountSettlementJob = require('../jobs/accountSettlementJob');
 const { createBackup } = require('../../scripts/backupDatabase');
 const { createSequelizeBackup } = require('../../scripts/backupDatabaseSequelize');
 const { resolveAutoBackupOptions } = require('./backupGoogleDriveConfig');
@@ -58,6 +59,15 @@ const schedulerStatus = {
       name: 'Overnight Fix',
       schedule: process.env.OVERNIGHT_FIX_CRON || '30 7 * * *',
       description: 'Auto-correct overnight schedules saved on checkout date instead of shift start date',
+      lastRun: null,
+      nextRun: null,
+      status: 'pending',
+      isRunning: false
+    },
+    accountSettlement: {
+      name: 'Account Settlement',
+      schedule: process.env.ACCOUNT_SETTLEMENT_CRON || '0 1 * * *',
+      description: 'Complete pending AccountEntry settlements (T+N) once settlementDate is due',
       lastRun: null,
       nextRun: null,
       status: 'pending',
@@ -401,12 +411,28 @@ function scheduleOvernightFix() {
   });
 }
 
+function scheduleAccountSettlement() {
+  accountSettlementJob.scheduleAccountSettlementJob();
+
+  logger.logSystem('Account settlement scheduler initialized (daily 01:00)', {
+    action: 'ACCOUNT_SETTLEMENT_SCHEDULER_INITIALIZED',
+    userId: null,
+    tenantId: null,
+    ip: 'system',
+    userAgent: 'scheduled-task',
+    method: 'SYSTEM',
+    path: '/system/scheduler',
+    skipDb: true,
+  });
+}
+
 function initializeScheduledJobs() {
   scheduleLogCleanup();
   scheduleReportCleanup();
   scheduleHikvisionSync();
   scheduleAttendanceRepair();
   scheduleOvernightFix();
+  scheduleAccountSettlement();
   scheduleAutoBackup();
   
   schedulerStatus.initialized = true;
@@ -430,6 +456,7 @@ function initializeScheduledJobs() {
  */
 function getSchedulerStatus() {
   const attendanceRepairStatus = attendanceRegenerationJob.getAttendanceRegenerationJobStatus();
+  const accountSettlementStatus = accountSettlementJob.getAccountSettlementJobStatus();
 
   return {
     ...schedulerStatus,
@@ -442,6 +469,14 @@ function getSchedulerStatus() {
         status: attendanceRepairStatus.lastRun
           ? (attendanceRepairStatus.lastRun.success ? 'success' : 'error')
           : (attendanceRepairStatus.isScheduled ? 'scheduled' : schedulerStatus.jobs.attendanceRepair.status),
+      },
+      accountSettlement: {
+        ...schedulerStatus.jobs.accountSettlement,
+        isRunning: accountSettlementStatus.isRunning,
+        lastRun: accountSettlementStatus.lastRun,
+        status: accountSettlementStatus.lastRun
+          ? (accountSettlementStatus.lastRun.success ? 'success' : 'error')
+          : (accountSettlementStatus.isScheduled ? 'scheduled' : schedulerStatus.jobs.accountSettlement.status),
       },
     },
     uptime: schedulerStatus.initializedAt 
@@ -474,8 +509,10 @@ module.exports = {
   scheduleReportCleanup,
   scheduleHikvisionSync,
   scheduleAttendanceRepair,
+  scheduleAccountSettlement,
   cleanupExpiredReports,
   hikvisionSyncJob,
   attendanceRegenerationJob,
+  accountSettlementJob,
   getSchedulerStatus
 };
