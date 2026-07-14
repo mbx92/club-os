@@ -321,7 +321,7 @@ async function getSummary(req, res, next) {
       raw: true,
     });
 
-    // --- Hari ini collected ---
+    // --- Hari ini collected (kept for backward compatibility) ---
     const todayStr = new Date().toISOString().split('T')[0];
     const todayCollectedResult = await CashMutation.findOne({
       where: {
@@ -329,27 +329,43 @@ async function getSummary(req, res, next) {
         mutationType: 'drawer_to_vault_transfer',
         status: 'posted',
         mutationDate: todayStr,
+        ...(locationId ? { locationId } : {}),
       },
       attributes: [[fn('COALESCE', fn('SUM', col('amount')), 0), 'total']],
       raw: true,
     });
 
-    // --- Pending cash drawer (closed sessions with remaining) ---
+    // --- Period collected (drawer_to_vault within date range) ---
+    const periodCollectedWhere = {
+      ...mutationWhere,
+      ...dateFilter,
+      mutationType: 'drawer_to_vault_transfer',
+    };
+    const periodCollectedResult = await CashMutation.findOne({
+      where: periodCollectedWhere,
+      attributes: [[fn('COALESCE', fn('SUM', col('amount')), 0), 'total']],
+      raw: true,
+    });
+
+    // --- Pending cash drawer (all closed sessions with remaining, filtered like collectibles) ---
+    const sessionWhere = {
+      tenantId,
+      status: 'closed',
+      deletedAt: null,
+    };
+    if (locationId) sessionWhere.locationId = locationId;
+    if (startDate) sessionWhere.shiftDate = { ...sessionWhere.shiftDate, [Op.gte]: startDate };
+    if (endDate) sessionWhere.shiftDate = { ...sessionWhere.shiftDate, [Op.lte]: endDate };
+
     const pendingSessions = await CashRegisterSession.findAll({
-      where: {
-        tenantId,
-        status: 'closed',
-        deletedAt: null,
-      },
+      where: sessionWhere,
       attributes: ['id', 'shiftDate', 'shiftName', 'shiftNumber', 'closingBalance', 'actualCash', 'locationId'],
       include: [
         { model: Location, as: 'location', attributes: ['id', 'name'], required: false },
       ],
       order: [['shiftDate', 'DESC'], ['shiftNumber', 'DESC']],
-      limit: 50,
     });
 
-    // Hitung collected amount per session dari CashMutations
     const sessionIds = pendingSessions.map(s => s.id);
     const collectedPerSession = sessionIds.length > 0 ? await CashMutation.findAll({
       where: {
@@ -368,13 +384,7 @@ async function getSummary(req, res, next) {
       collectedMap[c.shiftSessionId] = parseFloat(c.collected || 0);
     });
 
-    const pendingPreview = pendingSessions
-      .filter(s => {
-        const collected = collectedMap[s.id] || 0;
-        const base = parseFloat(s.actualCash || s.closingBalance || 0);
-        return base - collected > 0;
-      })
-      .slice(0, 10)
+    const pendingItems = pendingSessions
       .map(s => {
         const base = parseFloat(s.actualCash || s.closingBalance || 0);
         const collected = collectedMap[s.id] || 0;
@@ -391,9 +401,10 @@ async function getSummary(req, res, next) {
           collectionStatus: remaining <= 0 ? 'collected' : collected > 0 ? 'partially_collected' : 'uncollected',
         };
       })
-      .slice(0, 5);
+      .filter(s => s.remainingAmount > 0);
 
-    const pendingDrawerCash = pendingPreview.reduce((sum, s) => sum + s.remainingAmount, 0);
+    const pendingDrawerCash = pendingItems.reduce((sum, s) => sum + s.remainingAmount, 0);
+    const pendingPreview = pendingItems.slice(0, 5);
 
     return res.json({
       success: true,
@@ -404,8 +415,9 @@ async function getSummary(req, res, next) {
           totalIn: parseFloat(inflowResult?.total || 0),
           totalOut: parseFloat(outflowResult?.total || 0),
           todayCollected: parseFloat(todayCollectedResult?.total || 0),
+          periodCollected: parseFloat(periodCollectedResult?.total || 0),
           pendingDrawerCash,
-          pendingSessionCount: pendingPreview.length,
+          pendingSessionCount: pendingItems.length,
         },
         pendingCollectionsPreview: pendingPreview,
       },
@@ -1258,6 +1270,88 @@ async function recordPaymentInflow({
 }
 
 /**
+ * Reverse auto payment_inflow CashMutations for a cancelled/refunded transaction.
+ * Debits vault balance and records vault_adjustment (outflow) for audit.
+ */
+async function reversePaymentInflows({
+  tenantId,
+  referenceType = 'transaction',
+  referenceId,
+  notes,
+  createdBy,
+  dbTransaction = null,
+}) {
+  if (!tenantId || !referenceId) return [];
+
+  const run = async (transaction) => {
+    const mutations = await CashMutation.findAll({
+      where: {
+        tenantId,
+        referenceType,
+        referenceId,
+        mutationType: 'payment_inflow',
+        status: 'posted',
+      },
+      lock: transaction.LOCK.UPDATE,
+      transaction,
+    });
+
+    const results = [];
+    for (const mutation of mutations) {
+      const vaultAccountId = mutation.destinationVaultAccountId;
+      if (!vaultAccountId) continue;
+
+      const vaultAccount = await VaultAccount.findOne({
+        where: { id: vaultAccountId, tenantId },
+        lock: transaction.LOCK.UPDATE,
+        transaction,
+      });
+      if (!vaultAccount) continue;
+
+      const amount = parseFloat(mutation.amount || 0);
+      if (amount <= 0) continue;
+
+      const balanceBefore = parseFloat(vaultAccount.balance || 0);
+      const balanceAfter = Math.max(0, balanceBefore - amount);
+      await vaultAccount.update({ balance: balanceAfter }, { transaction });
+
+      const mutationNumber = await generateMutationNumber(CashMutation, tenantId, transaction);
+      const reversal = await CashMutation.create({
+        tenantId,
+        locationId: mutation.locationId,
+        mutationNumber,
+        sourceVaultAccountId: vaultAccount.id,
+        sourceAccount: vaultAccount.name,
+        destinationAccount: 'transaction_cancel',
+        amount,
+        mutationType: 'vault_adjustment',
+        referenceType,
+        referenceId,
+        referenceNumber: mutation.referenceNumber,
+        status: 'posted',
+        mutationDate: new Date().toISOString().split('T')[0],
+        notes: notes || `Batal/refund pemasukan: ${mutation.notes || mutation.mutationNumber}`,
+        metadata: {
+          reversalOf: mutation.id,
+          balanceBefore,
+          balanceAfter,
+        },
+        createdBy,
+      }, { transaction });
+
+      await mutation.update({ status: 'cancelled' }, { transaction });
+
+      results.push(reversal);
+    }
+
+    return results;
+  };
+
+  if (dbTransaction) return run(dbTransaction);
+  return sequelize.transaction(run);
+}
+
+/**
  * Map a normalized paymentMethod to a VaultAccount.accountType.
  */
 function mapPaymentMethodToAccountType(paymentMethod) {
@@ -1312,4 +1406,5 @@ module.exports = {
   transferBetweenAccounts,
   adjustVault,
   recordPaymentInflow,
+  reversePaymentInflows,
 };

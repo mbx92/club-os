@@ -737,7 +737,7 @@ export const navigation = [
         subject: "Account",
       },
       {
-        label: "Vault",
+        label: "Drawer",
         to: "/finances/vault",
         icon: "building-bank",
         menuKey: "finances.vault",

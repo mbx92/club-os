@@ -400,9 +400,8 @@ onMounted(async () => {
           >
             <IconCashRegister class="w-5 h-5" />
           </button>
-          <router-link to="/restaurant/orders" class="btn btn-ghost btn-sm btn-circle">
-            <IconArrowLeft class="w-4 h-4 mr-2" />
-            Back
+          <router-link to="/restaurant/orders" class="btn btn-ghost btn-sm" title="Back">
+            <IconArrowLeft class="w-5 h-5" />
           </router-link>
         </div>
       </div>

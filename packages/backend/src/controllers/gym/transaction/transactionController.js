@@ -18,7 +18,7 @@ const ConcurrencyUtils = require('../../../utils/concurrency');
 const voucherService = require('../../../services/voucherService');
 const transactionSettingsService = require('../../../services/transactionSettingsService');
 const receiptPrinterService = require('../../../services/receiptPrinterService');
-const { recordPaymentInflow } = require('../../../controllers/finance/vaultController');
+const { recordPaymentInflow, reversePaymentInflows } = require('../../../controllers/finance/vaultController');
 const accountService = require('../../../services/accountService');
 const { getTenantTimezone } = require('../../../utils/tenantTimezone');
 const logger = require('../../../utils/logger');
@@ -1267,6 +1267,30 @@ exports.refundTransaction = async (req, res) => {
       await service.save({ transaction: t });
     }
 
+    // Rollback Account + Vault credits from payments
+    const payments = await TransactionPayment.findAll({
+      where: { transactionId: id },
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
+    const tz = getTenantTimezone(req);
+    for (const payment of payments) {
+      await accountService.reversePaymentCredit(payment, {
+        tenantId,
+        timezone: tz,
+        performedBy: req.user.id,
+        reason: notes,
+      }, t);
+    }
+    await reversePaymentInflows({
+      tenantId,
+      referenceType: 'transaction',
+      referenceId: transaction.id,
+      notes: `Refund transaksi: ${notes}`,
+      createdBy: req.user.id,
+      dbTransaction: t,
+    });
+
     // Update transaction status to refunded
     transaction.status = 'refunded';
     transaction.notes = transaction.notes
@@ -1547,6 +1571,27 @@ exports.cancelTransaction = async (req, res) => {
           usageCount: Math.max(0, Number(voucher.usageCount || 0) - adjustment)
         }, { transaction: t });
       }
+    }
+
+    // Rollback Account + Vault credits from payments (skip if already refunded — already reversed)
+    if (!wasRefunded) {
+      const tz = getTenantTimezone(req);
+      for (const payment of payments) {
+        await accountService.reversePaymentCredit(payment, {
+          tenantId,
+          timezone: tz,
+          performedBy: req.user.id,
+          reason: notes,
+        }, t);
+      }
+      await reversePaymentInflows({
+        tenantId,
+        referenceType: 'transaction',
+        referenceId: transaction.id,
+        notes: `Batal transaksi: ${notes}`,
+        createdBy: req.user.id,
+        dbTransaction: t,
+      });
     }
 
     transaction.status = 'cancelled';
@@ -2395,14 +2440,19 @@ exports.splitBillByItem = async (req, res) => {
 /**
  * Update payment method on a transaction
  * PUT /api/v1/transactions/:id/payment
+ *
+ * Reverse old Account/Vault credits, then re-apply with the new method.
  */
 exports.updateTransactionPaymentMethod = async (req, res) => {
+  const t = await Transaction.sequelize.transaction();
+
   try {
     const { id } = req.params;
     const tenantId = req.user.tenantId;
     const { paymentMethod, bankName } = req.body;
 
     if (!paymentMethod || typeof paymentMethod !== 'string') {
+      await t.rollback();
       return res.status(400).json({
         success: false,
         message: 'paymentMethod is required',
@@ -2411,10 +2461,13 @@ exports.updateTransactionPaymentMethod = async (req, res) => {
     }
 
     const transaction = await Transaction.findOne({
-      where: { id, tenantId }
+      where: { id, tenantId },
+      transaction: t,
+      lock: t.LOCK.UPDATE,
     });
 
     if (!transaction) {
+      await t.rollback();
       return res.status(404).json({
         success: false,
         message: 'Transaction not found',
@@ -2423,6 +2476,7 @@ exports.updateTransactionPaymentMethod = async (req, res) => {
     }
 
     if (['cancelled', 'refunded'].includes(transaction.status)) {
+      await t.rollback();
       return res.status(400).json({
         success: false,
         message: 'Cannot change payment method on a cancelled or refunded transaction',
@@ -2433,10 +2487,13 @@ exports.updateTransactionPaymentMethod = async (req, res) => {
     const normalizedMethod = normalizePaymentMethod(paymentMethod);
 
     const payments = await TransactionPayment.findAll({
-      where: { transactionId: id }
+      where: { transactionId: id },
+      transaction: t,
+      lock: t.LOCK.UPDATE,
     });
 
     if (!payments.length) {
+      await t.rollback();
       return res.status(400).json({
         success: false,
         message: 'No payment records found for this transaction',
@@ -2445,16 +2502,36 @@ exports.updateTransactionPaymentMethod = async (req, res) => {
     }
 
     const oldMethod = payments[0].paymentMethod;
+    const tz = getTenantTimezone(req);
 
+    // 1) Reverse existing Account + Vault credits for old method
+    for (const payment of payments) {
+      await accountService.reversePaymentCredit(payment, {
+        tenantId,
+        timezone: tz,
+        performedBy: req.user.id,
+        reason: `Ubah metode ${oldMethod} → ${normalizedMethod}`,
+      }, t);
+    }
+    await reversePaymentInflows({
+      tenantId,
+      referenceType: 'transaction',
+      referenceId: transaction.id,
+      notes: `Ubah metode pembayaran: ${oldMethod} → ${normalizedMethod}`,
+      createdBy: req.user.id,
+      dbTransaction: t,
+    });
+
+    // 2) Update payment rows
     for (const payment of payments) {
       const updateData = {
         paymentMethod: normalizedMethod,
+        accountId: null,
         notes: appendAuditNote(payment.notes, 'PAYMENT_CHANGED',
           `${payment.paymentMethod} → ${normalizedMethod} by ${req.user.firstName || req.user.email || req.user.id}`
         )
       };
 
-      // If bank name is provided, store it in paymentDetails
       if (bankName && typeof bankName === 'string' && bankName.trim()) {
         updateData.paymentDetails = {
           ...(payment.paymentDetails || {}),
@@ -2462,8 +2539,33 @@ exports.updateTransactionPaymentMethod = async (req, res) => {
         };
       }
 
-      await payment.update(updateData);
+      await payment.update(updateData, { transaction: t });
+      await payment.reload({ transaction: t });
     }
+
+    // 3) Re-apply vault inflow + Account credit with new method
+    for (const payment of payments) {
+      await recordPaymentInflow({
+        tenantId,
+        locationId: transaction.locationId || null,
+        paymentMethod: payment.paymentMethod,
+        amount: payment.amount,
+        paymentDetails: payment.paymentDetails || {},
+        referenceType: 'transaction',
+        referenceId: transaction.id,
+        referenceNumber: transaction.transactionNumber,
+        createdBy: req.user.id,
+        dbTransaction: t,
+      });
+
+      await accountService.creditFromPayment(payment, {
+        tenantId,
+        timezone: tz,
+        performedBy: req.user.id,
+      }, t);
+    }
+
+    await t.commit();
 
     logAudit({
       action: 'UPDATE_PAYMENT_METHOD',
@@ -2483,18 +2585,26 @@ exports.updateTransactionPaymentMethod = async (req, res) => {
 
     const updatedTransaction = await Transaction.findByPk(id, {
       include: [
-        { model: TransactionPayment, as: 'payments', attributes: ['id', 'paymentMethod', 'amount', 'paymentDate', 'status'] },
+        { model: TransactionPayment, as: 'payments', attributes: ['id', 'paymentMethod', 'amount', 'paymentDate', 'status', 'accountId'] },
         { model: TransactionItem, as: 'transactionItems', attributes: ['id', 'itemType', 'itemId', 'itemName', 'quantity', 'unitPrice', 'subtotal', 'total'], required: false }
       ]
     });
 
     return res.status(200).json({
       success: true,
-      message: 'Metode pembayaran berhasil diubah',
+      message: 'Metode pembayaran berhasil diubah. Mutasi akun/vault disesuaikan.',
       data: updatedTransaction
     });
   } catch (error) {
-    console.error('Error updating payment method:', error);
+    if (!t.finished) {
+      await t.rollback();
+    }
+    logger.logError('Error updating payment method', {
+      action: 'UPDATE_PAYMENT_METHOD_ERROR',
+      transactionId: req.params.id,
+      tenantId: req.user?.tenantId,
+      error: error.message,
+    });
     return res.status(500).json({
       success: false,
       message: 'Failed to update payment method',

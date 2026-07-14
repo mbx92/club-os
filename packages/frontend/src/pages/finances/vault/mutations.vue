@@ -1,6 +1,6 @@
 <route lang="yaml">
 meta:
-  title: Mutasi Vault
+  title: Mutasi Drawer
   layout: default
   requiresModule: finance
 </route>
@@ -238,13 +238,13 @@ onMounted(async () => {
   <div class="container mx-auto px-4 py-8 max-w-7xl space-y-6">
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-3xl font-bold">Mutasi Vault</h1>
-        <p class="text-base-content/60 mt-1">Semua pergerakan dana yang menyentuh vault ditampilkan di halaman ini.</p>
+        <h1 class="text-3xl font-bold">Mutasi Drawer</h1>
+        <p class="text-base-content/60 mt-1">Semua pergerakan dana yang menyentuh drawer ditampilkan di halaman ini.</p>
       </div>
       <div class="flex items-center gap-2">
         <button class="btn btn-outline btn-sm" @click="goBackToVault">
           <IconArrowLeft class="w-4 h-4" />
-          Kembali ke Vault
+          Kembali ke Drawer
         </button>
         <button class="btn btn-ghost btn-sm" :disabled="mutationsLoading" @click="loadMutations">
           <IconRefresh class="w-4 h-4" :class="{ 'animate-spin': mutationsLoading }" />
@@ -257,7 +257,7 @@ onMounted(async () => {
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
             <h2 class="card-title">Filter Mutasi</h2>
-            <p class="text-sm text-base-content/60">Gunakan filter untuk melacak transfer drawer, expense vault, dan penyesuaian.</p>
+            <p class="text-sm text-base-content/60">Gunakan filter untuk melacak collect drawer, expense drawer, dan penyesuaian.</p>
           </div>
           <div class="flex gap-2">
             <button class="btn btn-ghost btn-sm" @click="resetFilters">
@@ -282,9 +282,9 @@ onMounted(async () => {
             <label class="label"><span class="label-text font-medium">Tipe Mutasi</span></label>
             <select v-model="filters.mutationType" class="select select-bordered w-full">
               <option value="">Semua Tipe</option>
-              <option value="drawer_to_vault_transfer">Drawer ke Vault</option>
-              <option value="vault_expense">Expense Vault</option>
-              <option value="vault_adjustment">Penyesuaian Vault</option>
+              <option value="drawer_to_vault_transfer">Collect ke Drawer</option>
+              <option value="vault_expense">Expense Drawer</option>
+              <option value="vault_adjustment">Penyesuaian Drawer</option>
             </select>
           </div>
           <div class="form-control">
@@ -292,7 +292,7 @@ onMounted(async () => {
             <select v-model="filters.sourceAccount" class="select select-bordered w-full">
               <option value="">Semua Sumber</option>
               <option value="cash_drawer">Laci Kasir</option>
-              <option value="vault">Vault / Brankas</option>
+              <option value="vault">Drawer</option>
               <option value="petty_cash">Petty Cash</option>
               <option value="bank">Bank / Transfer</option>
             </select>
@@ -301,7 +301,7 @@ onMounted(async () => {
             <label class="label"><span class="label-text font-medium">Ke</span></label>
             <select v-model="filters.destinationAccount" class="select select-bordered w-full">
               <option value="">Semua Tujuan</option>
-              <option value="vault">Vault / Brankas</option>
+              <option value="vault">Drawer</option>
               <option value="cash_drawer">Laci Kasir</option>
               <option value="petty_cash">Petty Cash</option>
               <option value="bank">Bank / Transfer</option>

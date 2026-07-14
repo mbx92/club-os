@@ -10,7 +10,9 @@ meta:
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
       <div>
         <h1 class="text-3xl font-bold">Pengeluaran</h1>
-        <p class="text-base-content/60 mt-1">Lacak dan kelola semua pengeluaran Anda</p>
+        <p class="text-base-content/60 mt-1">
+          {{ isCashier ? 'Pengeluaran dari laci kasir' : 'Lacak dan kelola semua pengeluaran Anda' }}
+        </p>
       </div>
       <div class="flex gap-2">
         <button
@@ -371,6 +373,13 @@ meta:
                 {{ option.label }}
               </option>
             </select>
+            <label v-if="payForm.paymentOption === 'cash_drawer_cash'" class="label">
+              <span class="label-text-alt" :class="currentSession ? 'text-base-content/60' : 'text-warning'">
+                {{ currentSession
+                  ? `Kas tersedia di laci: ${formatCurrency(drawerExpectedCash ?? 0)}`
+                  : 'Tidak ada shift kasir yang aktif' }}
+              </span>
+            </label>
           </div>
           <!-- Finance Account Selection -->
           <div v-if="payForm.paymentOption === 'from_account'" class="form-control">
@@ -386,7 +395,7 @@ meta:
               class="select select-bordered w-full"
               :class="{ 'select-error': !payForm.accountId }"
             >
-              <option value="">-- Pilih Akun (Tunai / Bank) --</option>
+              <option value="">-- Pilih Akun (Tunai / Brankas / Bank) --</option>
               <option v-for="account in expenseAccounts" :key="account.id" :value="String(account.id)">
                 {{ account.name }}{{ account.bankName ? ` (${account.bankName})` : '' }} — Saldo: {{ new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(account.balance) }}
               </option>
@@ -429,6 +438,7 @@ meta:
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useExpenses, useExpenseCategories, useAccounts } from '@/composables/finances'
+import { useCashRegister } from '@/composables/gym/cash-register/useCashRegister'
 import { useAuthStore } from '@/stores/auth'
 import { useDialog } from '@/composables/core/useApi'
 import { useDebounceFn } from '@vueuse/core'
@@ -436,7 +446,7 @@ import ExpenseFormModal from '@/components/finances/ExpenseFormModal.vue'
 import DialogConfirm from '@/components/shared/DialogConfirm.vue'
 import {
   EXPENSE_PAYMENT_OPTION_MAP,
-  getExpensePaymentOptions,
+  getExpensePaymentOptionsWithDrawer,
   resolveExpensePaymentOption,
   paymentMethodFromAccount,
   filterExpenseAccounts,
@@ -484,7 +494,19 @@ const isAdmin = computed(() => {
 
 const PAYMENT_OPTION_MAP = EXPENSE_PAYMENT_OPTION_MAP
 
-const paymentOptions = computed(() => getExpensePaymentOptions({ isCashier: isCashier.value }))
+const { accounts: financeAccounts, fetchAccounts: fetchFinanceAccounts, loading: financeAccountsLoading } = useAccounts()
+const { currentSession, liveSummary, getCurrentSession } = useCashRegister()
+
+const drawerExpectedCash = computed(() => {
+  const value = liveSummary.value?.expectedCash
+  return value == null ? null : Number(value)
+})
+
+const paymentOptions = computed(() => getExpensePaymentOptionsWithDrawer({
+  isCashier: isCashier.value,
+  hasSession: !!currentSession.value,
+  expectedCash: drawerExpectedCash.value,
+}))
 
 const expenseAccounts = computed(() => filterExpenseAccounts(financeAccounts.value))
 
@@ -492,7 +514,6 @@ const resolvePaymentOption = (expense = null) =>
   resolveExpensePaymentOption(expense, { isCashier: isCashier.value }) || (isCashier.value ? 'cash_drawer_cash' : 'from_account')
 
 const { categories, fetchCategories } = useExpenseCategories()
-const { accounts: financeAccounts, fetchAccounts: fetchFinanceAccounts, loading: financeAccountsLoading } = useAccounts()
 
 const dialog = useDialog()
 const expenseFormModal = ref(null)
@@ -676,6 +697,7 @@ const handleMarkAsPaid = (expense) => {
     paidDate: new Date().toISOString().split('T')[0],
     accountId: expense?.accountId ? String(expense.accountId) : '',
   }
+  getCurrentSession().catch(() => null)
   if (payForm.value.paymentOption === 'from_account') {
     fetchFinanceAccounts({ isActive: 'true' })
   }

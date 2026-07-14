@@ -135,7 +135,7 @@ export const ALL_MENU_KEYS = [
       { key: 'finances.expense-categories', label: 'Expense Categories' },
       { key: 'finances.cash-flow', label: 'Cash Flow' },
       { key: 'finances.accounts', label: 'Akun Keuangan' },
-      { key: 'finances.vault', label: 'Vault / Brankas' },
+      { key: 'finances.vault', label: 'Drawer' },
       { key: 'finances.analytics', label: 'Analytics' },
       { key: 'finances.transactions', label: 'Transactions' },
       { key: 'finances.shareholders', label: 'Pemegang Saham' },

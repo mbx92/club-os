@@ -1,5 +1,6 @@
 'use strict';
 
+const { randomUUID } = require('crypto');
 const { Op } = require('sequelize');
 const { Account, AccountEntry, sequelize: db } = require('../models');
 const { getTenantTimezone, todayInTz } = require('../utils/tenantTimezone');
@@ -315,6 +316,81 @@ async function creditFromPayment(payment, opts, t = null) {
   return result;
 }
 
+/**
+ * Reverse Account credits created by creditFromPayment when a transaction
+ * is cancelled or refunded.
+ *
+ * - Completed inflow/settlement → create matching outflow
+ * - Pending settlement (T+N, balance not yet credited) → soft-delete the pending entry
+ *
+ * Cash / compliment payments are skipped (never credited Account).
+ *
+ * @param {object} payment  TransactionPayment instance (or plain object with id)
+ * @param {object} opts
+ * @param {string} opts.tenantId
+ * @param {string} opts.timezone
+ * @param {string} [opts.performedBy]
+ * @param {string} [opts.reason]
+ * @param {object} [t]
+ * @returns {Promise<Array>}
+ */
+async function reversePaymentCredit(payment, opts, t = null) {
+  if (!payment?.id) return [];
+
+  const pm = String(payment.paymentMethod || '').toLowerCase();
+  if (EXCLUDED_PAYMENT_METHODS.has(pm)) return [];
+
+  const { tenantId, timezone, performedBy, reason } = opts;
+  const today = todayInTz(timezone);
+
+  const run = async (trx) => {
+    const entries = await AccountEntry.findAll({
+      where: {
+        tenantId,
+        referenceType: 'TransactionPayment',
+        referenceId: payment.id,
+        type: { [Op.in]: ['inflow', 'settlement'] },
+        status: { [Op.in]: ['completed', 'pending_settlement'] },
+      },
+      lock: trx.LOCK.UPDATE,
+      transaction: trx,
+    });
+
+    const results = [];
+    for (const entry of entries) {
+      if (entry.status === 'pending_settlement') {
+        // Balance was never credited — remove so cron won't settle it
+        await entry.destroy({ transaction: trx });
+        results.push({ action: 'deleted_pending', entryId: entry.id, amount: parseFloat(entry.amount) });
+        continue;
+      }
+
+      const amount = parseFloat(entry.amount || 0);
+      if (amount <= 0) continue;
+
+      const reversed = await createEntry({
+        accountId: entry.accountId,
+        tenantId,
+        type: 'outflow',
+        amount,
+        referenceType: 'TransactionPayment',
+        referenceId: payment.id,
+        description: `Batal/refund pembayaran${reason ? `: ${reason}` : ''} — ${payment.receiptNumber || payment.id}`,
+        entryDate: today,
+        performedBy,
+        timezone,
+      }, trx);
+
+      results.push({ action: 'outflow', ...reversed });
+    }
+
+    return results;
+  };
+
+  if (t) return run(t);
+  return db.transaction(run);
+}
+
 // ─── Expense deduction ───────────────────────────────────────────────────────
 
 /**
@@ -362,6 +438,47 @@ async function debitFromExpense(expense, opts, t = null) {
     referenceId: expense.id,
     description: `Pengeluaran: ${title || '-'}`,
     entryDate: expense.expenseDate || today,
+    performedBy,
+    timezone,
+  }, t);
+}
+
+/**
+ * Reverse an expense debit when the expense is reopened (paid → pending).
+ * Credits the account balance back and records an inflow mutation.
+ *
+ * @param {object} expense
+ * @param {object} opts
+ * @param {string} opts.tenantId
+ * @param {string} opts.timezone
+ * @param {string} [opts.performedBy]
+ * @param {string} [opts.reason]
+ * @param {object} [t]
+ */
+async function creditFromExpenseReversal(expense, opts, t = null) {
+  if (!expense?.accountId) return null;
+
+  const { tenantId, timezone, performedBy, reason } = opts;
+  const today = todayInTz(timezone);
+  const amount = parseFloat(expense.totalAmount || expense.amount || 0);
+  if (!amount || amount <= 0) return null;
+
+  const title = expense.title
+    || expense.description
+    || expense.expenseNumber
+    || '-';
+
+  const reasonSuffix = reason ? ` (${reason})` : '';
+
+  return createEntry({
+    accountId: expense.accountId,
+    tenantId,
+    type: 'inflow',
+    amount,
+    referenceType: 'Expense',
+    referenceId: expense.id,
+    description: `Reopen pengeluaran: ${title}${reasonSuffix}`,
+    entryDate: today,
     performedBy,
     timezone,
   }, t);
@@ -491,15 +608,140 @@ async function recalculateBalance(accountId) {
   return { before, after: correctedBalance };
 }
 
+/**
+ * Transfer balance between Accounts (Tunai → Brankas Utama).
+ * Creates paired transfer_out + transfer_in entries atomically.
+ *
+ * @param {object} opts
+ * @param {string} opts.tenantId
+ * @param {string} opts.fromAccountId
+ * @param {string} opts.toAccountId
+ * @param {number} opts.amount
+ * @param {string} [opts.entryDate]
+ * @param {string} [opts.notes]
+ * @param {string} [opts.performedBy]
+ * @param {string} [opts.timezone]
+ * @param {object} [externalTransaction]
+ */
+async function transferBetweenAccounts(opts, externalTransaction = null) {
+  const {
+    tenantId,
+    fromAccountId,
+    toAccountId,
+    amount,
+    entryDate,
+    notes,
+    performedBy,
+    timezone,
+  } = opts;
+
+  const parsedAmount = parseFloat(amount);
+  if (!fromAccountId || !toAccountId) {
+    throw Object.assign(new Error('fromAccountId dan toAccountId wajib diisi'), { status: 400 });
+  }
+  if (fromAccountId === toAccountId) {
+    throw Object.assign(new Error('Akun sumber dan tujuan tidak boleh sama'), { status: 400 });
+  }
+  if (!parsedAmount || parsedAmount <= 0) {
+    throw Object.assign(new Error('amount harus positif'), { status: 400 });
+  }
+
+  const run = async (t) => {
+    const fromAccount = await Account.findOne({
+      where: { id: fromAccountId, tenantId, isActive: true },
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+    });
+    const toAccount = await Account.findOne({
+      where: { id: toAccountId, tenantId, isActive: true },
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+    });
+
+    if (!fromAccount) {
+      throw Object.assign(new Error('Akun sumber tidak ditemukan'), { status: 404 });
+    }
+    if (!toAccount) {
+      throw Object.assign(new Error('Akun tujuan tidak ditemukan'), { status: 404 });
+    }
+    if (fromAccount.type !== 'cash') {
+      throw Object.assign(new Error('Mutasi ke Brankas Utama hanya bisa dari akun Tunai'), { status: 400 });
+    }
+    if (toAccount.type !== 'main_vault') {
+      throw Object.assign(new Error('Akun tujuan harus Brankas Utama'), { status: 400 });
+    }
+    if (parseFloat(fromAccount.balance) < parsedAmount) {
+      throw Object.assign(
+        new Error(`Saldo Tunai tidak cukup. Saldo: ${fromAccount.balance}, diminta: ${parsedAmount}`),
+        { status: 400 }
+      );
+    }
+
+    const transferId = randomUUID();
+    const date = entryDate || todayInTz(timezone || 'Asia/Makassar');
+    const description = notes?.trim()
+      ? notes.trim()
+      : `Mutasi Tunai → ${toAccount.name}`;
+
+    const outResult = await createEntry({
+      accountId: fromAccount.id,
+      tenantId,
+      type: 'transfer_out',
+      amount: parsedAmount,
+      referenceType: 'AccountTransfer',
+      referenceId: transferId,
+      description,
+      entryDate: date,
+      performedBy,
+      timezone,
+    }, t);
+
+    const inResult = await createEntry({
+      accountId: toAccount.id,
+      tenantId,
+      type: 'transfer_in',
+      amount: parsedAmount,
+      referenceType: 'AccountTransfer',
+      referenceId: transferId,
+      description: notes?.trim()
+        ? notes.trim()
+        : `Mutasi dari ${fromAccount.name}`,
+      entryDate: date,
+      performedBy,
+      timezone,
+    }, t);
+
+    return {
+      transferId,
+      amount: parsedAmount,
+      entryDate: date,
+      from: {
+        account: outResult.account,
+        entry: outResult.entry,
+      },
+      to: {
+        account: inResult.account,
+        entry: inResult.entry,
+      },
+    };
+  };
+
+  if (externalTransaction) return run(externalTransaction);
+  return db.transaction(run);
+}
+
 module.exports = {
   findMatchingAccount,
   findCashAccount,
   createEntry,
   creditFromPayment,
   creditFromCashCollect,
+  reversePaymentCredit,
   debitFromExpense,
+  creditFromExpenseReversal,
   processPendingSettlements,
   processAllPendingSettlements,
   recalculateBalance,
+  transferBetweenAccounts,
   EXCLUDED_PAYMENT_METHODS,
 };

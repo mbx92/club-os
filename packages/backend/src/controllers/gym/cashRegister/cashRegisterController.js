@@ -43,6 +43,35 @@ function getExpenseLocationWhere(locationId) {
     : {};
 }
 
+/**
+ * Expense mengurangi laci kasir HANYA jika dibayar dari cash drawer.
+ * Expense dari akun Tunai/Brankas juga paymentMethod=cash tapi fundSource=account — tidak masuk cash register.
+ * Legacy: paymentMethod=cash tanpa fundSource/accountId dianggap dari laci.
+ */
+function isCashDrawerExpense(expense) {
+  const fundSource = String(expense?.fundSource || '').toLowerCase();
+  if (fundSource === 'cash_drawer') return true;
+  if (fundSource && fundSource !== 'cash_drawer') return false;
+  if (expense?.accountId || expense?.vaultAccountId) return false;
+  return String(expense?.paymentMethod || '').toLowerCase() === 'cash';
+}
+
+/** Sequelize WHERE untuk expense yang mengurangi saldo laci. */
+function getCashDrawerExpenseWhere(extra = {}) {
+  return {
+    ...extra,
+    [Op.or]: [
+      { fundSource: 'cash_drawer' },
+      {
+        paymentMethod: 'cash',
+        accountId: { [Op.is]: null },
+        vaultAccountId: { [Op.is]: null },
+        fundSource: { [Op.is]: null },
+      },
+    ],
+  };
+}
+
 function getPettyCashLocationInclude(locationId) {
   if (!locationId) {
     return [];
@@ -522,20 +551,18 @@ exports.listSessions = async (req, res, next) => {
             return sum + Math.max(0, tendered - change);
           }, 0);
 
-          // Cash expenses for this shift's date (based on expenseDate)
-          // CATATAN: petty_cash TIDAK dimasukkan karena uangnya keluar dari fund petty cash,
-          // bukan dari laci kas register. Hanya 'cash' yang mengurangi saldo kas register.
+          // Cash drawer expenses only (bukan semua paymentMethod=cash dari akun Tunai/Brankas)
+          // CATATAN: petty_cash TIDAK dimasukkan — keluar dari fund, bukan laci.
           const csTz = getTenantTimezone(req);
           const csShiftStart = startOfDayInTz(session.shiftDate, csTz);
           const csShiftEnd   = endOfDayInTz(session.shiftDate, csTz);
           const expenseResult = await Expense.findAll({
-            where: {
+            where: getCashDrawerExpenseWhere({
               tenantId,
-              paymentMethod: 'cash',
               status: { [Op.in]: ['approved', 'paid'] },
               expenseDate: { [Op.gte]: csShiftStart, [Op.lte]: csShiftEnd },
               ...getExpenseLocationWhere(session.locationId),
-            },
+            }),
             attributes: [
               [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('totalAmount')), 0), 'totalExpenses'],
             ],
@@ -757,7 +784,7 @@ exports.getShiftReport = async (req, res, next) => {
 
     const totalExpenses = expenses.reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0);
     const cashExpenses = expenses
-      .filter(e => e.paymentMethod === 'cash')
+      .filter(isCashDrawerExpense)
       .reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0);
     const transferExpenses = expenses
       .filter(e => {
@@ -787,28 +814,27 @@ exports.getShiftReport = async (req, res, next) => {
     // Add petty cash returns to cash expenses (cash taken from register)
     const cashExpensesWithPettyCash = cashExpenses + pettyCashReturnTotal;
 
-    const expenseDetail = expenses.map(e => {
+    const expenseDetail = expenses
+      .filter(isCashDrawerExpense)
+      .map(e => {
       const pm = (e.paymentMethod || '').toLowerCase();
-      const isTransfer = pm === 'transfer' || pm === 'bank_transfer';
       const isPettyCash = pm === 'petty_cash';
       return {
         id: e.id,
         title: e.title,
         amount: parseFloat(e.totalAmount || 0),
         paymentMethod: e.paymentMethod,
+        fundSource: e.fundSource || null,
         category: e.category?.name || null,
         expenseDate: e.expenseDate,
-        // affectsCashRegister: apakah expense ini mengurangi saldo laci kas register
-        // petty_cash = TIDAK (uang keluar dari fund, bukan dari laci)
-        // transfer/bank_transfer = TIDAK (keluar dari rekening bank)
-        // cash = YA
-        affectsCashRegister: !isTransfer && !isPettyCash,
+        // affectsCashRegister: hanya expense dari laci (fundSource=cash_drawer)
+        affectsCashRegister: true,
         // affectsPettyCash: apakah expense ini mengurangi saldo petty cash fund
         affectsPettyCash: isPettyCash,
       };
     });
 
-    // Include petty cash returns in expense detail
+    // Include petty cash returns in expense detail (cash leaving the drawer)
     const pettyCashReturnDetail = pettyCashReturns.map(p => ({
       id: p.id,
       title: `Pemasukan ke petty cash: ${p.description || p.transactionNumber}`,
@@ -817,6 +843,7 @@ exports.getShiftReport = async (req, res, next) => {
       category: 'Petty Cash',
       expenseDate: p.transactionDate,
       affectsPettyCash: true,
+      affectsCashRegister: true,
     }));
 
     // ── Build response ───────────────────────────────────────────────────────
@@ -1690,7 +1717,7 @@ exports.getDailyReport = async (req, res, next) => {
 
     const totalExpenses = allExpenses.reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0);
     const cashExpenses  = allExpenses
-      .filter(e => e.paymentMethod === 'cash')
+      .filter(isCashDrawerExpense)
       .reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0);
     const transferExpenses = allExpenses
       .filter(e => {
@@ -1740,7 +1767,7 @@ exports.getDailyReport = async (req, res, next) => {
         return ed >= from && ed <= to;
       });
       const shiftCashExpenses = shiftExpenses
-        .filter(e => e.paymentMethod === 'cash')
+        .filter(isCashDrawerExpense)
         .reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0);
 
       // Petty cash returns within this shift
@@ -1846,23 +1873,24 @@ exports.getDailyReport = async (req, res, next) => {
 
     if (type === 'all' || type === 'cashier') {
       response.reportCashier = buildCashierReport(dailyCashierTrx, dayCashExpensesWithPettyCash, allExpenses, syntheticSession);
+      // Detail pengeluaran: hanya dari laci (+ return ke petty cash yang mengurangi kas)
       response.expenseDetail  = [
-        ...allExpenses.map(e => {
+        ...allExpenses.filter(isCashDrawerExpense).map(e => {
           const pm = (e.paymentMethod || '').toLowerCase();
-          const isTransfer = pm === 'transfer' || pm === 'bank_transfer';
           const isPettyCash = pm === 'petty_cash';
           return {
             id: e.id,
             title: e.title,
             amount: parseFloat(e.totalAmount || 0),
             paymentMethod: e.paymentMethod,
+            fundSource: e.fundSource || null,
             category: e.category?.name || null,
             expenseDate: e.expenseDate,
-            affectsCashRegister: !isTransfer && !isPettyCash,
+            affectsCashRegister: true,
             affectsPettyCash: isPettyCash,
           };
         }),
-        ...dayPettyCashReturnDetail.map(d => ({ ...d, affectsPettyCash: true, affectsCashRegister: false })),
+        ...dayPettyCashReturnDetail.map(d => ({ ...d, affectsPettyCash: true, affectsCashRegister: true })),
       ];
     }
 
@@ -2291,11 +2319,11 @@ exports.printDailyReport = async (req, res, next) => {
         expenseDate: { [Op.gte]: pDayStart, [Op.lte]: pDayEnd },
         ...getExpenseLocationWhere(locationId),
       },
-      attributes: ['totalAmount', 'paymentMethod'],
+      attributes: ['totalAmount', 'paymentMethod', 'fundSource', 'accountId', 'vaultAccountId'],
     });
 
     const totalExpenses = allExpenses.reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0);
-    const cashExpenses  = allExpenses.filter(e => e.paymentMethod === 'cash').reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0);
+    const cashExpenses  = allExpenses.filter(isCashDrawerExpense).reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0);
     const transferExpenses = allExpenses.filter(e => {
       const pm = (e.paymentMethod || '').toLowerCase();
       return pm === 'transfer' || pm === 'bank_transfer';
@@ -2493,7 +2521,7 @@ exports.printShiftReport = async (req, res, next) => {
     });
 
     const totalExpenses = expenses.reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0);
-    const cashExpenses  = expenses.filter(e => e.paymentMethod === 'cash').reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0);
+    const cashExpenses  = expenses.filter(isCashDrawerExpense).reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0);
     const transferExpenses = expenses.filter(e => {
       const pm = (e.paymentMethod || '').toLowerCase();
       return pm === 'transfer' || pm === 'bank_transfer';
@@ -2575,7 +2603,8 @@ exports.printShiftReport = async (req, res, next) => {
     }
 
     // ── Build receipt content ────────────────────────────────────────────────
-    const content = buildShiftReportReceiptFull(shiftData, reportCashier, reportGym, summary, expenses, tenant);
+    const drawerExpensesForReceipt = expenses.filter(isCashDrawerExpense);
+    const content = buildShiftReportReceiptFull(shiftData, reportCashier, reportGym, summary, drawerExpensesForReceipt, tenant);
 
     // ── Send to printer ──────────────────────────────────────────────────────
     const printer = receiptPrinterService.getReceiptPrinter(tenant);
@@ -3069,10 +3098,10 @@ exports.diagnoseReport = async (req, res, next) => {
         expenseDate: { [Op.gte]: dShiftStart, [Op.lte]: dShiftEnd },
         ...getExpenseLocationWhere(session.locationId),
       },
-      attributes: ['totalAmount', 'paymentMethod'],
+      attributes: ['totalAmount', 'paymentMethod', 'fundSource', 'accountId', 'vaultAccountId'],
     });
     const cashExpenses = expenses
-      .filter(e => e.paymentMethod === 'cash')
+      .filter(isCashDrawerExpense)
       .reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0);
 
     // Helper: compute Q from a set of transactions

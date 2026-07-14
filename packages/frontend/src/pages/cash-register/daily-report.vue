@@ -852,7 +852,7 @@ const shiftStatusBadge = (status) =>
             class="px-5 py-3 border-b border-base-200 flex items-center gap-2"
           >
             <IconReceipt class="w-5 h-5 text-error" />
-            <h2 class="font-bold text-base">Detail Pengeluaran</h2>
+            <h2 class="font-bold text-base">Detail Pengeluaran Laci</h2>
             <span class="badge badge-sm badge-ghost ml-auto"
               >{{ expenseDetail.length }} item</span
             >

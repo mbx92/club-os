@@ -32,7 +32,7 @@ const receiptPrinterService = require('../../../services/receiptPrinterService')
 const { normalizePaymentMethod } = require('../../../utils/paymentMethodNormalizer');
 const transactionSettingsService = require('../../../services/transactionSettingsService');
 const logger = require('../../../utils/logger');
-const { recordPaymentInflow } = require('../../../controllers/finance/vaultController');
+const { recordPaymentInflow, reversePaymentInflows } = require('../../../controllers/finance/vaultController');
 const accountService = require('../../../services/accountService');
 const { getTenantTimezone } = require('../../../utils/tenantTimezone');
 const { can } = require('../../../utils/rbac');
@@ -1111,6 +1111,32 @@ const updateOrderStatus = async (req, res, next) => {
       }, { transaction: t });
     }
 
+    // Cancel paid/completed order → rollback Account + Vault credits
+    if (status === 'cancelled' && ['completed', 'paid'].includes(previousStatus)) {
+      const payments = await TransactionPayment.findAll({
+        where: { transactionId: order.id },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+      const tz = getTenantTimezone(req);
+      for (const payment of payments) {
+        await accountService.reversePaymentCredit(payment, {
+          tenantId: order.tenantId,
+          timezone: tz,
+          performedBy: req.user.id,
+          reason: `Batal order ${order.transactionNumber}`,
+        }, t);
+      }
+      await reversePaymentInflows({
+        tenantId: order.tenantId,
+        referenceType: 'order',
+        referenceId: order.id,
+        notes: `Batal order ${order.transactionNumber}`,
+        createdBy: req.user.id,
+        dbTransaction: t,
+      });
+    }
+
     await order.update({
       status,
       ...(status === 'completed' ? { completedAt: new Date() } : {}),
@@ -1144,8 +1170,13 @@ const updateOrderStatus = async (req, res, next) => {
 /**
  * Change payment method on a restaurant order (correction)
  * PUT /api/v1/restaurant/orders/:id/payment
+ *
+ * Reverse old Account/Vault credits, then re-apply with the new method
+ * (only meaningful once payments exist — typically after complete).
  */
 const updateOrderPaymentMethod = async (req, res, next) => {
+  const t = await Transaction.sequelize.transaction();
+
   try {
     const { tenantId, isSuperAdmin } = req.user;
     const { id } = req.params;
@@ -1165,7 +1196,9 @@ const updateOrderPaymentMethod = async (req, res, next) => {
 
     const order = await Transaction.findOne({
       where,
-      include: [{ model: TransactionPayment, as: 'payments' }]
+      include: [{ model: TransactionPayment, as: 'payments' }],
+      transaction: t,
+      lock: { level: t.LOCK.UPDATE, of: Transaction },
     });
 
     if (!order) {
@@ -1184,11 +1217,33 @@ const updateOrderPaymentMethod = async (req, res, next) => {
     }
 
     const oldMethod = payments[0].paymentMethod;
+    const tz = getTenantTimezone(req);
+    const effectiveTenantId = order.tenantId;
 
+    // 1) Reverse existing credits (Account + Vault)
+    for (const payment of payments) {
+      await accountService.reversePaymentCredit(payment, {
+        tenantId: effectiveTenantId,
+        timezone: tz,
+        performedBy: req.user.id,
+        reason: `Ubah metode ${oldMethod} → ${normalizedMethod}`,
+      }, t);
+    }
+    await reversePaymentInflows({
+      tenantId: effectiveTenantId,
+      referenceType: 'order',
+      referenceId: order.id,
+      notes: `Ubah metode pembayaran order: ${oldMethod} → ${normalizedMethod}`,
+      createdBy: req.user.id,
+      dbTransaction: t,
+    });
+
+    // 2) Update payment rows
     for (const payment of payments) {
       const entry = `[PAYMENT_CHANGED ${new Date().toISOString()}] ${payment.paymentMethod} → ${normalizedMethod} by ${req.user.firstName || req.user.email || req.user.id}`;
       const updateData = {
         paymentMethod: normalizedMethod,
+        accountId: null,
         notes: payment.notes ? `${payment.notes}\n${entry}` : entry
       };
 
@@ -1199,8 +1254,33 @@ const updateOrderPaymentMethod = async (req, res, next) => {
         };
       }
 
-      await payment.update(updateData);
+      await payment.update(updateData, { transaction: t });
+      await payment.reload({ transaction: t });
     }
+
+    // 3) Re-apply with new method
+    for (const payment of payments) {
+      await recordPaymentInflow({
+        tenantId: effectiveTenantId,
+        locationId: order.locationId || null,
+        paymentMethod: payment.paymentMethod,
+        amount: payment.amount,
+        paymentDetails: payment.paymentDetails || {},
+        referenceType: 'order',
+        referenceId: order.id,
+        referenceNumber: order.transactionNumber,
+        createdBy: req.user.id,
+        dbTransaction: t,
+      });
+
+      await accountService.creditFromPayment(payment, {
+        tenantId: effectiveTenantId,
+        timezone: tz,
+        performedBy: req.user.id,
+      }, t);
+    }
+
+    await t.commit();
 
     logger.logInfo('Order payment method changed', {
       action: 'UPDATE_ORDER_PAYMENT_METHOD',
@@ -1215,7 +1295,7 @@ const updateOrderPaymentMethod = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'Metode pembayaran berhasil diubah',
+      message: 'Metode pembayaran berhasil diubah. Mutasi akun/vault disesuaikan.',
       data: {
         id: order.id,
         transactionNumber: order.transactionNumber,
@@ -1223,6 +1303,9 @@ const updateOrderPaymentMethod = async (req, res, next) => {
       }
     });
   } catch (error) {
+    if (!t.finished) {
+      await t.rollback();
+    }
     next(error);
   }
 };

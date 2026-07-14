@@ -20,6 +20,7 @@ import {
   IconWallet,
   IconCreditCard,
   IconCash,
+  IconBuildingWarehouse,
   IconPencil,
   IconTrash,
   IconChevronRight,
@@ -91,7 +92,7 @@ const showForm = ref(false)
 const editingAccount = ref(null)
 
 const emptyForm = () => ({
-  accountKind: 'bank', // cash | bank | e_wallet | payment_gateway | petty_cash | custom
+  accountKind: 'bank', // cash | main_vault | bank | e_wallet | payment_gateway | petty_cash | custom
   bankName: '',
   name: '',
   openingBalance: 0,
@@ -104,6 +105,7 @@ const form = ref(emptyForm())
 
 const accountKindOptions = [
   { value: 'cash', label: 'Tunai / Cash', hint: 'Ledger kas settled — saldo bertambah saat setoran dari laci kasir (bukan saat pembayaran POS)' },
+  { value: 'main_vault', label: 'Brankas Utama', hint: 'Brankas fisik — dana dimutasikan dari Tunai kapan saja, juga bisa dipakai untuk expense' },
   { value: 'bank', label: 'Bank (BCA / Mandiri / ...)', hint: 'Semua QRIS, transfer, kartu dengan bank details masuk ke akun ini' },
   { value: 'e_wallet', label: 'E-Wallet', hint: 'GoPay, OVO, DANA tanpa bank details' },
   { value: 'payment_gateway', label: 'Payment Gateway', hint: 'Midtrans, Stripe, dll' },
@@ -117,6 +119,7 @@ const formName = computed(() => {
     return `Bank ${String(form.value.bankName).toUpperCase()}`
   }
   if (form.value.accountKind === 'cash') return 'Tunai'
+  if (form.value.accountKind === 'main_vault') return 'Brankas Utama'
   return form.value.name || accountKindOptions.find(o => o.value === form.value.accountKind)?.label || ''
 })
 
@@ -139,6 +142,7 @@ const grouped = computed(() => {
 const typeLabel = (type) => {
   const map = {
     cash: 'Tunai',
+    main_vault: 'Brankas Utama',
     bank: 'Bank',
     e_wallet: 'E-Wallet',
     payment_gateway: 'Payment Gateway',
@@ -151,6 +155,7 @@ const typeLabel = (type) => {
 const typeIcon = (type) => {
   const map = {
     cash: IconCash,
+    main_vault: IconBuildingWarehouse,
     bank: IconBuildingBank,
     e_wallet: IconWallet,
     payment_gateway: IconCreditCard,
@@ -203,7 +208,7 @@ const submitForm = async () => {
     return
   }
 
-  if (!['bank', 'cash'].includes(form.value.accountKind) && !form.value.name?.trim() && !editingAccount.value) {
+  if (!['bank', 'cash', 'main_vault'].includes(form.value.accountKind) && !form.value.name?.trim() && !editingAccount.value) {
     showWarning('Nama akun wajib diisi')
     return
   }
@@ -217,7 +222,7 @@ const submitForm = async () => {
     type: form.value.accountKind,
     paymentMethod: form.value.accountKind === 'bank'
       ? null
-      : form.value.accountKind === 'cash'
+      : ['cash', 'main_vault'].includes(form.value.accountKind)
         ? 'cash'
         : (['e_wallet', 'payment_gateway'].includes(form.value.accountKind) ? form.value.accountKind : null),
     bankName: form.value.accountKind === 'bank' ? form.value.bankName : null,
@@ -444,12 +449,12 @@ onMounted(async () => {
           <div class="form-control">
             <label class="label">
               <span class="label-text font-medium">Nama Akun</span>
-              <span v-if="!editingAccount && ['bank', 'cash'].includes(form.accountKind)" class="label-text-alt text-base-content/50">
+              <span v-if="!editingAccount && ['bank', 'cash', 'main_vault'].includes(form.accountKind)" class="label-text-alt text-base-content/50">
                 Auto: "{{ formName }}"
               </span>
             </label>
             <input
-              v-if="editingAccount || !['bank', 'cash'].includes(form.accountKind)"
+              v-if="editingAccount || !['bank', 'cash', 'main_vault'].includes(form.accountKind)"
               v-model="form.name"
               type="text"
               class="input input-bordered w-full"

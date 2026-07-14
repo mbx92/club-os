@@ -41,7 +41,7 @@ export const formatDate = (value) => {
 export const accountLabel = (account) => {
   const map = {
     cash_drawer: 'Laci Kasir',
-    vault: 'Vault / Brankas',
+    vault: 'Drawer',
     petty_cash: 'Petty Cash',
     bank: 'Bank / Transfer',
     revenue: 'Revenue',
@@ -52,11 +52,27 @@ export const accountLabel = (account) => {
 
 export const mutationTypeLabel = (type) => {
   const map = {
-    drawer_to_vault_transfer: 'Drawer ke Vault',
-    vault_expense: 'Expense Vault',
-    vault_adjustment: 'Penyesuaian Vault',
+    drawer_to_vault_transfer: 'Collect ke Drawer',
+    vault_expense: 'Expense Drawer',
+    vault_adjustment: 'Penyesuaian Drawer',
   }
   return map[type] || String(type || '-').replace(/_/g, ' ')
+}
+
+export const getStartOfWeek = () => {
+  const today = new Date()
+  const day = today.getDay()
+  const diff = day === 0 ? 6 : day - 1
+  const start = new Date(today)
+  start.setDate(today.getDate() - diff)
+  return formatLocalDate(start)
+}
+
+export const getCollectionProgress = (item) => {
+  const base = Number(item?.collectibleBase || 0)
+  const collected = Number(item?.collectedAmount || 0)
+  if (base <= 0) return collected > 0 ? 100 : 0
+  return Math.min(100, Math.round((collected / base) * 100))
 }
 
 export const hasNoCashTransaction = (item) => {

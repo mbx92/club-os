@@ -12,6 +12,7 @@ const {
   getAccountEntries,
   getAccountBalance,
   createAdjustment,
+  transferBetweenAccounts,
   processSettlements,
 } = require('../../controllers/finance/accountController');
 
@@ -24,6 +25,12 @@ router.use(authenticate, requireModule('finance'));
 router.post('/process-settlements',
   authorize('update', 'Account'),
   processSettlements
+);
+
+router.post('/transfer',
+  authorize('update', 'Account'),
+  transferBetweenAccounts,
+  auditLog('ACCOUNT_TRANSFER')
 );
 
 // ─── CRUD ─────────────────────────────────────────────────────────────────────

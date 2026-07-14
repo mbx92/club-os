@@ -145,6 +145,20 @@ export function useAccounts() {
     }
   }
 
+  const transferBetweenAccounts = async (data) => {
+    actionLoading.value = true
+    try {
+      const response = await api.post('/finance/accounts/transfer', data)
+      showSuccess('Mutasi ke Brankas Utama berhasil')
+      return response
+    } catch (error) {
+      handleError(error, 'Gagal mutasi ke Brankas Utama')
+      throw error
+    } finally {
+      actionLoading.value = false
+    }
+  }
+
   const processSettlements = async () => {
     actionLoading.value = true
     try {
@@ -165,6 +179,6 @@ export function useAccounts() {
     fetchAccounts, fetchAccount,
     createAccount, updateAccount, deleteAccount,
     fetchEntries, fetchBalance,
-    createAdjustment, processSettlements,
+    createAdjustment, transferBetweenAccounts, processSettlements,
   }
 }

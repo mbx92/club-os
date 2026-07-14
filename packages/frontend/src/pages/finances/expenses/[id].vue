@@ -8,12 +8,13 @@ meta:
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useExpenses, useAccounts } from '@/composables/finances'
+import { useCashRegister } from '@/composables/gym/cash-register/useCashRegister'
 import { useAuthStore } from '@/stores/auth'
 import DialogConfirm from '@/components/shared/DialogConfirm.vue'
 import ExpenseFormModal from '@/components/finances/ExpenseFormModal.vue'
 import {
   EXPENSE_PAYMENT_OPTION_MAP,
-  getExpensePaymentOptions,
+  getExpensePaymentOptionsWithDrawer,
   resolveExpensePaymentOption,
   paymentMethodFromAccount,
   filterExpenseAccounts,
@@ -67,14 +68,24 @@ const isAdmin = computed(() => {
 
 const PAYMENT_OPTION_MAP = EXPENSE_PAYMENT_OPTION_MAP
 
-const paymentOptions = computed(() => getExpensePaymentOptions({ isCashier: isCashier.value }))
+const { accounts: financeAccounts, fetchAccounts: fetchFinanceAccounts, loading: financeAccountsLoading } = useAccounts()
+const { currentSession, liveSummary, getCurrentSession } = useCashRegister()
+
+const drawerExpectedCash = computed(() => {
+  const value = liveSummary.value?.expectedCash
+  return value == null ? null : Number(value)
+})
+
+const paymentOptions = computed(() => getExpensePaymentOptionsWithDrawer({
+  isCashier: isCashier.value,
+  hasSession: !!currentSession.value,
+  expectedCash: drawerExpectedCash.value,
+}))
 
 const expenseAccounts = computed(() => filterExpenseAccounts(financeAccounts.value))
 
 const resolvePaymentOption = (currentExpense = null) =>
   resolveExpensePaymentOption(currentExpense, { isCashier: isCashier.value }) || (isCashier.value ? 'cash_drawer_cash' : 'from_account')
-
-const { accounts: financeAccounts, fetchAccounts: fetchFinanceAccounts, loading: financeAccountsLoading } = useAccounts()
 
 const id = route.params.id
 onMounted(() => {
@@ -146,6 +157,7 @@ const handleMarkAsPaid = () => {
     paidDate: new Date().toISOString().split('T')[0],
     accountId: exp.value?.accountId ? String(exp.value.accountId) : '',
   }
+  getCurrentSession().catch(() => null)
   if (payForm.value.paymentOption === 'from_account') {
     fetchFinanceAccounts({ isActive: 'true' })
   }
@@ -446,6 +458,13 @@ const handleReopen = async () => {
                 {{ option.label }}
               </option>
             </select>
+            <label v-if="payForm.paymentOption === 'cash_drawer_cash'" class="label">
+              <span class="label-text-alt" :class="currentSession ? 'text-base-content/60' : 'text-warning'">
+                {{ currentSession
+                  ? `Kas tersedia di laci: ${fmt(drawerExpectedCash ?? 0)}`
+                  : 'Tidak ada shift kasir yang aktif' }}
+              </span>
+            </label>
           </div>
           <div v-if="payForm.paymentOption === 'from_account'" class="form-control">
             <label class="label">
@@ -455,7 +474,7 @@ const handleReopen = async () => {
               <span class="loading loading-spinner loading-xs"></span> Memuat akun...
             </div>
             <select v-else v-model="payForm.accountId" class="select select-bordered w-full">
-              <option value="">-- Pilih Akun (Tunai / Bank) --</option>
+              <option value="">-- Pilih Akun (Tunai / Brankas / Bank) --</option>
               <option v-for="account in expenseAccounts" :key="account.id" :value="String(account.id)">
                 {{ account.name }}{{ account.bankName ? ` (${account.bankName})` : '' }} — Saldo: {{ fmt(account.balance) }}
               </option>

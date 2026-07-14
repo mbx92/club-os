@@ -127,15 +127,24 @@ async function getDailySummaryReport(req, res, next) {
       ORDER BY date
     `, { replacements });
 
-    // ─── 3. Daily cashier expenses (pengeluaran kasir) ─────────────────
+    // ─── 3. Daily cashier expenses (pengeluaran dari laci saja) ─────────
     // Use expenseDate matching the cashier's authoritative shift-close calculation.
+    // Account/Tunai/Brankas cash expenses (fundSource=account) do NOT reduce drawer.
     const [expenseRows] = await sequelize.query(`
       SELECT
         DATE(e."expenseDate") AS date,
         COALESCE(SUM(e."totalAmount"), 0) AS pengeluaran,
         STRING_AGG(DISTINCT e."title", ', ' ORDER BY e."title") AS keterangan
       FROM "Expenses" e
-      WHERE e."paymentMethod" = 'cash'
+      WHERE (
+          e."fundSource" = 'cash_drawer'
+          OR (
+            e."paymentMethod" = 'cash'
+            AND e."accountId" IS NULL
+            AND e."vaultAccountId" IS NULL
+            AND e."fundSource" IS NULL
+          )
+        )
         AND e."status" IN ('approved', 'paid')
         AND e."expenseDate" BETWEEN :utcStart AND :utcEnd
         AND e."deletedAt" IS NULL
@@ -411,7 +420,7 @@ async function exportDailySummaryReport(req, res, next) {
       ORDER BY t."createdAt", t."transactionNumber", tp."paymentMethod"
     `, { replacements });
 
-    // ─── Query: expense details (aligned to expenseDate matching cashier) ─
+    // ─── Query: expense details (drawer only — aligned to expenseDate) ─
     const [expenseDetailRows] = await sequelize.query(`
       SELECT
         DATE(e."expenseDate")                    AS date,
@@ -421,6 +430,7 @@ async function exportDailySummaryReport(req, res, next) {
         e."title",
         COALESCE(ec."name", '')                  AS "categoryName",
         e."paymentMethod",
+        e."fundSource",
         e."bankName",
         e."status",
         e."vendor",
@@ -431,7 +441,15 @@ async function exportDailySummaryReport(req, res, next) {
       LEFT JOIN "ExpenseCategories" ec
         ON ec."id" = e."categoryId"
        AND ec."deletedAt" IS NULL
-      WHERE e."paymentMethod" = 'cash'
+      WHERE (
+          e."fundSource" = 'cash_drawer'
+          OR (
+            e."paymentMethod" = 'cash'
+            AND e."accountId" IS NULL
+            AND e."vaultAccountId" IS NULL
+            AND e."fundSource" IS NULL
+          )
+        )
         AND e."status" IN ('approved', 'paid')
         AND e."expenseDate" BETWEEN :utcStart AND :utcEnd
         AND e."deletedAt" IS NULL

@@ -623,6 +623,22 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/finance/cash-flow/summary': { subject: 'CashFlow', actions: ['read'] },
   '/finance/cash-flow/by-category': { subject: 'CashFlow', actions: ['read'] },
   '/finance/cash-flow/statement': { subject: 'CashFlow', actions: ['read'] },
+
+  // Accounts (Akun Keuangan / Brankas Utama)
+  '/finance/accounts': {
+    GET: { subject: 'Account', actions: ['read'] },
+    POST: { subject: 'Account', actions: ['create'] },
+  },
+  '/finance/accounts/process-settlements': { subject: 'Account', actions: ['update'] },
+  '/finance/accounts/transfer': { subject: 'Account', actions: ['update'] },
+  '/finance/accounts/:id': {
+    GET: { subject: 'Account', actions: ['read'] },
+    PUT: { subject: 'Account', actions: ['update'] },
+    DELETE: { subject: 'Account', actions: ['delete'] },
+  },
+  '/finance/accounts/:id/entries': { subject: 'Account', actions: ['read'] },
+  '/finance/accounts/:id/balance': { subject: 'Account', actions: ['read'] },
+  '/finance/accounts/:id/adjustment': { subject: 'Account', actions: ['update'] },
   
   '/finance/reports/financial': { subject: 'FinancialReport', actions: ['read'] },
   '/finance/reports/revenue': { subject: 'FinancialReport', actions: ['read'] },

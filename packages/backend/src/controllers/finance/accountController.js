@@ -50,6 +50,20 @@ async function createAccount(req, res, next) {
       }
     }
 
+    // Main vault: only one active Brankas Utama per tenant
+    if (resolvedType === 'main_vault') {
+      const existingVault = await Account.findOne({
+        where: { tenantId, type: 'main_vault', isActive: true },
+      });
+      if (existingVault) {
+        return next(createError(
+          'VALIDATION_ERROR',
+          `Brankas Utama sudah ada (${existingVault.name}). Gunakan akun tersebut.`,
+          400
+        ));
+      }
+    }
+
     if (normalizedBank) {
       const existingBank = await Account.findOne({
         where: { tenantId, bankName: normalizedBank, isActive: true },
@@ -66,14 +80,16 @@ async function createAccount(req, res, next) {
     const account = await db.transaction(async (t) => {
       const isBank = resolvedType === 'bank' || !!normalizedBank;
       const isCash = resolvedType === 'cash';
+      const isMainVault = resolvedType === 'main_vault';
       const acc = await Account.create({
         tenantId,
         name,
         type: isBank ? 'bank' : resolvedType,
-        // Bank: matched by bankName only. Cash: paymentMethod = cash for expense mapping.
+        // Bank: matched by bankName only.
+        // Cash + Main Vault: paymentMethod = cash (expense mapping); excluded from method unique index.
         paymentMethod: isBank
           ? null
-          : (isCash ? 'cash' : (paymentMethod || null)),
+          : ((isCash || isMainVault) ? 'cash' : (paymentMethod || null)),
         bankName: isBank ? normalizedBank : null,
         openingBalance: parseFloat(openingBalance),
         openingDate,
@@ -338,6 +354,58 @@ async function createAdjustment(req, res, next) {
   }
 }
 
+/**
+ * POST /finance/accounts/transfer
+ * Body: { fromAccountId, toAccountId, amount, entryDate?, notes? }
+ * Fase 1: Tunai (cash) → Brankas Utama (main_vault)
+ */
+async function transferBetweenAccounts(req, res, next) {
+  try {
+    const tenantId = req.user.tenantId;
+    const { fromAccountId, toAccountId, amount, entryDate, notes } = req.body;
+
+    if (!fromAccountId || !toAccountId) {
+      return next(createError('VALIDATION_ERROR', 'fromAccountId dan toAccountId wajib diisi', 400));
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+      return next(createError('VALIDATION_ERROR', 'amount harus positif', 400));
+    }
+
+    const tz = getTenantTimezone(req);
+    const result = await accountService.transferBetweenAccounts({
+      tenantId,
+      fromAccountId,
+      toAccountId,
+      amount: parseFloat(amount),
+      entryDate,
+      notes,
+      performedBy: req.user.id,
+      timezone: tz,
+    });
+
+    logger.logInfo('Account transfer completed', {
+      action: 'ACCOUNT_TRANSFER',
+      userId: req.user.id,
+      tenantId,
+      transferId: result.transferId,
+      amount: result.amount,
+      fromAccountId,
+      toAccountId,
+    });
+
+    return res.status(201).json({ success: true, data: result });
+  } catch (err) {
+    if (err.status) {
+      return next(createError(
+        err.status === 404 ? 'NOT_FOUND' : 'VALIDATION_ERROR',
+        err.message,
+        err.status
+      ));
+    }
+    next(err);
+  }
+}
+
 // ─── Settlement trigger (admin / cron) ───────────────────────────────────────
 
 /**
@@ -364,5 +432,6 @@ module.exports = {
   getAccountEntries,
   getAccountBalance,
   createAdjustment,
+  transferBetweenAccounts,
   processSettlements,
 };

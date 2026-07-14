@@ -34,6 +34,7 @@ const PERMISSION_CATALOG = [
   { subject: 'Expense', label: 'Expenses', module: 'finances', actions: ['create', 'delete', 'read', 'update'] },
   { subject: 'ExpenseCategory', label: 'Expense Categories', module: 'finances', actions: ['create', 'delete', 'read', 'update'] },
   { subject: 'CashFlow', label: 'Cash Flow', module: 'finances', actions: ['read'] },
+  { subject: 'Account', label: 'Akun Keuangan', module: 'finances', actions: ['create', 'delete', 'read', 'update'] },
   { subject: 'FinancialReport', label: 'Financial Reports', module: 'reports', actions: ['create', 'delete', 'read', 'update'] },
   { subject: 'PettyCash', label: 'Petty Cash', module: 'finances', actions: ['create', 'delete', 'read', 'update'] },
   { subject: 'Supplier', label: 'Suppliers', module: 'finances', actions: ['create', 'delete', 'read', 'update'] },

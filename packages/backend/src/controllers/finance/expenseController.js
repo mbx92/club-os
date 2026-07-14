@@ -16,6 +16,35 @@ const { generateUniqueSequence, withRetry } = require('../../utils/concurrency')
 const { buildOptionalDateRangeFilter } = require('../../utils/dateRange');
 const accountService = require('../../services/accountService');
 const { getTenantTimezone } = require('../../utils/tenantTimezone');
+const { getRoleName } = require('../../utils/rbacUtils');
+
+/** Expense yang dibayar dari laci kasir (termasuk legacy cash tanpa fundSource/account). */
+function getCashDrawerExpenseWhere() {
+  return {
+    [Op.or]: [
+      { fundSource: 'cash_drawer' },
+      {
+        paymentMethod: 'cash',
+        accountId: { [Op.is]: null },
+        vaultAccountId: { [Op.is]: null },
+        fundSource: { [Op.is]: null },
+      },
+    ],
+  };
+}
+
+function isCashierUser(user) {
+  const role = getRoleName(user);
+  return role === 'cashier' || role === 'kasir';
+}
+
+function isCashDrawerExpenseRecord(expense) {
+  const fundSource = String(expense?.fundSource || '').toLowerCase();
+  if (fundSource === 'cash_drawer') return true;
+  if (fundSource && fundSource !== 'cash_drawer') return false;
+  if (expense?.accountId || expense?.vaultAccountId) return false;
+  return String(expense?.paymentMethod || '').toLowerCase() === 'cash';
+}
 
 /**
  * Create new expense
@@ -131,8 +160,8 @@ async function createExpense(req, res, next) {
           tags,
           attachments,
           fundSource: fundSource || null,
-          vaultAccountId: vaultAccountId || null,
-          accountId: accountId || null,
+          vaultAccountId: fundSource === 'vault' ? (vaultAccountId || null) : null,
+          accountId: fundSource === 'account' ? (accountId || null) : null,
           createdBy: userId
         }, { transaction });
 
@@ -232,7 +261,7 @@ async function createExpense(req, res, next) {
         }
 
         // Jika langsung paid dari akun keuangan, debit Account
-        if (status === 'paid' && accountId) {
+        if (status === 'paid' && fundSource === 'account' && accountId) {
           const { Account } = require('../../models');
           const financeAccount = await Account.findOne({
             where: { id: accountId, tenantId, isActive: true },
@@ -410,8 +439,15 @@ async function getAllExpenses(req, res, next) {
     } = req.query;
 
     const where = {};
+    const andConditions = [];
+
     if (!isSuperAdmin) {
       where.tenantId = tenantId;
+    }
+
+    // Kasir hanya melihat pengeluaran dari laci (bukan Tunai/Brankas/petty cash)
+    if (isCashierUser(req.user)) {
+      andConditions.push(getCashDrawerExpenseWhere());
     }
 
     if (status) {
@@ -432,12 +468,18 @@ async function getAllExpenses(req, res, next) {
     }
 
     if (search) {
-      where[Op.or] = [
-        { title: { [Op.iLike]: `%${search}%` } },
-        { description: { [Op.iLike]: `%${search}%` } },
-        { vendor: { [Op.iLike]: `%${search}%` } },
-        { expenseNumber: { [Op.iLike]: `%${search}%` } }
-      ];
+      andConditions.push({
+        [Op.or]: [
+          { title: { [Op.iLike]: `%${search}%` } },
+          { description: { [Op.iLike]: `%${search}%` } },
+          { vendor: { [Op.iLike]: `%${search}%` } },
+          { expenseNumber: { [Op.iLike]: `%${search}%` } }
+        ]
+      });
+    }
+
+    if (andConditions.length > 0) {
+      where[Op.and] = andConditions;
     }
 
     const offset = (page - 1) * limit;
@@ -508,6 +550,14 @@ async function getExpenseById(req, res, next) {
     });
 
     if (!expense) {
+      return res.status(404).json({
+        success: false,
+        code: 'EXPENSE_NOT_FOUND',
+        message: 'Expense not found'
+      });
+    }
+
+    if (isCashierUser(req.user) && !isCashDrawerExpenseRecord(expense)) {
       return res.status(404).json({
         success: false,
         code: 'EXPENSE_NOT_FOUND',
@@ -990,6 +1040,9 @@ async function markExpenseAsPaid(req, res, next) {
       }
     }
 
+    const paidFromAccount = resolvedFundSource === 'account' && !!resolvedAccountId;
+    const paidFromVault = resolvedFundSource === 'vault' && !!resolvedVaultAccountId;
+
     await expense.update({
       status: 'paid',
       paymentMethod,
@@ -997,12 +1050,13 @@ async function markExpenseAsPaid(req, res, next) {
       paymentNotes: paymentNotes || expense.paymentNotes || null,
       paidDate,
       fundSource: resolvedFundSource,
-      ...(resolvedVaultAccountId ? { vaultAccountId: resolvedVaultAccountId } : {}),
-      ...(resolvedAccountId ? { accountId: resolvedAccountId } : {}),
+      // Clear stale cross-source IDs so reopen/pay never double-deduct
+      accountId: paidFromAccount ? resolvedAccountId : null,
+      vaultAccountId: paidFromVault ? resolvedVaultAccountId : null,
     }, { transaction });
 
-    // Debit Account within the same transaction (must succeed or whole pay rolls back)
-    if (resolvedAccountId) {
+    // Debit Account only when paying from finance account (not vault / drawer / petty cash)
+    if (paidFromAccount) {
       await accountService.debitFromExpense(
         {
           id: expense.id,
@@ -1077,7 +1131,9 @@ async function markExpenseAsPaid(req, res, next) {
 /**
  * Reopen an expense — revert it back to 'pending' status.
  * Allowed from: approved, paid.
- * Clears approval fields so it can go through the approval flow again.
+ * Jika status sebelumnya 'paid', rollback nominal ke sumber dana (akun / vault / petty cash)
+ * dan catat mutasi balik.
+ * Clears approval / payment fields so it can go through the approval flow again.
  * @route POST /api/v1/finance/expenses/:id/reopen
  */
 async function reopenExpense(req, res, next) {
@@ -1115,19 +1171,149 @@ async function reopenExpense(req, res, next) {
     }
 
     const previousStatus = expense.status;
+    const tz = getTenantTimezone(req);
+    const today = new Date().toISOString().split('T')[0];
+    const expenseAmount = parseFloat(expense.totalAmount || expense.amount || 0);
+    const reversalNotes = [];
+
+    // ── Rollback money movement if previously paid ──────────────────────────
+    if (previousStatus === 'paid' && expenseAmount > 0) {
+      // 1) Finance Account (Tunai / Brankas / Bank)
+      if (expense.accountId) {
+        await accountService.creditFromExpenseReversal(
+          {
+            id: expense.id,
+            title: expense.title,
+            description: expense.description,
+            expenseNumber: expense.expenseNumber,
+            accountId: expense.accountId,
+            totalAmount: expenseAmount,
+            amount: expense.amount,
+          },
+          {
+            tenantId,
+            timezone: tz,
+            performedBy: userId,
+            reason: reason || null,
+          },
+          transaction
+        );
+        reversalNotes.push('akun keuangan');
+      }
+
+      // 2) Legacy VaultAccount
+      if (expense.fundSource === 'vault' && expense.vaultAccountId) {
+        const vaultAccount = await VaultAccount.findOne({
+          where: { id: expense.vaultAccountId, tenantId },
+          lock: transaction.LOCK.UPDATE,
+          transaction,
+        });
+
+        if (vaultAccount) {
+          const balanceBefore = parseFloat(vaultAccount.balance || 0);
+          const balanceAfter = balanceBefore + expenseAmount;
+          await vaultAccount.update({ balance: balanceAfter }, { transaction });
+
+          await CashMutation.create({
+            tenantId,
+            destinationVaultAccountId: vaultAccount.id,
+            sourceAccount: 'expense_reopen',
+            destinationAccount: vaultAccount.name,
+            amount: expenseAmount,
+            mutationType: 'vault_adjustment',
+            referenceType: 'Expense',
+            referenceId: expense.id,
+            referenceNumber: expense.expenseNumber,
+            status: 'posted',
+            mutationDate: today,
+            notes: `Reopen pengeluaran: ${expense.title || expense.expenseNumber || '-'}${reason ? ` (${reason})` : ''}`,
+            metadata: {
+              reason: reason || null,
+              balanceBefore,
+              balanceAfter,
+              reversalOf: 'vault_expense',
+            },
+            createdBy: userId,
+          }, { transaction });
+
+          reversalNotes.push('vault');
+        }
+      }
+
+      // 3) Petty cash (find original PCT by expense reference)
+      if (expense.fundSource === 'petty_cash' || expense.paymentMethod === 'petty_cash') {
+        const originalPct = await PettyCashTransaction.findOne({
+          where: {
+            tenantId,
+            referenceType: 'Expense',
+            referenceId: expense.id,
+            type: 'expense',
+          },
+          order: [['createdAt', 'DESC']],
+          transaction,
+        });
+
+        if (originalPct?.pettyCashId) {
+          const pettyCash = await PettyCash.findOne({
+            where: { id: originalPct.pettyCashId, tenantId },
+            lock: transaction.LOCK.UPDATE,
+            transaction,
+          });
+
+          if (pettyCash) {
+            const refundAmount = Math.abs(parseFloat(originalPct.amount || expenseAmount));
+            const balanceBefore = parseFloat(pettyCash.balance || 0);
+            const balanceAfter = balanceBefore + refundAmount;
+            await pettyCash.update({ balance: balanceAfter }, { transaction });
+
+            const transactionNumber = await generateUniqueSequence(
+              PettyCashTransaction,
+              { tenantId },
+              'PCT-',
+              'transactionNumber',
+              transaction
+            );
+
+            await PettyCashTransaction.create({
+              tenantId,
+              pettyCashId: pettyCash.id,
+              transactionNumber,
+              type: 'adjustment',
+              fundSource: null,
+              amount: refundAmount,
+              balanceBefore,
+              balanceAfter,
+              referenceType: 'Expense',
+              referenceId: expense.id,
+              description: `Reopen pengeluaran: ${expense.title || expense.expenseNumber || '-'}${reason ? ` (${reason})` : ''}`,
+              transactionDate: today,
+              performedBy: userId,
+            }, { transaction });
+
+            reversalNotes.push('petty cash');
+          }
+        }
+      }
+      // cash_drawer: no ledger debit at pay-time — clearing status is enough
+    }
+
+    const wasPaid = previousStatus === 'paid';
 
     await expense.update({
       status: 'pending',
       approvedBy: null,
       approvedAt: null,
-      paymentMethod: expense.status === 'paid' ? null : expense.paymentMethod,
-      bankName: expense.status === 'paid' ? null : expense.bankName,
-      paymentNotes: expense.status === 'paid' ? null : expense.paymentNotes,
-      paidDate: expense.status === 'paid' ? null : expense.paidDate,
+      paymentMethod: wasPaid ? null : expense.paymentMethod,
+      bankName: wasPaid ? null : expense.bankName,
+      paymentNotes: wasPaid ? null : expense.paymentNotes,
+      paidDate: wasPaid ? null : expense.paidDate,
+      fundSource: wasPaid ? null : expense.fundSource,
+      accountId: wasPaid ? null : expense.accountId,
+      vaultAccountId: wasPaid ? null : expense.vaultAccountId,
       notes: reason
         ? (expense.notes
-            ? `${expense.notes}\n[${new Date().toISOString().split('T')[0]}] Reopened: ${reason}`
-            : `[${new Date().toISOString().split('T')[0]}] Reopened: ${reason}`)
+            ? `${expense.notes}\n[${today}] Reopened: ${reason}${reversalNotes.length ? ` — rollback: ${reversalNotes.join(', ')}` : ''}`
+            : `[${today}] Reopened: ${reason}${reversalNotes.length ? ` — rollback: ${reversalNotes.join(', ')}` : ''}`)
         : expense.notes
     }, { transaction });
 
@@ -1136,7 +1322,8 @@ async function reopenExpense(req, res, next) {
     const reopenedExpense = await Expense.findByPk(id, {
       include: [
         { model: ExpenseCategory, as: 'category' },
-        { model: User, as: 'approver', attributes: ['id', 'firstName', 'lastName', 'email'] }
+        { model: User, as: 'approver', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: Account, as: 'account', attributes: ['id', 'name', 'type', 'bankName', 'paymentMethod', 'balance'], required: false },
       ]
     });
 
@@ -1147,14 +1334,18 @@ async function reopenExpense(req, res, next) {
       expenseId: id,
       previousStatus,
       reason: reason || null,
+      moneyReversal: reversalNotes,
       ip: getClientIp(req),
       userAgent: getUserAgent(req)
     });
 
     return res.json({
       success: true,
-      message: `Expense reopened from '${previousStatus}' back to 'pending'`,
-      data: reopenedExpense
+      message: wasPaid && reversalNotes.length
+        ? `Expense reopened. Nominal dikembalikan ke: ${reversalNotes.join(', ')}`
+        : `Expense reopened from '${previousStatus}' back to 'pending'`,
+      data: reopenedExpense,
+      reversal: reversalNotes,
     });
 
   } catch (error) {

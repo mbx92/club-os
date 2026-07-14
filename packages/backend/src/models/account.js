@@ -18,7 +18,8 @@ const { Model } = require('sequelize');
  *   - bank     : Transfer BCA, QRIS BCA, Debit Mandiri, etc.
  *   - e_wallet : GoPay, OVO, DANA (standalone, not bank-linked)
  *   - payment_gateway : Midtrans, Stripe virtual wallets
- *   - petty_cash : replaces the separate PettyCash model for new funds
+ *   - petty_cash : replaces the separate Petty Cash model for new funds
+ *   - main_vault : Brankas Utama — physical safe; funded via transfer from Tunai
  *   - custom   : anything else the tenant needs
  *
  * Auto-match key: (tenantId, paymentMethod, bankName) must be unique
@@ -63,7 +64,7 @@ module.exports = (sequelize, DataTypes) => {
       comment: 'Display name, e.g. "QRIS BCA", "Transfer BNI", "Modal Harian"',
     },
     type: {
-      type: DataTypes.ENUM('cash', 'bank', 'e_wallet', 'payment_gateway', 'petty_cash', 'custom'),
+      type: DataTypes.ENUM('cash', 'bank', 'e_wallet', 'payment_gateway', 'petty_cash', 'main_vault', 'custom'),
       allowNull: false,
       defaultValue: 'bank',
       comment: 'Broad account category',

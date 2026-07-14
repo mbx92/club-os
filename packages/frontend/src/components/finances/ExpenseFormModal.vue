@@ -195,6 +195,13 @@
                 {{ option.label }}
               </option>
             </select>
+            <label v-if="formData.paymentOption === 'cash_drawer_cash'" class="label">
+              <span class="label-text-alt" :class="currentSession ? 'text-base-content/60' : 'text-warning'">
+                {{ currentSession
+                  ? `Kas tersedia di laci: ${formatCurrency(drawerExpectedCash ?? 0)}`
+                  : 'Tidak ada shift kasir yang aktif' }}
+              </span>
+            </label>
           </div>
 
           <div class="form-control">
@@ -222,7 +229,7 @@
             class="select select-bordered w-full"
             :class="{ 'select-error': errors.accountId }"
           >
-            <option value="">Pilih akun (Tunai / Bank)</option>
+            <option value="">Pilih akun (Tunai / Brankas / Bank)</option>
             <option v-for="account in expenseAccounts" :key="account.id" :value="String(account.id)">
               {{ account.name }}{{ account.bankName ? ` (${account.bankName})` : '' }} — {{ formatCurrency(account.balance) }}
             </option>
@@ -366,9 +373,10 @@
 import { ref, computed, watch } from 'vue'
 import CurrencyInput from '@/components/shared/CurrencyInput.vue'
 import { useSuppliers, useAccounts } from '@/composables/finances'
+import { useCashRegister } from '@/composables/gym/cash-register/useCashRegister'
 import {
   EXPENSE_PAYMENT_OPTION_MAP,
-  getExpensePaymentOptions,
+  getExpensePaymentOptionsWithDrawer,
   resolveExpensePaymentOption,
   paymentMethodFromAccount,
   filterExpenseAccounts,
@@ -405,11 +413,21 @@ const tagsInput = ref('')
 
 const { suppliers: supplierList, fetchSuppliers } = useSuppliers()
 const { accounts: financeAccounts, fetchAccounts: fetchFinanceAccounts, loading: financeAccountsLoading } = useAccounts()
+const { currentSession, liveSummary, getCurrentSession } = useCashRegister()
 const vendorMode = ref('select') // 'select' | 'manual'
 
 const PAYMENT_OPTION_MAP = EXPENSE_PAYMENT_OPTION_MAP
 
-const paymentOptions = computed(() => getExpensePaymentOptions({ isCashier: props.isCashier }))
+const drawerExpectedCash = computed(() => {
+  const value = liveSummary.value?.expectedCash
+  return value == null ? null : Number(value)
+})
+
+const paymentOptions = computed(() => getExpensePaymentOptionsWithDrawer({
+  isCashier: props.isCashier,
+  hasSession: !!currentSession.value,
+  expectedCash: drawerExpectedCash.value,
+}))
 
 const expenseAccounts = computed(() => filterExpenseAccounts(financeAccounts.value))
 
@@ -572,6 +590,7 @@ const open = (expense = null) => {
   // Fetch active suppliers for dropdown
   fetchSuppliers({ isActive: 'true', limit: 200, sortBy: 'name', sortOrder: 'ASC' })
   fetchFinanceAccounts({ isActive: 'true' })
+  getCurrentSession().catch(() => null)
 
   if (expense) {
     formData.value = {

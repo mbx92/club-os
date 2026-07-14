@@ -31,16 +31,45 @@ export const EXPENSE_PAYMENT_OPTIONS = [
 ]
 
 /** Account types allowed as expense fund source for owner/admin. */
-export const EXPENSE_ACCOUNT_TYPES = ['cash', 'bank']
+export const EXPENSE_ACCOUNT_TYPES = ['cash', 'bank', 'main_vault']
 
 export function getExpensePaymentOptions({ isCashier = false } = {}) {
   return isCashier ? EXPENSE_PAYMENT_OPTIONS_CASHIER : EXPENSE_PAYMENT_OPTIONS_OWNER
 }
 
+/**
+ * Label for Laci / Cash Drawer option, including available cash when shift is open.
+ * @param {{ expectedCash?: number|null, hasSession?: boolean }} opts
+ */
+export function formatCashDrawerPaymentLabel({ expectedCash = null, hasSession = false } = {}) {
+  const base = 'Laci / Cash Drawer'
+  if (!hasSession) return `${base} — Tidak ada shift aktif`
+  const nominal = new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(Number(expectedCash) || 0)
+  return `${base} — ${nominal}`
+}
+
+/**
+ * Enrich payment options with live cash-drawer balance when available.
+ */
+export function getExpensePaymentOptionsWithDrawer(opts = {}) {
+  const { isCashier = false, expectedCash = null, hasSession = false } = opts
+  return getExpensePaymentOptions({ isCashier }).map((option) => {
+    if (option.value !== 'cash_drawer_cash') return option
+    return {
+      ...option,
+      label: formatCashDrawerPaymentLabel({ expectedCash, hasSession }),
+    }
+  })
+}
+
 const FUND_SOURCE_LABELS = {
   account: 'Dari Akun Keuangan',
   cash_drawer: 'Laci / Cash Drawer',
-  vault: 'Vault / Brankas',
+  vault: 'Drawer',
   petty_cash: 'Petty Cash',
   bank: 'Transfer Bank',
 }
@@ -86,7 +115,7 @@ export function resolveExpensePaymentOption(expense = null, { isCashier = false 
 export function paymentMethodFromAccount(acc) {
   if (!acc) return 'bank_transfer'
   if (acc.paymentMethod) return acc.paymentMethod
-  if (acc.type === 'cash') return 'cash'
+  if (acc.type === 'cash' || acc.type === 'main_vault') return 'cash'
   if (acc.type === 'bank') return 'bank_transfer'
   if (acc.type === 'e_wallet') return 'e_wallet'
   if (acc.type === 'payment_gateway') return 'payment_gateway'
@@ -119,7 +148,7 @@ export function formatExpenseFundSource(expense) {
   }
 
   if (expense.vaultAccount?.name) {
-    return `Vault: ${expense.vaultAccount.name}`
+    return `Drawer: ${expense.vaultAccount.name}`
   }
 
   if (expense.fundSource && FUND_SOURCE_LABELS[expense.fundSource]) {
