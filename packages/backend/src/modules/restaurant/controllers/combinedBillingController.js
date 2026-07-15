@@ -97,6 +97,7 @@ const createCombinedTransaction = async (req, res, next) => {
     const transactionSettings = tenant.settings?.transaction || tenant.settings?.transactions || {};
     const taxEnabled = transactionSettings.taxEnable || false;
     const taxPercentage = parseFloat(transactionSettings.taxPercentage) || 0;
+    const taxType = transactionSettings.taxType === 'fixed' ? 'fixed' : 'percentage';
     // Combined billing uses transactionPrefix since it combines multiple types
     const combinedPrefix = transactionSettings.invoice?.transactionPrefix || 'TRX';
 
@@ -218,7 +219,11 @@ const createCombinedTransaction = async (req, res, next) => {
     // Calculate tax from subtotalAfterDiscount (NOT including service charge)
     let finalTax = 0;
     if (taxEnabled && taxPercentage > 0) {
-      finalTax = Math.round((subtotalAfterDiscount * taxPercentage) / 100);
+      if (taxType === 'fixed') {
+        finalTax = Math.round(taxPercentage);
+      } else {
+        finalTax = Math.round((subtotalAfterDiscount * taxPercentage) / 100);
+      }
     }
     
     const totalAmount = subtotalAfterDiscount + serviceChargeAmount + finalTax;

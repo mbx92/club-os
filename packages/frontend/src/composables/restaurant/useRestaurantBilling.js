@@ -248,7 +248,7 @@ export function useRestaurantBilling() {
           // Note: Tax does not typically include the service charge base in this region per generic requirements, but if it does, add serviceCharge here.
           tax = (afterDiscount * taxPercentage) / 100
         } else if (taxType === 'fixed') {
-          tax = parseFloat(txSettings.taxAmount || 0) || 0
+          tax = parseFloat(txSettings.taxPercentage || 0) || 0
         }
       }
     } catch (e) {

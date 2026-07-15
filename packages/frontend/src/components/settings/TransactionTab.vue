@@ -32,15 +32,17 @@
           <div v-if="form.transaction.taxEnable" class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="form-control">
               <label class="label">
-                <span class="label-text font-semibold">Tax Percentage</span>
+                <span class="label-text font-semibold">
+                  {{ form.transaction.taxType === 'fixed' ? 'Tax Amount' : 'Tax Percentage' }}
+                </span>
               </label>
               <input
                 v-model.number="form.transaction.taxPercentage"
                 type="number"
                 step="0.01"
                 min="0"
-                max="100"
-                placeholder="11.0"
+                :max="form.transaction.taxType === 'percentage' ? 100 : undefined"
+                :placeholder="form.transaction.taxType === 'fixed' ? '1000' : '11.0'"
                 class="input input-bordered w-full"
               />
             </div>
@@ -579,7 +581,7 @@
 
           <div class="alert alert-info">
             <IconInfoCircle class="w-5 h-5" />
-            <span>Atur metode pembayaran yang tersedia di POS, billing, dan transaksi. Nonaktifkan metode yang tidak dipakai.</span>
+            <span>Atur metode pembayaran yang tersedia di POS, billing, dan transaksi. Fee charge opsional ditambahkan saat pelanggan bayar dengan metode tersebut.</span>
           </div>
 
           <div class="overflow-x-auto rounded-box border border-base-300">
@@ -590,6 +592,9 @@
                   <th>Key</th>
                   <th>Label</th>
                   <th>Perlu Bank</th>
+                  <th>Fee</th>
+                  <th>Tipe Fee</th>
+                  <th>Nilai Fee</th>
                   <th></th>
                 </tr>
               </thead>
@@ -619,6 +624,44 @@
                       type="checkbox"
                       class="checkbox checkbox-sm"
                     />
+                  </td>
+                  <td>
+                    <input
+                      v-model="method.feeEnable"
+                      type="checkbox"
+                      class="checkbox checkbox-sm"
+                      :disabled="method.key === 'compliment'"
+                    />
+                  </td>
+                  <td>
+                    <select
+                      v-model="method.feeType"
+                      class="select select-bordered select-sm w-28"
+                      :disabled="!method.feeEnable"
+                    >
+                      <option value="percentage">%</option>
+                      <option value="fixed">Fixed</option>
+                    </select>
+                  </td>
+                  <td>
+                    <div class="join">
+                      <input
+                        v-model.number="method.feeValue"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        :max="method.feeType === 'percentage' ? 100 : undefined"
+                        class="input input-bordered input-sm join-item w-20"
+                        :disabled="!method.feeEnable"
+                        placeholder="0"
+                      />
+                      <span
+                        class="input input-bordered input-sm join-item w-10 !px-0 flex items-center justify-center pointer-events-none bg-base-200"
+                        :class="{ 'opacity-50': !method.feeEnable }"
+                      >
+                        {{ method.feeType === 'fixed' ? 'Rp' : '%' }}
+                      </span>
+                    </div>
                   </td>
                   <td>
                     <button
@@ -792,7 +835,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useApi } from "@/composables/core/useApi";
 import { useNotification } from "@/composables/core/useNotification";
 import { useTenantSettings } from "@/composables/admin/useTenantSettings";
-import { buildDefaultPaymentMethods } from "@/utils/paymentMethods";
+import { buildDefaultPaymentMethods, normalizePaymentMethod } from "@/utils/paymentMethods";
 import { buildDefaultBanks } from "@/utils/paymentBanks";
 import { usePaymentMethods } from "@/composables/shared/usePaymentMethods";
 import { usePaymentBanks } from "@/composables/shared/usePaymentBanks";
@@ -884,7 +927,7 @@ const mergePaymentMethods = (paymentConfig = {}) => {
   }
 
   const storedKeys = new Set(stored.map((method) => method.key));
-  const merged = stored.map((method) => ({ ...method }));
+  const merged = stored.map((method) => normalizePaymentMethod(method));
 
   for (const fallback of defaults) {
     if (!storedKeys.has(fallback.key)) {
@@ -969,6 +1012,9 @@ const addPaymentMethod = () => {
     enabled: true,
     requiresBank: false,
     isSystem: false,
+    feeEnable: false,
+    feeType: 'percentage',
+    feeValue: 0,
   });
 
   newPaymentMethod.value = { key: "", label: "" };

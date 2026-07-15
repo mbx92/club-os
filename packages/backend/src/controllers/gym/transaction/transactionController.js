@@ -2305,13 +2305,13 @@ exports.splitBillByItem = async (req, res) => {
         splitServiceCharge = Math.round((splitSubtotal / originalSubtotalVal) * originalServiceCharge);
       }
 
-      // Calculate tax for this split
+      // Calculate tax for this split (on split subtotal only — not including service charge)
       let splitTax = 0;
       if (taxConfig.taxEnable && taxConfig.taxPercentage > 0) {
         if (taxConfig.taxType === 'percentage') {
-          splitTax = ((splitSubtotal + splitServiceCharge) * taxConfig.taxPercentage) / 100;
+          splitTax = (splitSubtotal * taxConfig.taxPercentage) / 100;
         } else {
-          // Fixed tax — divide proportionally
+          // Fixed tax — divide proportionally by subtotal share
           const proportion = originalSubtotalVal > 0 ? splitSubtotal / originalSubtotalVal : 0;
           splitTax = parseFloat(originalTransaction.tax || 0) * proportion;
         }

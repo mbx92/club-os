@@ -680,6 +680,12 @@ const shiftStatusBadge = (status) =>
                   <td class="text-right">{{ formatCurrency(item.amount) }}</td>
                 </tr>
 
+                <tr v-if="reportGym.taxTotal > 0" class="hover">
+                  <td class="text-base-content/60">Tax</td>
+                  <td></td>
+                  <td class="text-right">{{ formatCurrency(reportGym.taxTotal) }}</td>
+                </tr>
+
                 <tr class="bg-secondary/5 font-bold">
                   <td>GRAND TOTAL</td>
                   <td></td>

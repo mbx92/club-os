@@ -111,22 +111,58 @@ export const getPaymentBgClass = (method) => {
   return BG_CLASSES[method] || 'bg-base-content/30'
 }
 
+/** Default fee charge fields per payment method */
+export const DEFAULT_PAYMENT_METHOD_FEE = {
+  feeEnable: false,
+  feeType: 'percentage', // 'percentage' | 'fixed'
+  feeValue: 0,
+}
+
 /** Master catalog — system-defined payment methods */
 export const DEFAULT_PAYMENT_METHOD_CATALOG = [
-  { key: 'cash', label: 'Tunai', enabled: true, requiresBank: false, isSystem: true },
-  { key: 'credit_card', label: 'Kartu', enabled: true, requiresBank: true, isSystem: true },
-  { key: 'debit_card', label: 'Kartu Debit', enabled: true, requiresBank: true, isSystem: true },
-  { key: 'bank_transfer', label: 'Transfer Bank', enabled: true, requiresBank: true, isSystem: true },
-  { key: 'qris', label: 'QRIS', enabled: true, requiresBank: false, isSystem: true },
-  { key: 'e_wallet', label: 'E-Wallet', enabled: true, requiresBank: false, isSystem: true },
-  { key: 'payment_gateway', label: 'Payment Gateway', enabled: true, requiresBank: false, isSystem: true },
-  { key: 'compliment', label: 'Gratis (Compliment)', enabled: true, requiresBank: false, isSystem: true },
+  { key: 'cash', label: 'Tunai', enabled: true, requiresBank: false, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'credit_card', label: 'Kartu', enabled: true, requiresBank: true, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'debit_card', label: 'Kartu Debit', enabled: true, requiresBank: true, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'bank_transfer', label: 'Transfer Bank', enabled: true, requiresBank: true, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'qris', label: 'QRIS', enabled: true, requiresBank: false, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'e_wallet', label: 'E-Wallet', enabled: true, requiresBank: false, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'payment_gateway', label: 'Payment Gateway', enabled: true, requiresBank: false, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'compliment', label: 'Gratis (Compliment)', enabled: true, requiresBank: false, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
 ]
 
 export const normalizePaymentMethodKey = (key) => {
   if (!key) return ''
   if (key === 'ewallet') return 'e_wallet'
   return key
+}
+
+export const normalizePaymentMethodFee = (method = {}) => {
+  const feeType = method.feeType === 'fixed' ? 'fixed' : 'percentage'
+  const feeValue = Number(method.feeValue)
+  return {
+    feeEnable: method.feeEnable === true,
+    feeType,
+    feeValue: Number.isFinite(feeValue) && feeValue >= 0 ? feeValue : 0,
+  }
+}
+
+export const normalizePaymentMethod = (method = {}) => ({
+  ...method,
+  key: normalizePaymentMethodKey(method.key),
+  ...normalizePaymentMethodFee(method),
+})
+
+/**
+ * Calculate fee charge for a payment method against a base amount.
+ * @returns {number} fee amount (0 if disabled)
+ */
+export const calculatePaymentMethodFee = (baseAmount, method) => {
+  const fee = normalizePaymentMethodFee(method)
+  if (!fee.feeEnable || fee.feeValue <= 0) return 0
+  const amount = Number(baseAmount) || 0
+  if (amount <= 0) return 0
+  if (fee.feeType === 'fixed') return fee.feeValue
+  return Math.round((amount * fee.feeValue) / 100)
 }
 
 export const buildDefaultPaymentMethods = () =>

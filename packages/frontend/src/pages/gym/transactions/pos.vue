@@ -401,10 +401,9 @@ meta:
                 </div>
                 <div class="flex justify-between" :class="taxConfigStatus === 'enabled' ? '' : 'text-base-content/40'">
                   <span>
-                    Tax
-                    <span v-if="taxConfigStatus === 'enabled'">({{ taxPercentage }}%)</span>
-                    <span v-else-if="taxConfigStatus === 'disabled'" class="text-xs italic text-warning">(disabled in settings)</span>
-                    <span v-else class="text-xs italic">(not configured)</span>
+                    {{ taxDisplayLabel }}
+                    <span v-if="taxConfigStatus === 'disabled'" class="text-xs italic text-warning">(disabled in settings)</span>
+                    <span v-else-if="taxConfigStatus === 'not-configured'" class="text-xs italic">(not configured)</span>
                   </span>
                   <span class="font-semibold">{{ formatCurrency(taxAmount) }}</span>
                 </div>
@@ -1222,10 +1221,15 @@ const subtotal = computed(() => {
 const taxPercentage = computed(() => {
   const txSettings = authStore.user?.tenant?.settings?.transaction || {}
   const taxEnabled = !!txSettings.taxEnable
-  const percentage = parseFloat(txSettings.taxPercentage || 0)
-  
-  // Only return percentage if tax is enabled
-  return taxEnabled ? percentage : 0
+  const value = parseFloat(txSettings.taxPercentage || 0)
+
+  // Only return value if tax is enabled
+  return taxEnabled ? value : 0
+})
+
+const taxType = computed(() => {
+  const txSettings = authStore.user?.tenant?.settings?.transaction || {}
+  return txSettings.taxType === 'fixed' ? 'fixed' : 'percentage'
 })
 
 const voucherDiscount = computed(() => {
@@ -1254,9 +1258,10 @@ const voucherDiscount = computed(() => {
 })
 
 const taxAmount = computed(() => {
-  // Tax calculated after discount: (subtotal - discount) * tax%
-  // taxPercentage already handles taxEnable check
-  const afterDiscount = subtotal.value - voucherDiscount.value
+  // Tax calculated after discount: (subtotal - discount)
+  const afterDiscount = Math.max(0, subtotal.value - voucherDiscount.value)
+  if (taxPercentage.value <= 0) return 0
+  if (taxType.value === 'fixed') return taxPercentage.value
   return (afterDiscount * taxPercentage.value) / 100
 })
 
@@ -1264,11 +1269,17 @@ const taxAmount = computed(() => {
 const taxConfigStatus = computed(() => {
   const txSettings = authStore.user?.tenant?.settings?.transaction || {}
   const taxEnabled = !!txSettings.taxEnable
-  const percentage = parseFloat(txSettings.taxPercentage || 0)
+  const value = parseFloat(txSettings.taxPercentage || 0)
   
-  if (taxEnabled && percentage > 0) return 'enabled'
-  if (!taxEnabled && percentage > 0) return 'disabled'
+  if (taxEnabled && value > 0) return 'enabled'
+  if (!taxEnabled && value > 0) return 'disabled'
   return 'not-configured'
+})
+
+const taxDisplayLabel = computed(() => {
+  if (taxConfigStatus.value !== 'enabled') return 'Tax'
+  if (taxType.value === 'fixed') return 'Tax'
+  return `Tax (${taxPercentage.value}%)`
 })
 
 const total = computed(() => {

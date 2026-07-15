@@ -20,21 +20,37 @@ const { getClientIp, getUserAgent } = require('../utils/requestHelper');
 /**
  * Default transaction settings structure
  */
+const DEFAULT_PAYMENT_METHOD_FEE = {
+  feeEnable: false,
+  feeType: 'percentage', // 'percentage' | 'fixed'
+  feeValue: 0,
+};
+
 const PAYMENT_METHOD_CATALOG = [
-  { key: 'cash', label: 'Tunai', enabled: true, requiresBank: false, isSystem: true },
-  { key: 'credit_card', label: 'Kartu', enabled: true, requiresBank: true, isSystem: true },
-  { key: 'debit_card', label: 'Kartu Debit', enabled: true, requiresBank: true, isSystem: true },
-  { key: 'bank_transfer', label: 'Transfer Bank', enabled: true, requiresBank: true, isSystem: true },
-  { key: 'qris', label: 'QRIS', enabled: true, requiresBank: false, isSystem: true },
-  { key: 'e_wallet', label: 'E-Wallet', enabled: true, requiresBank: false, isSystem: true },
-  { key: 'payment_gateway', label: 'Payment Gateway', enabled: true, requiresBank: false, isSystem: true },
-  { key: 'compliment', label: 'Gratis (Compliment)', enabled: true, requiresBank: false, isSystem: true },
+  { key: 'cash', label: 'Tunai', enabled: true, requiresBank: false, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'credit_card', label: 'Kartu', enabled: true, requiresBank: true, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'debit_card', label: 'Kartu Debit', enabled: true, requiresBank: true, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'bank_transfer', label: 'Transfer Bank', enabled: true, requiresBank: true, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'qris', label: 'QRIS', enabled: true, requiresBank: false, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'e_wallet', label: 'E-Wallet', enabled: true, requiresBank: false, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'payment_gateway', label: 'Payment Gateway', enabled: true, requiresBank: false, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'compliment', label: 'Gratis (Compliment)', enabled: true, requiresBank: false, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
 ];
 
 const BANK_CATALOG = [
   { key: 'BCA', label: 'BCA', enabled: true, isSystem: true },
   { key: 'MANDIRI', label: 'MANDIRI', enabled: true, isSystem: true },
 ];
+
+const normalizePaymentMethodFee = (method = {}) => {
+  const feeType = method.feeType === 'fixed' ? 'fixed' : 'percentage';
+  const feeValue = Number(method.feeValue);
+  return {
+    feeEnable: method.feeEnable === true,
+    feeType,
+    feeValue: Number.isFinite(feeValue) && feeValue >= 0 ? feeValue : 0,
+  };
+};
 
 const buildDefaultPaymentMethods = () =>
   PAYMENT_METHOD_CATALOG.map((method) => ({ ...method }));
@@ -253,11 +269,16 @@ async function updateTaxConfiguration(tenantId, taxConfig) {
   }
   
   if (taxConfig.rate !== undefined) {
-    if (taxConfig.rate < 0 || taxConfig.rate > 100) {
-      throw createError('VALIDATION_ERROR', 'Tax rate must be between 0 and 100', 400);
+    const rate = parseFloat(taxConfig.rate);
+    if (isNaN(rate) || rate < 0) {
+      throw createError('VALIDATION_ERROR', 'Tax rate must be a non-negative number', 400);
     }
-    updates.taxPercentage = taxConfig.rate;
-    updates.taxRate = taxConfig.rate;
+    const type = taxConfig.type || 'percentage';
+    if (type === 'percentage' && rate > 100) {
+      throw createError('VALIDATION_ERROR', 'Tax rate percentage must be between 0 and 100', 400);
+    }
+    updates.taxPercentage = rate;
+    updates.taxRate = rate;
   }
   
   if (taxConfig.type !== undefined) {
@@ -398,9 +419,13 @@ async function getPaymentConfiguration(tenantId) {
   
   // Mask sensitive data
   const paymentConfig = settings.payment || DEFAULT_TRANSACTION_SETTINGS.payment;
-  const paymentMethods = Array.isArray(paymentConfig.paymentMethods) && paymentConfig.paymentMethods.length
+  const paymentMethods = (Array.isArray(paymentConfig.paymentMethods) && paymentConfig.paymentMethods.length
     ? paymentConfig.paymentMethods
-    : buildDefaultPaymentMethods();
+    : buildDefaultPaymentMethods()
+  ).map((method) => ({
+    ...method,
+    ...normalizePaymentMethodFee(method),
+  }));
   const banks = Array.isArray(paymentConfig.banks) && paymentConfig.banks.length
     ? paymentConfig.banks
     : buildDefaultBanks();
@@ -675,7 +700,16 @@ function deepMerge(target, source) {
  * @returns {object} Merged settings
  */
 function mergeWithDefaults(settings) {
-  return deepMerge(DEFAULT_TRANSACTION_SETTINGS, settings);
+  const merged = deepMerge(DEFAULT_TRANSACTION_SETTINGS, settings);
+
+  if (Array.isArray(merged.payment?.paymentMethods)) {
+    merged.payment.paymentMethods = merged.payment.paymentMethods.map((method) => ({
+      ...method,
+      ...normalizePaymentMethodFee(method),
+    }));
+  }
+
+  return merged;
 }
 
 /**
@@ -688,7 +722,11 @@ function validateTransactionSettings(settings) {
   // Validate tax
   if (settings.taxPercentage !== undefined) {
     const tax = parseFloat(settings.taxPercentage);
-    if (isNaN(tax) || tax < 0 || tax > 100) {
+    if (isNaN(tax) || tax < 0) {
+      throw createError('VALIDATION_ERROR', 'Tax value must be a non-negative number', 400);
+    }
+    const taxType = settings.taxType || 'percentage';
+    if (taxType === 'percentage' && tax > 100) {
       throw createError('VALIDATION_ERROR', 'Tax percentage must be between 0 and 100', 400);
     }
   }
@@ -757,6 +795,37 @@ function validatePaymentMethods(paymentMethods) {
     if (seen.has(key)) {
       throw createError('VALIDATION_ERROR', `Duplicate payment method key "${key}"`, 400);
     }
+
+    if (method.feeEnable === true) {
+      const feeType = method.feeType;
+      if (feeType && feeType !== 'percentage' && feeType !== 'fixed') {
+        throw createError(
+          'VALIDATION_ERROR',
+          `Payment method "${key}" feeType must be "percentage" or "fixed"`,
+          400
+        );
+      }
+
+      const feeValue = Number(method.feeValue);
+      if (!Number.isFinite(feeValue) || feeValue < 0) {
+        throw createError(
+          'VALIDATION_ERROR',
+          `Payment method "${key}" feeValue must be a non-negative number`,
+          400
+        );
+      }
+
+      if ((feeType === 'percentage' || !feeType) && feeValue > 100) {
+        throw createError(
+          'VALIDATION_ERROR',
+          `Payment method "${key}" feeValue percentage cannot exceed 100`,
+          400
+        );
+      }
+    }
+
+    // Normalize fee fields so they persist consistently
+    Object.assign(method, normalizePaymentMethodFee(method));
 
     seen.add(key);
   }

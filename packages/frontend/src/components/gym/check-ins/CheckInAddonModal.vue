@@ -4,6 +4,7 @@ import { useServicePlans } from '@/composables/gym/service-management'
 import { useTransactions } from '@/composables/gym/transactions'
 import { useCurrency } from '@/composables/core/useCurrency'
 import { usePaymentMethods } from '@/composables/shared/usePaymentMethods'
+import { useTransactionSettings } from '@/composables/shared/useTransactionSettings'
 import { buildPaymentBankPayload } from '@/utils/paymentBanks'
 import { usePaymentBanks } from '@/composables/shared/usePaymentBanks'
 import {
@@ -22,6 +23,7 @@ const { createAddonTransaction, loading } = useTransactions()
 const { formatCurrency } = useCurrency()
 const { availableMethods: availablePaymentMethods, getMethodLabel, methodRequiresBank } = usePaymentMethods()
 const { bankOptions } = usePaymentBanks()
+const { calculateTax, isTaxEnabled, taxConfig } = useTransactionSettings()
 
 const selectedMethodRequiresBank = computed(() =>
   methodRequiresBank(selectedPaymentMethod.value)
@@ -51,9 +53,20 @@ const cartItems = computed(() =>
   Object.values(cart.value).filter(entry => entry.qty > 0)
 )
 
-const total = computed(() =>
+const subtotal = computed(() =>
   cartItems.value.reduce((sum, entry) => sum + entry.plan.price * entry.qty, 0)
 )
+
+const taxAmount = computed(() => calculateTax(subtotal.value))
+
+const total = computed(() => Math.max(0, subtotal.value + taxAmount.value))
+
+const taxLabel = computed(() => {
+  if (!isTaxEnabled.value) return 'Tax'
+  const cfg = taxConfig.value || {}
+  if (cfg.taxType === 'fixed') return 'Tax'
+  return `Tax (${cfg.taxPercentage || 0}%)`
+})
 
 const hasItems = computed(() => cartItems.value.length > 0)
 
@@ -238,6 +251,14 @@ defineExpose({ openModal })
           <span class="font-semibold">{{ formatCurrency(entry.plan.price * entry.qty) }}</span>
         </div>
         <div class="divider my-1"></div>
+        <div class="flex justify-between text-sm">
+          <span>Subtotal</span>
+          <span class="font-semibold">{{ formatCurrency(subtotal) }}</span>
+        </div>
+        <div v-if="taxAmount > 0" class="flex justify-between text-sm">
+          <span>{{ taxLabel }}</span>
+          <span class="font-semibold">{{ formatCurrency(taxAmount) }}</span>
+        </div>
         <div class="flex justify-between font-bold">
           <span>Total</span>
           <span class="text-primary">{{ formatCurrency(total) }}</span>

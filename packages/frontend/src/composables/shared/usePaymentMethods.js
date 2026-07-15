@@ -3,16 +3,15 @@ import { useApi } from '@/composables/core/useApi'
 import { useAuthStore } from '@/stores/auth'
 import {
   buildDefaultPaymentMethods,
+  calculatePaymentMethodFee,
   getPaymentLabel,
+  normalizePaymentMethod,
   normalizePaymentMethodKey,
   resolvePaymentMethodLabel,
 } from '@/utils/paymentMethods'
 
 const normalizeCatalog = (methods) =>
-  (methods || []).map((method) => ({
-    ...method,
-    key: normalizePaymentMethodKey(method.key),
-  }))
+  (methods || []).map((method) => normalizePaymentMethod(method))
 
 const cachedPaymentMethods = ref(null)
 let loadPromise = null
@@ -61,6 +60,9 @@ export function usePaymentMethods() {
       label: method.label || getPaymentLabel(method.key),
       requiresBank: method.requiresBank === true,
       isSystem: method.isSystem !== false,
+      feeEnable: method.feeEnable === true,
+      feeType: method.feeType || 'percentage',
+      feeValue: Number(method.feeValue) || 0,
     }))
   )
 
@@ -79,6 +81,17 @@ export function usePaymentMethods() {
     const normalized = normalizePaymentMethodKey(key)
     const method = enabledPaymentMethods.value.find((item) => item.key === normalized)
     return method?.requiresBank === true
+  }
+
+  const getMethodConfig = (key) => {
+    const normalized = normalizePaymentMethodKey(key)
+    return configuredPaymentMethods.value.find((item) => item.key === normalized) || null
+  }
+
+  const getPaymentFee = (key, baseAmount) => {
+    const method = getMethodConfig(key)
+    if (!method) return 0
+    return calculatePaymentMethodFee(baseAmount, method)
   }
 
   const applyPaymentMethods = (methods) => {
@@ -145,6 +158,8 @@ export function usePaymentMethods() {
     getMethodLabel,
     isMethodEnabled,
     methodRequiresBank,
+    getMethodConfig,
+    getPaymentFee,
     loadPaymentMethods,
     applyPaymentMethods,
   }
