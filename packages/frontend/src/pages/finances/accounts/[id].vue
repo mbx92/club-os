@@ -122,6 +122,8 @@ const entryTypeClass = (type) => {
   return inflows.includes(type) ? 'text-success' : 'text-error'
 }
 
+const hasMdrFee = (entry) => /fee mdr/i.test(entry?.description || '')
+
 const entryIcon = (type) => {
   const map = {
     opening: IconPlus,
@@ -160,7 +162,10 @@ const loadAll = async () => {
   await Promise.all([
     fetchAccount(accountId),
     loadEntries(),
-    fetchBalance(accountId),
+    fetchBalance(accountId, {
+      startDate: filters.value.startDate,
+      endDate: filters.value.endDate,
+    }),
   ])
 }
 
@@ -177,7 +182,13 @@ const loadEntries = async () => {
 
 const applyFilters = async () => {
   filters.value.page = 1
-  await loadEntries()
+  await Promise.all([
+    loadEntries(),
+    fetchBalance(accountId, {
+      startDate: filters.value.startDate,
+      endDate: filters.value.endDate,
+    }),
+  ])
 }
 
 const submitAdjustment = async () => {
@@ -293,7 +304,7 @@ onMounted(async () => {
     </div>
 
     <!-- Balance Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
       <div class="stat bg-base-100 shadow rounded-box">
         <div class="stat-title flex items-center gap-2">
           Saldo Sekarang
@@ -324,6 +335,11 @@ onMounted(async () => {
         <div class="stat-title">Keluar (periode)</div>
         <div class="stat-value text-2xl text-error">{{ formatCurrency(entrySummary.outflow) }}</div>
         <div class="stat-desc">{{ filters.startDate }} s/d {{ filters.endDate }}</div>
+      </div>
+      <div class="stat bg-base-100 shadow rounded-box">
+        <div class="stat-title">Total MDR Fee</div>
+        <div class="stat-value text-2xl text-warning">{{ formatCurrency(balance?.mdrFeeTotal || 0) }}</div>
+        <div class="stat-desc">Potongan fee (periode)</div>
       </div>
     </div>
 
@@ -409,8 +425,11 @@ onMounted(async () => {
                 </td>
                 <td class="max-w-xs">
                   <div class="truncate text-sm">{{ entry.description || '-' }}</div>
-                  <div v-if="entry.referenceType" class="text-xs text-base-content/40">
-                    {{ entry.referenceType }}
+                  <div class="flex flex-wrap items-center gap-1 mt-0.5">
+                    <span v-if="hasMdrFee(entry)" class="badge badge-xs badge-warning badge-outline">Fee MDR</span>
+                    <span v-if="entry.referenceType" class="text-xs text-base-content/40">
+                      {{ entry.referenceType }}
+                    </span>
                   </div>
                 </td>
                 <td>

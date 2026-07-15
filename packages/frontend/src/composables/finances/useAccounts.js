@@ -120,9 +120,13 @@ export function useAccounts() {
     }
   }
 
-  const fetchBalance = async (id) => {
+  const fetchBalance = async (id, filters = {}) => {
     try {
-      const response = await api.get(`/finance/accounts/${id}/balance`)
+      const params = new URLSearchParams()
+      if (filters.startDate) params.append('startDate', filters.startDate)
+      if (filters.endDate) params.append('endDate', filters.endDate)
+      const qs = params.toString()
+      const response = await api.get(`/finance/accounts/${id}/balance${qs ? `?${qs}` : ''}`)
       balance.value = response.data
       return response
     } catch (error) {

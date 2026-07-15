@@ -61,6 +61,52 @@ async function findMatchingAccount(tenantId, paymentMethod, bankName = null) {
   return null;
 }
 
+// ─── Payment method MDR fee ──────────────────────────────────────────────────
+
+/**
+ * Resolve MDR fee for a payment method from tenant transaction settings.
+ * Fee is deducted from Account credit only (customer still pays gross).
+ *
+ * @param {string} tenantId
+ * @param {string} paymentMethod
+ * @param {number} grossAmount
+ * @returns {Promise<{feeEnable:boolean, feeType:string, feeValue:number, feeAmount:number}>}
+ */
+async function resolvePaymentMethodFee(tenantId, paymentMethod, grossAmount) {
+  const empty = { feeEnable: false, feeType: 'percentage', feeValue: 0, feeAmount: 0 };
+  if (!tenantId || !paymentMethod) return empty;
+
+  const pm = String(paymentMethod).toLowerCase();
+  if (EXCLUDED_PAYMENT_METHODS.has(pm)) return empty;
+
+  const gross = parseFloat(grossAmount) || 0;
+  if (gross <= 0) return empty;
+
+  // Lazy require to avoid circular deps at module load
+  const transactionSettingsService = require('./transactionSettingsService');
+  const methods = await transactionSettingsService.getPaymentMethodsConfiguration(tenantId);
+  const method = (methods || []).find((m) => String(m.key || '').toLowerCase() === pm);
+
+  if (!method || method.feeEnable !== true) return empty;
+
+  const feeType = method.feeType === 'fixed' ? 'fixed' : 'percentage';
+  const feeValue = Number(method.feeValue);
+  const safeFeeValue = Number.isFinite(feeValue) && feeValue > 0 ? feeValue : 0;
+
+  if (safeFeeValue <= 0) {
+    return { feeEnable: true, feeType, feeValue: 0, feeAmount: 0 };
+  }
+
+  let feeAmount = feeType === 'fixed'
+    ? safeFeeValue
+    : Math.round((gross * safeFeeValue) / 100);
+
+  // Fee cannot exceed gross
+  feeAmount = Math.min(Math.max(0, feeAmount), gross);
+
+  return { feeEnable: true, feeType, feeValue: safeFeeValue, feeAmount };
+}
+
 // ─── Entry number sequence ───────────────────────────────────────────────────
 
 async function generateEntryNumber(tenantId, t) {
@@ -294,24 +340,49 @@ async function creditFromPayment(payment, opts, t = null) {
     settlementDate = d.toISOString().slice(0, 10);
   }
 
-  // Net cash: amount already reflects the net value from the transaction layer
-  // (e.g. 80k for a 100k sale with 20k change — handled before this call)
-  const result = await createEntry({
-    accountId: account.id,
-    tenantId,
-    type: settlementDate ? 'settlement' : 'inflow',
-    amount: parseFloat(payment.amount),
-    referenceType: 'TransactionPayment',
-    referenceId: payment.id,
-    description: `Pembayaran ${payment.paymentMethod}${bankName ? ` ${bankName}` : ''} — ${payment.receiptNumber || payment.id}`,
-    entryDate: today,
-    settlementDate,
-    performedBy,
-    timezone,
-  }, t);
+  // Gross = payment amount (customer paid). Net = gross − MDR fee from transaction settings.
+  const gross = parseFloat(payment.amount) || 0;
+  const fee = await resolvePaymentMethodFee(tenantId, payment.paymentMethod, gross);
+  const net = Math.max(0, gross - (fee.feeAmount || 0));
 
-  // Link payment → account
-  await payment.update({ accountId: account.id }, { transaction: t });
+  const existingDetails = (payment.paymentDetails && typeof payment.paymentDetails === 'object')
+    ? { ...payment.paymentDetails }
+    : {};
+  const paymentDetails = {
+    ...existingDetails,
+    feeEnable: fee.feeEnable,
+    feeType: fee.feeType,
+    feeValue: fee.feeValue,
+    feeAmount: fee.feeAmount,
+    grossAmount: gross,
+    netAmount: net,
+  };
+
+  let result = null;
+  if (net > 0) {
+    const feeNote = fee.feeAmount > 0
+      ? ` (gross ${gross}, fee MDR ${fee.feeAmount})`
+      : '';
+    result = await createEntry({
+      accountId: account.id,
+      tenantId,
+      type: settlementDate ? 'settlement' : 'inflow',
+      amount: net,
+      referenceType: 'TransactionPayment',
+      referenceId: payment.id,
+      description: `Pembayaran ${payment.paymentMethod}${bankName ? ` ${bankName}` : ''} — ${payment.receiptNumber || payment.id}${feeNote}`,
+      entryDate: today,
+      settlementDate,
+      performedBy,
+      timezone,
+    }, t);
+  }
+
+  // Link payment → account + persist MDR fee metadata
+  await payment.update({
+    accountId: account.id,
+    paymentDetails,
+  }, { transaction: t });
 
   return result;
 }
@@ -368,6 +439,9 @@ async function reversePaymentCredit(payment, opts, t = null) {
       const amount = parseFloat(entry.amount || 0);
       if (amount <= 0) continue;
 
+      const feeAmount = parseFloat(payment.paymentDetails?.feeAmount || 0);
+      const feeNote = feeAmount > 0 ? ` (net, fee MDR ${feeAmount})` : '';
+
       const reversed = await createEntry({
         accountId: entry.accountId,
         tenantId,
@@ -375,7 +449,7 @@ async function reversePaymentCredit(payment, opts, t = null) {
         amount,
         referenceType: 'TransactionPayment',
         referenceId: payment.id,
-        description: `Batal/refund pembayaran${reason ? `: ${reason}` : ''} — ${payment.receiptNumber || payment.id}`,
+        description: `Batal/refund pembayaran${reason ? `: ${reason}` : ''} — ${payment.receiptNumber || payment.id}${feeNote}`,
         entryDate: today,
         performedBy,
         timezone,
@@ -743,5 +817,6 @@ module.exports = {
   processAllPendingSettlements,
   recalculateBalance,
   transferBetweenAccounts,
+  resolvePaymentMethodFee,
   EXCLUDED_PAYMENT_METHODS,
 };

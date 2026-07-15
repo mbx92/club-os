@@ -286,7 +286,8 @@ async function getAccountEntries(req, res, next) {
 
 /**
  * GET /finance/accounts/:id/balance
- * Returns current balance + pending settlement total.
+ * Returns current balance + pending settlement total + MDR fee total for period.
+ * Query: startDate?, endDate? (YYYY-MM-DD) — filters MDR fee sum
  */
 async function getAccountBalance(req, res, next) {
   try {
@@ -299,6 +300,39 @@ async function getAccountBalance(req, res, next) {
       where: { accountId: account.id, status: 'pending_settlement' },
     }) || 0;
 
+    // MDR fee total for period (from TransactionPayment.paymentDetails linked via entries)
+    const { startDate, endDate } = req.query;
+    const entryWhere = {
+      accountId: account.id,
+      referenceType: 'TransactionPayment',
+      type: { [Op.in]: ['inflow', 'settlement'] },
+    };
+    if (startDate) entryWhere.entryDate = { ...entryWhere.entryDate, [Op.gte]: startDate };
+    if (endDate) entryWhere.entryDate = { ...entryWhere.entryDate, [Op.lte]: endDate };
+
+    const paymentEntries = await AccountEntry.findAll({
+      where: entryWhere,
+      attributes: ['referenceId'],
+      raw: true,
+    });
+    const paymentIds = [...new Set(
+      paymentEntries.map((e) => e.referenceId).filter(Boolean)
+    )];
+
+    let mdrFeeTotal = 0;
+    if (paymentIds.length > 0) {
+      const { TransactionPayment } = require('../../models');
+      const payments = await TransactionPayment.findAll({
+        where: { id: { [Op.in]: paymentIds } },
+        attributes: ['paymentDetails'],
+        raw: true,
+      });
+      mdrFeeTotal = payments.reduce((sum, p) => {
+        const fee = parseFloat(p.paymentDetails?.feeAmount || 0);
+        return sum + (Number.isFinite(fee) ? fee : 0);
+      }, 0);
+    }
+
     return res.json({
       success: true,
       data: {
@@ -307,6 +341,7 @@ async function getAccountBalance(req, res, next) {
         balance: parseFloat(account.balance),
         pendingSettlement: parseFloat(pending),
         projectedBalance: parseFloat(account.balance) + parseFloat(pending),
+        mdrFeeTotal: parseFloat(mdrFeeTotal.toFixed(2)),
         currency: account.currency,
       },
     });
