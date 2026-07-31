@@ -1,5 +1,19 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import {
+  getTenantTimezone,
+  todayInTz,
+  addDays,
+  firstDayOfMonth,
+  lastDayOfMonth,
+  firstDayOfPrevMonth,
+  lastDayOfPrevMonth,
+  dayOfWeekInTz,
+} from '@/utils/tenantDate'
+
+const authStore = useAuthStore()
+const tenantTz = computed(() => getTenantTimezone(authStore))
 
 const props = defineProps({
   modelValue: {
@@ -54,57 +68,48 @@ watch([startDate, endDate], ([newStart, newEnd]) => {
 
 // Preset options
 const setToday = () => {
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayInTz(tenantTz.value)
   startDate.value = today
   endDate.value = today
 }
 
 const setYesterday = () => {
-  const yesterday = new Date()
-  yesterday.setDate(yesterday.getDate() - 1)
-  const dateStr = yesterday.toISOString().split('T')[0]
+  const today = todayInTz(tenantTz.value)
+  const dateStr = addDays(today, -1)
   startDate.value = dateStr
   endDate.value = dateStr
 }
 
 const setThisWeek = () => {
-  const today = new Date()
-  const firstDay = new Date(today.setDate(today.getDate() - today.getDay()))
-  const lastDay = new Date(today.setDate(today.getDate() - today.getDay() + 6))
-  startDate.value = firstDay.toISOString().split('T')[0]
-  endDate.value = lastDay.toISOString().split('T')[0]
+  const today = todayInTz(tenantTz.value)
+  const weekStart = addDays(today, -dayOfWeekInTz(today, tenantTz.value))
+  const weekEnd = addDays(weekStart, 6)
+  startDate.value = weekStart
+  endDate.value = weekEnd
 }
 
 const setThisMonth = () => {
-  const today = new Date()
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
-  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-  startDate.value = firstDay.toISOString().split('T')[0]
-  endDate.value = lastDay.toISOString().split('T')[0]
+  const today = todayInTz(tenantTz.value)
+  startDate.value = firstDayOfMonth(today)
+  endDate.value = lastDayOfMonth(today)
 }
 
 const setLastMonth = () => {
-  const today = new Date()
-  const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-  const lastDay = new Date(today.getFullYear(), today.getMonth(), 0)
-  startDate.value = firstDay.toISOString().split('T')[0]
-  endDate.value = lastDay.toISOString().split('T')[0]
+  const today = todayInTz(tenantTz.value)
+  startDate.value = firstDayOfPrevMonth(today)
+  endDate.value = lastDayOfPrevMonth(today)
 }
 
 const setLast7Days = () => {
-  const today = new Date()
-  const last7 = new Date()
-  last7.setDate(today.getDate() - 7)
-  startDate.value = last7.toISOString().split('T')[0]
-  endDate.value = today.toISOString().split('T')[0]
+  const today = todayInTz(tenantTz.value)
+  startDate.value = addDays(today, -6)
+  endDate.value = today
 }
 
 const setLast30Days = () => {
-  const today = new Date()
-  const last30 = new Date()
-  last30.setDate(today.getDate() - 30)
-  startDate.value = last30.toISOString().split('T')[0]
-  endDate.value = today.toISOString().split('T')[0]
+  const today = todayInTz(tenantTz.value)
+  startDate.value = addDays(today, -29)
+  endDate.value = today
 }
 
 const clearDates = () => {

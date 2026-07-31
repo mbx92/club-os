@@ -1,6 +1,8 @@
 const { Member, Transaction, TransactionItem, TransactionPayment } = require('../../models');
 const logger = require('../../utils/logger');
 const { Op } = require('sequelize');
+const { getTenantTimezone } = require('../../utils/tenantTimezone');
+const { mergeDateRangeInto } = require('../../utils/dateRange');
 
 /**
  * Get member's transaction history
@@ -47,15 +49,7 @@ async function getTransactionHistory(req, res, next) {
       whereClause.type = type;
     }
 
-    if (startDate || endDate) {
-      whereClause.transactionDate = {};
-      if (startDate) {
-        whereClause.transactionDate[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      }
-      if (endDate) {
-        whereClause.transactionDate[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
-      }
-    }
+    mergeDateRangeInto(whereClause, 'transactionDate', startDate, endDate, Op, getTenantTimezone(req));
 
     // Get transactions with pagination
     const { count, rows: transactions } = await Transaction.findAndCountAll({

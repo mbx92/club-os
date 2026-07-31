@@ -28,7 +28,7 @@ const DEFAULT_PAYMENT_METHOD_FEE = {
 
 const PAYMENT_METHOD_CATALOG = [
   { key: 'cash', label: 'Tunai', enabled: true, requiresBank: false, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
-  { key: 'credit_card', label: 'Kartu', enabled: true, requiresBank: true, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'credit_card', label: 'Kartu Kredit', enabled: true, requiresBank: true, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
   { key: 'debit_card', label: 'Kartu Debit', enabled: true, requiresBank: true, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
   { key: 'bank_transfer', label: 'Transfer Bank', enabled: true, requiresBank: true, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
   { key: 'qris', label: 'QRIS', enabled: true, requiresBank: false, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },

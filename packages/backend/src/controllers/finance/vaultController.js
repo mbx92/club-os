@@ -29,7 +29,7 @@ const { getClientIp, getUserAgent } = require('../../utils/requestHelper');
 const { buildInclusiveDateRange } = require('../../utils/dateRange');
 const { generateUniqueSequence, withRetry } = require('../../utils/concurrency');
 const accountService = require('../../services/accountService');
-const { getTenantTimezone } = require('../../utils/tenantTimezone');
+const { getTenantTimezone, todayInTz } = require('../../utils/tenantTimezone');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -279,11 +279,15 @@ async function getSummary(req, res, next) {
     const { tenantId, isSuperAdmin } = req.user;
     const { startDate, endDate, locationId } = req.query;
 
+    const tz = getTenantTimezone(req);
+    const today = todayInTz(tz);
+
     const dateFilter = {};
     if (startDate || endDate) {
       const { start, end } = buildInclusiveDateRange(
-        startDate || new Date().toISOString().split('T')[0],
-        endDate || new Date().toISOString().split('T')[0]
+        startDate || today,
+        endDate || today,
+        tz
       );
       dateFilter.mutationDate = { [Op.between]: [start, end] };
     }
@@ -812,10 +816,14 @@ async function getMutations(req, res, next) {
     if (destinationVaultAccountId) where.destinationVaultAccountId = destinationVaultAccountId;
     if (status) where.status = status;
 
+    const tz = getTenantTimezone(req);
+    const today = todayInTz(tz);
+
     if (startDate || endDate) {
       const { start, end } = buildInclusiveDateRange(
-        startDate || new Date().toISOString().split('T')[0],
-        endDate || new Date().toISOString().split('T')[0]
+        startDate || today,
+        endDate || today,
+        tz
       );
       where.mutationDate = { [Op.between]: [start, end] };
     }

@@ -4,6 +4,8 @@ const { createError } = require('../../../utils/errorCodes');
 const logger = require('../../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../../utils/requestHelper');
 const { withRetry } = require('../../../utils/concurrency');
+const { getTenantTimezone, todayInTz, startOfDayInTz, firstDayOfMonth, addDays } = require('../../../utils/tenantTimezone');
+const { mergeDateRangeInto } = require('../../../utils/dateRange');
 
 /**
  * Create check-in
@@ -284,16 +286,7 @@ async function getCheckIns(req, res, next) {
       where.memberId = memberId;
     }
 
-    // Filter by date range
-    if (startDate || endDate) {
-      where.checkInTime = {};
-      if (startDate) {
-        where.checkInTime[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      }
-      if (endDate) {
-        where.checkInTime[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
-      }
-    }
+    mergeDateRangeInto(where, 'checkInTime', startDate, endDate, Op, getTenantTimezone(req));
 
     const include = [
       {
@@ -563,21 +556,18 @@ async function getCheckInStats(req, res, next) {
       where.memberId = memberId;
     }
 
-    if (startDate || endDate) {
-      where.checkInTime = {};
-      if (startDate) {
-        where.checkInTime[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      }
-      if (endDate) {
-        where.checkInTime[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
-      }
-    }
+    mergeDateRangeInto(where, 'checkInTime', startDate, endDate, Op, getTenantTimezone(req));
 
     const totalCheckIns = await CheckIn.count({ where });
 
-    // Today's check-ins
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    const tz = getTenantTimezone(req);
+    const todayStr = todayInTz(tz);
+    const todayStart = startOfDayInTz(todayStr, tz);
+
+    const nowInTz = new Date(new Date().toLocaleString('en-US', { timeZone: tz }));
+    const weekStart = startOfDayInTz(addDays(todayStr, -nowInTz.getDay()), tz);
+    const monthStart = startOfDayInTz(firstDayOfMonth(todayStr), tz);
+
     const todayCheckIns = await CheckIn.count({
       where: {
         ...where,
@@ -585,10 +575,6 @@ async function getCheckInStats(req, res, next) {
       }
     });
 
-    // This week's check-ins
-    const weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-    weekStart.setHours(0, 0, 0, 0);
     const weekCheckIns = await CheckIn.count({
       where: {
         ...where,
@@ -596,10 +582,6 @@ async function getCheckInStats(req, res, next) {
       }
     });
 
-    // This month's check-ins
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
     const monthCheckIns = await CheckIn.count({
       where: {
         ...where,

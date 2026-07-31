@@ -1,6 +1,7 @@
 const logService = require('../../../services/logService');
 const logger = require('../../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../../utils/requestHelper');
+const { getTenantTimezone } = require('../../../utils/tenantTimezone');
 
 /**
  * Get all logs with pagination and filters
@@ -30,7 +31,8 @@ async function getLogs(req, res, next) {
       search,
       startDate,
       endDate,
-      isSuperAdmin
+      isSuperAdmin,
+      timezone: getTenantTimezone(req),
     };
 
     const pagination = { page, limit, sortBy, sortOrder };
@@ -92,7 +94,7 @@ async function getLogStats(req, res, next) {
     const stats = await logService.getLogStats(
       isSuperAdmin && filterTenantId ? filterTenantId : tenantId,
       isSuperAdmin,
-      { startDate, endDate }
+      { startDate, endDate, timezone: getTenantTimezone(req) }
     );
 
     return res.json({ data: stats });
@@ -258,7 +260,8 @@ async function exportLogs(req, res, next) {
       search,
       startDate,
       endDate,
-      isSuperAdmin
+      isSuperAdmin,
+      timezone: getTenantTimezone(req),
     };
 
     const logs = await logService.exportLogs(filters);

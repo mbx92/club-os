@@ -19,6 +19,22 @@ const Product = require('../models/product')(sequelize, require('sequelize').Dat
 const { Op } = require('sequelize');
 const { createError } = require('../../../utils/errorCodes');
 const { REVENUE_RECOGNIZED_TRANSACTION_STATUSES } = require('../../../utils/reportingStatus');
+const { getTenantTimezone, todayInTz, startOfDayInTz, endOfDayInTz, addDays, firstDayOfMonth, firstDayOfPrevMonth, lastDayOfPrevMonth } = require('../../../utils/tenantTimezone');
+
+function getDateAnchors(req) {
+  const tz = getTenantTimezone(req);
+  const todayStr = todayInTz(tz);
+  return {
+    tz,
+    todayStr,
+    today: startOfDayInTz(todayStr, tz),
+    tomorrow: startOfDayInTz(addDays(todayStr, 1), tz),
+    yesterday: startOfDayInTz(addDays(todayStr, -1), tz),
+    thisMonthStart: startOfDayInTz(firstDayOfMonth(todayStr), tz),
+    lastMonthStart: startOfDayInTz(firstDayOfPrevMonth(todayStr), tz),
+    lastMonthEnd: endOfDayInTz(lastDayOfPrevMonth(todayStr), tz),
+  };
+}
 
 /**
  * Get dashboard overview
@@ -37,15 +53,7 @@ const getDashboardOverview = async (req, res, next) => {
       where.locationId = locationId;
     }
 
-    // Get today's date range
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    // Get yesterday's date range for comparison
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    const { today, tomorrow, yesterday } = getDateAnchors(req);
 
     // 1. TODAY'S SALES
     const todayWhere = {
@@ -185,12 +193,9 @@ const getSalesTrend = async (req, res, next) => {
       where.locationId = locationId;
     }
 
-    // Get date range
-    const endDate = new Date();
-    endDate.setHours(23, 59, 59, 999);
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(days));
-    startDate.setHours(0, 0, 0, 0);
+    const { tz, todayStr } = getDateAnchors(req);
+    const endDate = endOfDayInTz(todayStr, tz);
+    const startDate = startOfDayInTz(addDays(todayStr, -parseInt(days)), tz);
 
     where.createdAt = {
       [Op.between]: [startDate, endDate]
@@ -251,11 +256,7 @@ const getTopProductsToday = async (req, res, next) => {
       where.locationId = locationId;
     }
 
-    // Get today's date range
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const { today, tomorrow } = getDateAnchors(req);
 
     where.createdAt = {
       [Op.gte]: today,
@@ -387,17 +388,9 @@ const getRestaurantOverview = async (req, res, next) => {
       where.locationId = locationId;
     }
 
-    // Date ranges
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59, 999);
+    const {
+      today, tomorrow, yesterday, thisMonthStart, lastMonthStart, lastMonthEnd
+    } = getDateAnchors(req);
 
     // === TODAY'S REVENUE ===
     const todayTransactions = await Transaction.findAll({

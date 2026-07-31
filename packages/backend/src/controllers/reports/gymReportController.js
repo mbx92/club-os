@@ -6,6 +6,8 @@ const { Member, CheckIn, ActiveService, ServicePlan, sequelize } = require('../.
 const { Op, fn, col, literal } = require('sequelize');
 const { generateForecast } = require('../../utils/forecasting');
 const logger = require('../../utils/logger');
+const { getTenantTimezone } = require('../../utils/tenantTimezone');
+const { mergeDateRangeInto } = require('../../utils/dateRange');
 
 /**
  * GET /reports/gym/overview
@@ -114,8 +116,7 @@ async function getCheckInTrends(req, res, next) {
     const where = {};
     if (!isSuperAdmin) where.tenantId = tenantId;
 
-    if (startDate) where.checkInTime = { ...(where.checkInTime || {}), [Op.gte]: new Date(`${startDate}T00:00:00.000Z`) };
-    if (endDate) where.checkInTime = { ...(where.checkInTime || {}), [Op.lte]: new Date(`${endDate}T23:59:59.999Z`) };
+    mergeDateRangeInto(where, 'checkInTime', startDate, endDate, Op, getTenantTimezone(req));
 
     const dateTruncMap = { daily: 'day', weekly: 'week', monthly: 'month' };
     const trunc = dateTruncMap[groupBy] || 'day';

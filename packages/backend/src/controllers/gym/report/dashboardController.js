@@ -33,6 +33,22 @@ const {
   COMPLETED_PAYMENT_STATUS,
   shouldIncludeCashierTransaction,
 } = require('../../../utils/reportingStatus');
+const { getTenantTimezone, todayInTz, startOfDayInTz, endOfDayInTz, addDays, firstDayOfMonth, firstDayOfPrevMonth, lastDayOfPrevMonth } = require('../../../utils/tenantTimezone');
+
+function getDateAnchors(req) {
+  const tz = getTenantTimezone(req);
+  const todayStr = todayInTz(tz);
+  return {
+    tz,
+    todayStr,
+    today: startOfDayInTz(todayStr, tz),
+    tomorrow: startOfDayInTz(addDays(todayStr, 1), tz),
+    yesterday: startOfDayInTz(addDays(todayStr, -1), tz),
+    thisMonthStart: startOfDayInTz(firstDayOfMonth(todayStr), tz),
+    lastMonthStart: startOfDayInTz(firstDayOfPrevMonth(todayStr), tz),
+    lastMonthEnd: endOfDayInTz(lastDayOfPrevMonth(todayStr), tz),
+  };
+}
 
 /**
  * Get main dashboard overview for gym operations
@@ -52,18 +68,9 @@ async function getDashboardOverview(req, res, next) {
       where.locationId = locationId;
     }
 
-    // Date ranges
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59, 999);
+    const {
+      today, tomorrow, yesterday, thisMonthStart, lastMonthStart, lastMonthEnd
+    } = getDateAnchors(req);
 
     // 1. TODAY'S REVENUE
     const todayTransactions = await Transaction.findAll({
@@ -318,10 +325,7 @@ async function getDashboardStats(req, res, next) {
       }
     });
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const { today, tomorrow } = getDateAnchors(req);
 
     const todayCheckIns = await CheckIn.count({
       where: {
@@ -386,18 +390,9 @@ async function getGymComprehensive(req, res, next) {
       where.locationId = locationId;
     }
 
-    // Date ranges
-    const now = new Date();
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59, 999);
+    const {
+      today, tomorrow, yesterday, thisMonthStart, lastMonthStart, lastMonthEnd
+    } = getDateAnchors(req);
 
     // ======================
     // 1. REVENUE SECTION

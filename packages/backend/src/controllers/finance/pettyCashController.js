@@ -13,6 +13,8 @@ const { PettyCash, PettyCashTransaction, Expense, ExpenseCategory, User, Locatio
 const { Op, Transaction: SequelizeTransaction } = require('sequelize');
 const logger = require('../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../utils/requestHelper');
+const { getTenantTimezone } = require('../../utils/tenantTimezone');
+const { mergeDateRangeInto } = require('../../utils/dateRange');
 const { generateUniqueSequence, withRetry } = require('../../utils/concurrency');
 
 // ==========================================
@@ -1288,11 +1290,7 @@ async function getPettyCashTransactions(req, res, next) {
       where.fundSource = fundSource;
     }
 
-    if (startDate || endDate) {
-      where.transactionDate = {};
-      if (startDate) where.transactionDate[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      if (endDate) where.transactionDate[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
-    }
+    mergeDateRangeInto(where, 'transactionDate', startDate, endDate, Op, getTenantTimezone(req));
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const validSortFields = ['transactionDate', 'amount', 'type', 'createdAt'];

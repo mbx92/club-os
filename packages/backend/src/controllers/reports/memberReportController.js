@@ -6,6 +6,8 @@ const { Member, ActiveService, ServicePlan, CheckIn, sequelize } = require('../.
 const { Op, fn, col, literal } = require('sequelize');
 const { generateForecast } = require('../../utils/forecasting');
 const logger = require('../../utils/logger');
+const { getTenantTimezone, todayInTz, startOfDayInTz, endOfDayInTz, addDays } = require('../../utils/tenantTimezone');
+const { mergeDateRangeInto } = require('../../utils/dateRange');
 
 /**
  * GET /reports/members/active
@@ -104,8 +106,7 @@ async function getMemberGrowthReport(req, res, next) {
 
     const where = {};
     if (!isSuperAdmin) where.tenantId = tenantId;
-    if (startDate) where.joinDate = { ...(where.joinDate || {}), [Op.gte]: new Date(`${startDate}T00:00:00.000Z`) };
-    if (endDate) where.joinDate = { ...(where.joinDate || {}), [Op.lte]: new Date(`${endDate}T23:59:59.999Z`) };
+    mergeDateRangeInto(where, 'joinDate', startDate, endDate, Op, getTenantTimezone(req));
 
     const dateTruncMap = { daily: 'day', weekly: 'week', monthly: 'month', yearly: 'year' };
     const trunc = dateTruncMap[groupBy] || 'month';
@@ -173,14 +174,23 @@ async function getMemberRetentionReport(req, res, next) {
     if (!isSuperAdmin) where.tenantId = tenantId;
 
     // Monthly cohort analysis - members who joined each month and how many are still active
+    const tz = getTenantTimezone(req);
+    const todayStr = todayInTz(tz);
+
     const monthsBack = parseInt(months);
     const cohorts = [];
 
     for (let i = monthsBack; i >= 0; i--) {
-      const start = new Date();
-      start.setMonth(start.getMonth() - i, 1);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(start.getFullYear(), start.getMonth() + 1, 0, 23, 59, 59);
+      const monthStr = todayStr.slice(0, 7);
+      const [year, month] = monthStr.split('-').map(Number);
+      const cohortMonth = new Date(Date.UTC(year, month - 1 - i, 1));
+      const cohortYear = cohortMonth.getUTCFullYear();
+      const cohortMon = cohortMonth.getUTCMonth() + 1;
+      const startStr = `${cohortYear}-${String(cohortMon).padStart(2, '0')}-01`;
+      const lastDay = new Date(Date.UTC(cohortYear, cohortMon, 0)).getUTCDate();
+      const endStr = `${cohortYear}-${String(cohortMon).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      const start = startOfDayInTz(startStr, tz);
+      const end = endOfDayInTz(endStr, tz);
 
       const joined = await Member.count({
         where: {
@@ -198,7 +208,7 @@ async function getMemberRetentionReport(req, res, next) {
       });
 
       cohorts.push({
-        period: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`,
+        period: `${cohortYear}-${String(cohortMon).padStart(2, '0')}`,
         joined,
         stillActive,
         churned: joined - stillActive,
@@ -207,8 +217,7 @@ async function getMemberRetentionReport(req, res, next) {
     }
 
     // Check-in frequency analysis (how often active members check in)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgo = startOfDayInTz(addDays(todayStr, -30), tz);
 
     const checkInFrequency = await CheckIn.findAll({
       where: {

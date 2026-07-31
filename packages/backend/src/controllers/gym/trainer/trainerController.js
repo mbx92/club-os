@@ -3,6 +3,8 @@ const { Op } = require('sequelize');
 const logger = require('../../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../../utils/requestHelper');
 const { createError } = require('../../../utils/errorCodes');
+const { getTenantTimezone } = require('../../../utils/tenantTimezone');
+const { mergeDateRangeInto } = require('../../../utils/dateRange');
 
 /**
  * Helper: Generate password (default atau random)
@@ -847,11 +849,7 @@ async function getTrainerCommissions(req, res, next) {
       commissionWhere.status = status;
     }
 
-    if (startDate || endDate) {
-      commissionWhere.createdAt = {};
-      if (startDate) commissionWhere.createdAt[Op.gte] = new Date(startDate);
-      if (endDate) commissionWhere.createdAt[Op.lte] = new Date(endDate);
-    }
+    mergeDateRangeInto(commissionWhere, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     const { count, rows } = await TrainerCommission.findAndCountAll({
       where: commissionWhere,

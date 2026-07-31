@@ -17,6 +17,8 @@ const HikvisionService = require('../../../services/hikvisionService');
 const HikvisionEventProcessor = require('../../../services/hikvisionEventProcessor');
 const { createError } = require('../../../utils/errorCodes');
 const logger = require('../../../utils/logger');
+const { getTenantTimezone, startOfDayInTz, endOfDayInTz, todayInTz } = require('../../../utils/tenantTimezone');
+const { mergeDateRangeInto } = require('../../../utils/dateRange');
 
 // ==========================================
 // Internal utility: tulis sync log ke DB
@@ -365,17 +367,17 @@ async function manualSync(req, res, next) {
     const _manualSyncStart = Date.now();
 
     // Support query params for custom time range
+    const tz = getTenantTimezone(req);
     const { startDate, fullDay } = req.query;
     const endTime = new Date();
     let startTime;
 
     if (startDate) {
-      // Manual date override: pull from specific date
-      startTime = new Date(startDate);
+      startTime = /^\d{4}-\d{2}-\d{2}$/.test(String(startDate))
+        ? startOfDayInTz(startDate, tz)
+        : new Date(startDate);
     } else if (fullDay === 'true') {
-      // Pull full current day (from midnight local time)
-      const now = new Date();
-      startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      startTime = startOfDayInTz(todayInTz(tz), tz);
     } else {
       // Default: from last sync, or last 24 hours if never synced
       startTime = device.lastSyncAt || new Date(endTime.getTime() - 24 * 60 * 60 * 1000);
@@ -707,8 +709,7 @@ async function reprocessUnmatchedLogs(req, res, next) {
     };
     if (!isSuperAdmin) where.tenantId = tenantId;
 
-    if (startDate) where.eventTime = { ...(where.eventTime || {}), [Op.gte]: new Date(startDate) };
-    if (endDate) where.eventTime = { ...(where.eventTime || {}), [Op.lte]: new Date(endDate) };
+    mergeDateRangeInto(where, 'eventTime', startDate, endDate, Op, getTenantTimezone(req));
 
     // Find all unmatched logs
     const unmatchedLogs = await DeviceAttendanceLog.findAll({
@@ -1441,11 +1442,7 @@ async function getDeviceLogs(req, res, next) {
     const where = { deviceId: id };
     if (!isSuperAdmin) where.tenantId = tenantId;
 
-    if (startDate || endDate) {
-      where.eventTime = {};
-      if (startDate) where.eventTime[Op.gte] = new Date(startDate);
-      if (endDate) where.eventTime[Op.lte] = new Date(endDate);
-    }
+    mergeDateRangeInto(where, 'eventTime', startDate, endDate, Op, getTenantTimezone(req));
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
@@ -1955,11 +1952,7 @@ async function getSyncLogs(req, res, next) {
     if (syncType) where.syncType = syncType;
     if (trigger) where.trigger = trigger;
     if (status) where.status = status;
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) where.createdAt[Op.gte] = new Date(startDate);
-      if (endDate) where.createdAt[Op.lte] = new Date(endDate);
-    }
+    mergeDateRangeInto(where, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     const { count, rows } = await DeviceSyncLog.findAndCountAll({
       where,
@@ -2229,11 +2222,10 @@ async function getDeviceStatus(req, res, next) {
     const device = await HikvisionDevice.findOne({ where });
     if (!device) throw createError('NOT_FOUND', 'Device not found');
 
-    const tenantTimezone = req.user?.tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
-    const now = new Date();
-    const todayLocal = now.toLocaleDateString('en-CA', { timeZone: tenantTimezone });
-    const todayStart = new Date(`${todayLocal}T00:00:00`);
-    const weekStart  = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const tz = getTenantTimezone(req);
+    const todayStr = todayInTz(tz);
+    const todayStart = startOfDayInTz(todayStr, tz);
+    const weekStart  = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
     // ── 1. Connectivity + hardware info (live call to device) ──────────
     let connectivity = { online: false, error: null };

@@ -6,6 +6,8 @@ const { TrainerCommission, Trainer, Transaction, sequelize } = require('../../mo
 const { Op, fn, col, literal } = require('sequelize');
 const { generateForecast } = require('../../utils/forecasting');
 const logger = require('../../utils/logger');
+const { getTenantTimezone } = require('../../utils/tenantTimezone');
+const { mergeDateRangeInto } = require('../../utils/dateRange');
 
 /**
  * GET /reports/commissions/summary
@@ -19,11 +21,7 @@ async function getCommissionSummary(req, res, next) {
     const where = {};
     if (!isSuperAdmin) where.tenantId = tenantId;
     if (status) where.status = status;
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) where.createdAt[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      if (endDate) where.createdAt[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
-    }
+    mergeDateRangeInto(where, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     // By trainer
     const byTrainer = await TrainerCommission.findAll({
@@ -97,11 +95,7 @@ async function getCommissionTrends(req, res, next) {
 
     const where = {};
     if (!isSuperAdmin) where.tenantId = tenantId;
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) where.createdAt[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      if (endDate) where.createdAt[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
-    }
+    mergeDateRangeInto(where, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     const dateTruncMap = { daily: 'day', weekly: 'week', monthly: 'month' };
     const trunc = dateTruncMap[groupBy] || 'month';
@@ -147,11 +141,7 @@ async function getTrainerCommissionDetail(req, res, next) {
     const where = { trainerId };
     if (!isSuperAdmin) where.tenantId = tenantId;
     if (status) where.status = status;
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) where.createdAt[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      if (endDate) where.createdAt[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
-    }
+    mergeDateRangeInto(where, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);

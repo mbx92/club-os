@@ -21,6 +21,7 @@ const receiptPrinterService = require('../../../services/receiptPrinterService')
 const { recordPaymentInflow, reversePaymentInflows } = require('../../../controllers/finance/vaultController');
 const accountService = require('../../../services/accountService');
 const { getTenantTimezone } = require('../../../utils/tenantTimezone');
+const { buildDateFieldFilter } = require('../../../utils/dateRange');
 const logger = require('../../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../../utils/requestHelper');
 const { createError } = require('../../../utils/errorCodes');
@@ -620,18 +621,9 @@ exports.getAllTransactions = async (req, res) => {
       }
     }
     
-    if (startDate && endDate) {
-      whereClause.transactionDate = {
-        [Op.between]: [new Date(`${startDate}T00:00:00.000Z`), new Date(`${endDate}T23:59:59.999Z`)]
-      };
-    } else if (startDate) {
-      whereClause.transactionDate = {
-        [Op.gte]: new Date(`${startDate}T00:00:00.000Z`)
-      };
-    } else if (endDate) {
-      whereClause.transactionDate = {
-        [Op.lte]: new Date(`${endDate}T23:59:59.999Z`)
-      };
+    const txDateFilter = buildDateFieldFilter(startDate, endDate, Op, getTenantTimezone(req));
+    if (txDateFilter) {
+      whereClause.transactionDate = txDateFilter;
     }
 
     // Validate and sanitize sortBy to prevent SQL injection
@@ -1068,21 +1060,8 @@ exports.getTransactionStatistics = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { startDate, endDate } = req.query;
     
-    // Build date filter
-    const dateFilter = {};
-    if (startDate && endDate) {
-      dateFilter.transactionDate = {
-        [Op.between]: [new Date(`${startDate}T00:00:00.000Z`), new Date(`${endDate}T23:59:59.999Z`)]
-      };
-    } else if (startDate) {
-      dateFilter.transactionDate = {
-        [Op.gte]: new Date(`${startDate}T00:00:00.000Z`)
-      };
-    } else if (endDate) {
-      dateFilter.transactionDate = {
-        [Op.lte]: new Date(`${endDate}T23:59:59.999Z`)
-      };
-    }
+    const txDateFilter = buildDateFieldFilter(startDate, endDate, Op, getTenantTimezone(req));
+    const dateFilter = txDateFilter ? { transactionDate: txDateFilter } : {};
     
     // Get transaction statistics
     const transactions = await Transaction.findAll({

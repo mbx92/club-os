@@ -11,7 +11,7 @@ export const PAYMENT_METHODS = {
 
 export const ID_LABELS = {
   cash: 'Tunai',
-  credit_card: 'Kartu',
+  credit_card: 'Kartu Kredit',
   debit_card: 'Kartu Debit',
   bank_transfer: 'Transfer Bank',
   qris: 'QRIS',
@@ -29,7 +29,7 @@ export const ID_LABELS = {
 
 export const EN_LABELS = {
   cash: 'Cash',
-  credit_card: 'Card',
+  credit_card: 'Credit Card',
   debit_card: 'Debit Card',
   bank_transfer: 'Bank Transfer',
   qris: 'QRIS',
@@ -121,7 +121,7 @@ export const DEFAULT_PAYMENT_METHOD_FEE = {
 /** Master catalog — system-defined payment methods */
 export const DEFAULT_PAYMENT_METHOD_CATALOG = [
   { key: 'cash', label: 'Tunai', enabled: true, requiresBank: false, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
-  { key: 'credit_card', label: 'Kartu', enabled: true, requiresBank: true, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
+  { key: 'credit_card', label: 'Kartu Kredit', enabled: true, requiresBank: true, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
   { key: 'debit_card', label: 'Kartu Debit', enabled: true, requiresBank: true, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
   { key: 'bank_transfer', label: 'Transfer Bank', enabled: true, requiresBank: true, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },
   { key: 'qris', label: 'QRIS', enabled: true, requiresBank: false, isSystem: true, ...DEFAULT_PAYMENT_METHOD_FEE },

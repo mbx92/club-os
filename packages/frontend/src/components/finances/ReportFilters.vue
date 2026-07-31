@@ -83,6 +83,12 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { getTenantTimezone, todayInTz, firstDayOfMonth } from '@/utils/tenantDate'
+
+const authStore = useAuthStore()
+const tz = getTenantTimezone(authStore)
+const today = todayInTz(tz)
 
 const props = defineProps({
   title: {
@@ -114,8 +120,8 @@ const props = defineProps({
 const emit = defineEmits(['generate'])
 
 const filters = ref({
-  startDate: new Date(new Date().setDate(1)).toISOString().split('T')[0], // First day of current month
-  endDate: new Date().toISOString().split('T')[0], // Today
+  startDate: firstDayOfMonth(today),
+  endDate: today,
   groupBy: 'month',
   locationId: '',
   categoryId: ''

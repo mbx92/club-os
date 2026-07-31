@@ -14,6 +14,7 @@ const logger = require('../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../utils/requestHelper');
 const { generateUniqueSequence } = require('../../utils/concurrency');
 const { buildOptionalDateRangeFilter } = require('../../utils/dateRange');
+const { getTenantTimezone } = require('../../utils/tenantTimezone');
 
 /**
  * Create new income (manual entry)
@@ -177,7 +178,7 @@ async function getAllIncomes(req, res, next) {
       where.locationId = locationId;
     }
 
-    const incomeDateRange = buildOptionalDateRangeFilter(startDate, endDate, Op);
+    const incomeDateRange = buildOptionalDateRangeFilter(startDate, endDate, Op, getTenantTimezone(req));
     if (incomeDateRange) {
       where.incomeDate = incomeDateRange;
     }

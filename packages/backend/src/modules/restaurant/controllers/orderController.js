@@ -35,6 +35,7 @@ const logger = require('../../../utils/logger');
 const { recordPaymentInflow, reversePaymentInflows } = require('../../../controllers/finance/vaultController');
 const accountService = require('../../../services/accountService');
 const { getTenantTimezone } = require('../../../utils/tenantTimezone');
+const { mergeDateRangeInto } = require('../../../utils/dateRange');
 const { can } = require('../../../utils/rbac');
 const { hasFeature } = require('../../../middlewares/featureGateMiddleware');
 
@@ -385,15 +386,7 @@ const getAllOrders = async (req, res, next) => {
     }
 
     // Date range filter
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) {
-        where.createdAt[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      }
-      if (endDate) {
-        where.createdAt[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
-      }
-    }
+    mergeDateRangeInto(where, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     // Search by order number or customer name
     if (search) {

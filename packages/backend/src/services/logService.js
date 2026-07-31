@@ -2,6 +2,7 @@ const { Log, Tenant, User, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const logger = require('../utils/logger');
 const { getClientIp, getUserAgent } = require('../utils/requestHelper');
+const { startOfDayInTz, endOfDayInTz, DEFAULT_TIMEZONE } = require('../utils/tenantTimezone');
 const fs = require('fs');
 const path = require('path');
 
@@ -21,7 +22,8 @@ function buildLogWhereClause(filters) {
     search,
     startDate, 
     endDate,
-    isSuperAdmin 
+    isSuperAdmin,
+    timezone = DEFAULT_TIMEZONE,
   } = filters;
   
   const where = {};
@@ -60,13 +62,10 @@ function buildLogWhereClause(filters) {
   if (startDate || endDate) {
     where.createdAt = {};
     if (startDate) {
-      where.createdAt[Op.gte] = new Date(startDate);
+      where.createdAt[Op.gte] = startOfDayInTz(startDate, timezone);
     }
     if (endDate) {
-      // Include the entire end date
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      where.createdAt[Op.lte] = end;
+      where.createdAt[Op.lte] = endOfDayInTz(endDate, timezone);
     }
   }
 
@@ -163,6 +162,7 @@ async function getLogById(id, tenantId, isSuperAdmin = false) {
  */
 async function getLogStats(tenantId, isSuperAdmin = false, dateRange = {}) {
   const where = {};
+  const timezone = dateRange.timezone || DEFAULT_TIMEZONE;
   
   if (!isSuperAdmin && tenantId) {
     where.tenantId = tenantId;
@@ -174,12 +174,10 @@ async function getLogStats(tenantId, isSuperAdmin = false, dateRange = {}) {
   if (dateRange.startDate || dateRange.endDate) {
     where.createdAt = {};
     if (dateRange.startDate) {
-      where.createdAt[Op.gte] = new Date(dateRange.startDate);
+      where.createdAt[Op.gte] = startOfDayInTz(dateRange.startDate, timezone);
     }
     if (dateRange.endDate) {
-      const end = new Date(dateRange.endDate);
-      end.setHours(23, 59, 59, 999);
-      where.createdAt[Op.lte] = end;
+      where.createdAt[Op.lte] = endOfDayInTz(dateRange.endDate, timezone);
     }
   }
 

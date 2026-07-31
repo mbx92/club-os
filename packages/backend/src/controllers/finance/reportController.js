@@ -13,6 +13,7 @@ const { Op, fn, col, literal } = require('sequelize');
 const logger = require('../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../utils/requestHelper');
 const { buildInclusiveDateRange } = require('../../utils/dateRange');
+const { getTenantTimezone } = require('../../utils/tenantTimezone');
 const {
   REVENUE_RECOGNIZED_TRANSACTION_STATUSES,
   REVENUE_RECOGNIZED_TRANSACTION_STATUS_SQL,
@@ -51,7 +52,7 @@ async function getProfitLossReport(req, res, next) {
       where.locationId = locationId;
     }
 
-    const { start, end } = buildInclusiveDateRange(startDate, endDate);
+    const { start, end } = buildInclusiveDateRange(startDate, endDate, getTenantTimezone(req));
 
     // =================
     // INCOME (Revenue from all modules)
@@ -292,7 +293,7 @@ async function getRevenueReport(req, res, next) {
       where.locationId = locationId;
     }
 
-    const { start, end } = buildInclusiveDateRange(startDate, endDate);
+    const { start, end } = buildInclusiveDateRange(startDate, endDate, getTenantTimezone(req));
 
     // Revenue by period and module
     const revenueByPeriod = await Transaction.findAll({
@@ -491,7 +492,7 @@ async function getExpenseReport(req, res, next) {
       });
     }
 
-    const { start, end } = buildInclusiveDateRange(startDate, endDate);
+    const { start, end } = buildInclusiveDateRange(startDate, endDate, getTenantTimezone(req));
 
     const where = {
       status: { [Op.in]: ['approved', 'paid'] },

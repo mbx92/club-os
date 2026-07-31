@@ -33,6 +33,7 @@ const {
   shouldSwapOvernightTimes,
   toLocalDateOnly,
 } = require('../utils/attendanceSchedule');
+const { startOfDayInTz } = require('../utils/tenantTimezone');
 const logger = require('../utils/logger');
 
 /**
@@ -636,7 +637,7 @@ class HikvisionEventProcessor {
         memberId: member.id,
         checkOutTime: null,
         checkInTime: {
-          [Op.gte]: new Date(`${today}T00:00:00`),
+          [Op.gte]: startOfDayInTz(today, tz),
         },
       },
       transaction,

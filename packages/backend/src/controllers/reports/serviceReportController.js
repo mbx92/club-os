@@ -6,6 +6,8 @@ const { ActiveService, ServicePlan, TransactionItem, Transaction, sequelize } = 
 const { Op, fn, col, literal } = require('sequelize');
 const { generateForecast } = require('../../utils/forecasting');
 const logger = require('../../utils/logger');
+const { getTenantTimezone } = require('../../utils/tenantTimezone');
+const { mergeDateRangeInto } = require('../../utils/dateRange');
 const { REVENUE_RECOGNIZED_TRANSACTION_STATUSES } = require('../../utils/reportingStatus');
 
 /**
@@ -19,8 +21,7 @@ async function getServicePerformance(req, res, next) {
 
     const txWhere = { status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES } };
     if (!isSuperAdmin) txWhere.tenantId = tenantId;
-    if (startDate) txWhere.createdAt = { ...(txWhere.createdAt || {}), [Op.gte]: new Date(`${startDate}T00:00:00.000Z`) };
-    if (endDate) txWhere.createdAt = { ...(txWhere.createdAt || {}), [Op.lte]: new Date(`${endDate}T23:59:59.999Z`) };
+    mergeDateRangeInto(txWhere, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     const itemWhere = { itemType: { [Op.in]: ['membership', 'service_plan'] } };
 

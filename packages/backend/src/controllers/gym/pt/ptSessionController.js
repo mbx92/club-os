@@ -5,6 +5,8 @@ const { Op } = require('sequelize');
 const logger = require('../../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../../utils/requestHelper');
 const { createError } = require('../../../utils/errorCodes');
+const { getTenantTimezone } = require('../../../utils/tenantTimezone');
+const { mergeDateRangeInto } = require('../../../utils/dateRange');
 
 // -----------------------------------------------------------------
 // Shared include builder
@@ -75,8 +77,7 @@ async function getAllPTSessions(req, res, next) {
 
     if (startDate || endDate) {
       where.sessionDate = {};
-      if (startDate) where.sessionDate[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      if (endDate)   where.sessionDate[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
+      mergeDateRangeInto(where, 'sessionDate', startDate, endDate, Op, getTenantTimezone(req));
     }
 
     const validSort = ['sessionDate', 'status', 'createdAt', 'durationMinutes'];

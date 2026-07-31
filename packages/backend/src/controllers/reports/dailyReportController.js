@@ -19,6 +19,7 @@ const {
   COMPLETED_PAYMENT_STATUS,
   PAID_TRANSACTION_EXISTS_SQL,
 } = require('../../utils/reportingStatus');
+const { addDays } = require('../../utils/tenantTimezone');
 
 /**
  * Convert a local date string (YYYY-MM-DD) to UTC datetime range,
@@ -170,11 +171,11 @@ async function getDailySummaryReport(req, res, next) {
     `, { replacements: { utcStart: startDate, utcEnd: endDate, ...(isSuperAdmin ? {} : { tenantId }) } });
 
     // ─── Build date range ──────────────────────────────────────────────
-    const start = new Date(startDate);
-    const end = new Date(endDate);
     const dates = [];
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      dates.push(d.toISOString().slice(0, 10));
+    let cur = startDate;
+    while (cur <= endDate) {
+      dates.push(cur);
+      cur = addDays(cur, 1);
     }
 
     // ─── Index lookup maps ─────────────────────────────────────────────

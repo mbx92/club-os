@@ -151,7 +151,7 @@
               <option value="">Select Method</option>
               <option value="cash">Tunai</option>
               <option value="bank_transfer">Transfer Bank</option>
-              <option value="credit_card">Kartu</option>
+              <option value="credit_card">Kartu Kredit</option>
               <option value="debit_card">Kartu Debit</option>
               <option value="qris">QRIS</option>
               <option value="e_wallet">E-Wallet (OVO, GoPay, Dana)</option>

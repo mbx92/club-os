@@ -132,7 +132,7 @@ const orderTypeLabel = (t) => {
   return map[t] || t || '-'
 }
 const paymentMethodLabel = (m) => {
-  const map = { cash: 'Tunai', qris: 'QRIS', transfer: 'Transfer', card: 'Kartu', credit_card: 'Kartu', debit_card: 'Kartu Debit', bank_transfer: 'Transfer Bank', debit: 'Debit', credit: 'Kredit', e_wallet: 'E-Wallet', compliment: 'Komplemen', voucher: 'Voucher' }
+  const map = { cash: 'Tunai', qris: 'QRIS', transfer: 'Transfer', card: 'Kartu', credit_card: 'Kartu Kredit', debit_card: 'Kartu Debit', bank_transfer: 'Transfer Bank', debit: 'Debit', credit: 'Kredit', e_wallet: 'E-Wallet', compliment: 'Komplemen', voucher: 'Voucher' }
   return map[m] || m || '-'
 }
 const paymentStatusClass = (s) => {

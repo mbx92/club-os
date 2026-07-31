@@ -53,7 +53,7 @@ const forecastMeta = computed(() => financeRevenue.value?.forecast || {})
 const formatPaymentLabel = (method) => {
   const map = {
     cash: 'Tunai',
-    credit_card: 'Kartu',
+    credit_card: 'Kartu Kredit',
     debit_card: 'Kartu Debit',
     bank_transfer: 'Transfer Bank',
     qris: 'QRIS',

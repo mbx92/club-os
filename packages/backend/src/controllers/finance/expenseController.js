@@ -462,7 +462,7 @@ async function getAllExpenses(req, res, next) {
       where.locationId = locationId;
     }
 
-    const expenseDateRange = buildOptionalDateRangeFilter(startDate, endDate, Op);
+    const expenseDateRange = buildOptionalDateRangeFilter(startDate, endDate, Op, getTenantTimezone(req));
     if (expenseDateRange) {
       where.expenseDate = expenseDateRange;
     }

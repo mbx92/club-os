@@ -25,6 +25,8 @@ const {
   REVENUE_RECOGNIZED_TRANSACTION_STATUSES,
   COMPLETED_PAYMENT_STATUS,
 } = require('../../../utils/reportingStatus');
+const { getTenantTimezone } = require('../../../utils/tenantTimezone');
+const { buildStartOfDay, buildEndOfDay } = require('../../../utils/dateRange');
 
 /**
  * Get sales report with flexible grouping
@@ -49,12 +51,14 @@ const getSalesReport = async (req, res, next) => {
       throw createError('VALIDATION_ERROR', 'startDate and endDate are required');
     }
 
+    const tz = getTenantTimezone(req);
+
     const where = {
       transactionType: 'restaurant',
       status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES },
       completedAt: {
-        [Op.gte]: new Date(startDate),
-        [Op.lte]: new Date(`${endDate}T23:59:59.999Z`)
+        [Op.gte]: buildStartOfDay(startDate, tz),
+        [Op.lte]: buildEndOfDay(endDate, tz)
       }
     };
 
@@ -216,12 +220,14 @@ const getProductReport = async (req, res, next) => {
       throw createError('VALIDATION_ERROR', 'startDate and endDate are required');
     }
 
+    const tz = getTenantTimezone(req);
+
     const transactionWhere = {
       transactionType: 'restaurant',
       status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES },
       completedAt: {
-        [Op.gte]: new Date(startDate),
-        [Op.lte]: new Date(`${endDate}T23:59:59.999Z`)
+        [Op.gte]: buildStartOfDay(startDate, tz),
+        [Op.lte]: buildEndOfDay(endDate, tz)
       }
     };
 
@@ -364,14 +370,16 @@ const getTableReport = async (req, res, next) => {
       throw createError('VALIDATION_ERROR', 'startDate and endDate are required');
     }
 
+    const tz = getTenantTimezone(req);
+
     const transactionWhere = {
       transactionType: 'restaurant',
       status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES },
       orderType: 'dine-in',
       tableId: { [Op.ne]: null },
       completedAt: {
-        [Op.gte]: new Date(startDate),
-        [Op.lte]: new Date(`${endDate}T23:59:59.999Z`)
+        [Op.gte]: buildStartOfDay(startDate, tz),
+        [Op.lte]: buildEndOfDay(endDate, tz)
       }
     };
 
@@ -486,8 +494,9 @@ const getDailySummary = async (req, res, next) => {
       throw createError('VALIDATION_ERROR', 'date is required');
     }
 
-    const startOfDay = new Date(`${date}T00:00:00.000Z`);
-    const endOfDay = new Date(`${date}T23:59:59.999Z`);
+    const tz = getTenantTimezone(req);
+    const startOfDay = buildStartOfDay(date, tz);
+    const endOfDay = buildEndOfDay(date, tz);
 
     const baseWhere = {
       transactionType: 'restaurant',

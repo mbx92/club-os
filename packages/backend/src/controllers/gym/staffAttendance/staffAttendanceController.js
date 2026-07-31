@@ -24,6 +24,7 @@ const {
 } = require('../../../utils/attendanceSchedule');
 const { createError } = require('../../../utils/errorCodes');
 const logger = require('../../../utils/logger');
+const { getTenantTimezone, startOfDayInTz, endOfDayInTz, todayInTz, addDays } = require('../../../utils/tenantTimezone');
 const overnightFixService = require('../../../services/overnightFixService');
 
 /** Normalize any date value (Date object or string) to "YYYY-MM-DD" */
@@ -735,8 +736,8 @@ async function listAttendance(req, res, next) {
     if (effectiveStart || effectiveEnd) {
       // Use eventTime to approximate date range (slight overlap is OK)
       logRangeWhere.eventTime = {};
-      if (effectiveStart) logRangeWhere.eventTime[Op.gte] = new Date(`${effectiveStart}T00:00:00`);
-      if (effectiveEnd) logRangeWhere.eventTime[Op.lte] = new Date(`${effectiveEnd}T23:59:59`);
+      if (effectiveStart) logRangeWhere.eventTime[Op.gte] = startOfDayInTz(effectiveStart, tenantTimezone);
+      if (effectiveEnd) logRangeWhere.eventTime[Op.lte] = endOfDayInTz(effectiveEnd, tenantTimezone);
     }
     if (resolvedEmployeeId) logRangeWhere.matchedDeviceEmployeeId = resolvedEmployeeId;
 
@@ -1368,8 +1369,8 @@ async function reprocessUnmatchedLogs(req, res, next) {
 
     if (startDate || endDate) {
       logWhere.eventTime = {};
-      if (startDate) logWhere.eventTime[Op.gte] = new Date(startDate);
-      if (endDate) logWhere.eventTime[Op.lte] = new Date(`${endDate}T23:59:59`);
+      if (startDate) logWhere.eventTime[Op.gte] = startOfDayInTz(startDate, tenantTimezone);
+      if (endDate) logWhere.eventTime[Op.lte] = endOfDayInTz(endDate, tenantTimezone);
     }
 
     const unmatchedLogs = await DeviceAttendanceLog.findAll({
@@ -1468,6 +1469,7 @@ async function syncAllDevices(req, res, next) {
       });
     }
 
+    const tenantTimezone = getTenantTimezone(req);
     const endTime = new Date();
     const results = [];
     let totalProcessed = 0;
@@ -1487,7 +1489,9 @@ async function syncAllDevices(req, res, next) {
 
       let syncStart;
       if (startDate) {
-        syncStart = new Date(startDate);
+        syncStart = /^\d{4}-\d{2}-\d{2}$/.test(String(startDate))
+          ? startOfDayInTz(startDate, tenantTimezone)
+          : new Date(startDate);
       } else {
         // From last sync, or last 24 hours if never synced
         syncStart = device.lastSyncAt || new Date(endTime.getTime() - 24 * 60 * 60 * 1000);

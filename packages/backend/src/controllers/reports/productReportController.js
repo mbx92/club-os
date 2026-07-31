@@ -9,6 +9,8 @@ const StockMovement = require('../../models').StockMovement;
 const { Op, fn, col, literal } = require('sequelize');
 const { generateForecast } = require('../../utils/forecasting');
 const logger = require('../../utils/logger');
+const { getTenantTimezone } = require('../../utils/tenantTimezone');
+const { mergeDateRangeInto, buildStartOfDay, buildEndOfDay } = require('../../utils/dateRange');
 const { REVENUE_RECOGNIZED_TRANSACTION_STATUSES, REVENUE_RECOGNIZED_TRANSACTION_STATUS_SQL } = require('../../utils/reportingStatus');
 
 /**
@@ -22,8 +24,7 @@ async function getProductPerformance(req, res, next) {
 
     const txWhere = { status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES } };
     if (!isSuperAdmin) txWhere.tenantId = tenantId;
-    if (startDate) txWhere.createdAt = { ...(txWhere.createdAt || {}), [Op.gte]: new Date(`${startDate}T00:00:00.000Z`) };
-    if (endDate) txWhere.createdAt = { ...(txWhere.createdAt || {}), [Op.lte]: new Date(`${endDate}T23:59:59.999Z`) };
+    mergeDateRangeInto(txWhere, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     const dateTruncMap = { daily: 'day', weekly: 'week', monthly: 'month' };
     const trunc = dateTruncMap[groupBy] || 'day';
@@ -100,8 +101,7 @@ async function getTopSellingProducts(req, res, next) {
 
     const txWhere = { status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES } };
     if (!isSuperAdmin) txWhere.tenantId = tenantId;
-    if (startDate) txWhere.createdAt = { ...(txWhere.createdAt || {}), [Op.gte]: new Date(`${startDate}T00:00:00.000Z`) };
-    if (endDate) txWhere.createdAt = { ...(txWhere.createdAt || {}), [Op.lte]: new Date(`${endDate}T23:59:59.999Z`) };
+    mergeDateRangeInto(txWhere, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     const orderCol = sortBy === 'quantity' ? fn('SUM', col('quantity')) : fn('SUM', col('TransactionItem.total'));
 
@@ -151,8 +151,7 @@ async function getProductsByCategory(req, res, next) {
 
     const txWhere = { status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES } };
     if (!isSuperAdmin) txWhere.tenantId = tenantId;
-    if (startDate) txWhere.createdAt = { ...(txWhere.createdAt || {}), [Op.gte]: new Date(`${startDate}T00:00:00.000Z`) };
-    if (endDate) txWhere.createdAt = { ...(txWhere.createdAt || {}), [Op.lte]: new Date(`${endDate}T23:59:59.999Z`) };
+    mergeDateRangeInto(txWhere, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     // Use raw query for category join via Product
     const results = await sequelize.query(`
@@ -178,8 +177,8 @@ async function getProductsByCategory(req, res, next) {
     `, {
       replacements: {
         tenantId,
-        startDate: startDate ? `${startDate}T00:00:00.000Z` : undefined,
-        endDate: endDate ? `${endDate}T23:59:59.999Z` : undefined
+        startDate: startDate ? buildStartOfDay(startDate, getTenantTimezone(req)).toISOString() : undefined,
+        endDate: endDate ? buildEndOfDay(endDate, getTenantTimezone(req)).toISOString() : undefined
       },
       type: sequelize.QueryTypes.SELECT
     });

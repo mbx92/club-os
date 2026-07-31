@@ -25,6 +25,7 @@ const {
   COMPLETED_PAYMENT_STATUS,
   PAID_TRANSACTION_SEQUELIZE_LITERAL_SQL,
 } = require('../../utils/reportingStatus');
+const { getTenantTimezone, todayInTz, startOfDayInTz, endOfDayInTz, firstDayOfMonth, firstDayOfPrevMonth, lastDayOfPrevMonth, addDays } = require('../../utils/tenantTimezone');
 
 // Pre-built Sequelize condition for payment-exists filter (correct Op.and usage).
 const PAID_TX_CONDITION = { [Op.and]: sequelize.literal(PAID_TRANSACTION_SEQUELIZE_LITERAL_SQL) };
@@ -34,19 +35,29 @@ const PAID_TX_CONDITION = { [Op.and]: sequelize.literal(PAID_TRANSACTION_SEQUELI
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Normalize payment method label for display.
- * credit_card / debit_card → 'card'
+ * Normalize payment method aliases to canonical snake_case.
+ * Keeps credit_card and debit_card as separate methods.
  */
 function displayPaymentMethod(method) {
   if (!method) return 'other';
-  const m = method.toLowerCase().trim();
-  if (m === 'credit_card' || m === 'debit_card' || m === 'creditcard' || m === 'debitcard') return 'card';
-  return m;
+  const m = method.trim();
+  const map = {
+    creditcard: 'credit_card',
+    creditCard: 'credit_card',
+    debitcard: 'debit_card',
+    debitCard: 'debit_card',
+    banktransfer: 'bank_transfer',
+    bankTransfer: 'bank_transfer',
+    ewallet: 'e_wallet',
+    eWallet: 'e_wallet',
+    e_wallet: 'e_wallet',
+  };
+  return map[m] || map[m.toLowerCase()] || m.toLowerCase();
 }
 
 /**
  * Merge raw payment rows + bank detail map into a clean array.
- * Groups methods that map to the same display name (e.g. credit_card + debit_card → card).
+ * Groups alias variants of the same method (e.g. creditCard + credit_card).
  * @param {Array}  rows         - rows from DB: { paymentMethod, total, transactionCount }
  * @param {Object} bankDetailMap - keyed by paymentMethod → [{ bankName, total, transactionCount }]
  * @param {number} grandTotal   - total revenue (for share %).
@@ -108,25 +119,22 @@ async function getFinanceDashboard(req, res, next) {
   try {
     const { tenantId, isSuperAdmin } = req.user;
     const { locationId } = req.query;
-    const timezone = req.query.timezone || req.user?.tenant?.settings?.timezone || 'Asia/Jakarta';
+    const timezone = getTenantTimezone(req);
 
     // ── Date anchors ──────────────────────────────────────────────────────────
-    const now = new Date();
-    const todayStr = now.toLocaleDateString('en-CA', { timeZone: timezone }); // YYYY-MM-DD
+    const todayStr = todayInTz(timezone);
+    const dayStart = startOfDayInTz(todayStr, timezone);
+    const dayEnd   = endOfDayInTz(todayStr, timezone);
 
-    const dayStart = new Date(`${todayStr}T00:00:00`);
-    const dayEnd   = new Date(`${todayStr}T23:59:59.999`);
+    const monthStart = startOfDayInTz(firstDayOfMonth(todayStr), timezone);
+    const yearStart  = startOfDayInTz(`${todayStr.slice(0, 4)}-01-01`, timezone);
 
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const yearStart  = new Date(now.getFullYear(), 0, 1);
+    const yesterdayStr = addDays(todayStr, -1);
+    const yesterday = startOfDayInTz(yesterdayStr, timezone);
+    const yesterdayEnd = endOfDayInTz(yesterdayStr, timezone);
 
-    const yesterday = new Date(dayStart);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayEnd = new Date(dayStart);
-    yesterdayEnd.setMilliseconds(yesterdayEnd.getMilliseconds() - 1);
-
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnd   = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    const lastMonthStart = startOfDayInTz(firstDayOfPrevMonth(todayStr), timezone);
+    const lastMonthEnd   = endOfDayInTz(lastDayOfPrevMonth(todayStr), timezone);
 
     const w = buildTenantWhere(isSuperAdmin, tenantId, locationId);
 

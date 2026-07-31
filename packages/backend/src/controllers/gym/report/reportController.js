@@ -29,6 +29,8 @@ const { Op, fn, col, literal } = require('sequelize');
 const { createError } = require('../../../utils/errorCodes');
 const logger = require('../../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../../utils/requestHelper');
+const { getTenantTimezone } = require('../../../utils/tenantTimezone');
+const { mergeDateRangeInto } = require('../../../utils/dateRange');
 const {
   REVENUE_RECOGNIZED_TRANSACTION_STATUSES,
   COMPLETED_PAYMENT_STATUS,
@@ -71,15 +73,7 @@ async function getRevenueReport(req, res, next) {
     }
 
     // Date filter
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) {
-        where.createdAt[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      }
-      if (endDate) {
-        where.createdAt[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
-      }
-    }
+    mergeDateRangeInto(where, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     // Determine date truncation for grouping
     let dateTrunc;
@@ -258,15 +252,7 @@ async function getProfitLossReport(req, res, next) {
       where.tenantId = tenantId;
     }
 
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) {
-        where.createdAt[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      }
-      if (endDate) {
-        where.createdAt[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
-      }
-    }
+    mergeDateRangeInto(where, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     // Determine date truncation
     let dateTrunc;
@@ -299,15 +285,7 @@ async function getProfitLossReport(req, res, next) {
     if (!isSuperAdmin) {
       commissionWhere.tenantId = tenantId;
     }
-    if (startDate || endDate) {
-      commissionWhere.createdAt = {};
-      if (startDate) {
-        commissionWhere.createdAt[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      }
-      if (endDate) {
-        commissionWhere.createdAt[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
-      }
-    }
+    mergeDateRangeInto(commissionWhere, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     // Calculate gross profit (Revenue - Direct Costs)
     // Direct costs include: trainer commissions, discounts given
@@ -399,15 +377,7 @@ async function getAttendanceReport(req, res, next) {
       where.locationId = locationId;
     }
 
-    if (startDate || endDate) {
-      where.checkInTime = {};
-      if (startDate) {
-        where.checkInTime[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      }
-      if (endDate) {
-        where.checkInTime[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
-      }
-    }
+    mergeDateRangeInto(where, 'checkInTime', startDate, endDate, Op, getTenantTimezone(req));
 
     // Determine date truncation
     let dateTrunc;
@@ -800,15 +770,7 @@ async function getTrainerCommissionReport(req, res, next) {
     }
 
     // Date filter
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) {
-        where.createdAt[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      }
-      if (endDate) {
-        where.createdAt[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
-      }
-    }
+    mergeDateRangeInto(where, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     // Get all commissions with trainer and transaction details
     const commissions = await TrainerCommission.findAll({
@@ -1040,15 +1002,7 @@ async function getServiceCommissionIncomeReport(req, res, next) {
     }
 
     // Date filter
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) {
-        where.createdAt[Op.gte] = new Date(`${startDate}T00:00:00.000Z`);
-      }
-      if (endDate) {
-        where.createdAt[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
-      }
-    }
+    mergeDateRangeInto(where, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     // Include ServicePlan for serviceType filter
     const transactionInclude = {

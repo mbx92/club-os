@@ -14,6 +14,7 @@ const { Op, fn, col, literal } = require('sequelize');
 const logger = require('../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../utils/requestHelper');
 const { buildInclusiveDateRange } = require('../../utils/dateRange');
+const { getTenantTimezone } = require('../../utils/tenantTimezone');
 const {
   REVENUE_RECOGNIZED_TRANSACTION_STATUSES,
   REVENUE_RECOGNIZED_TRANSACTION_STATUS_SQL,
@@ -21,18 +22,28 @@ const {
 } = require('../../utils/reportingStatus');
 
 /**
- * Normalize payment method for display.
- * DB stores 'credit_card' / 'debit_card' but we show them as 'card'.
+ * Normalize payment method aliases to canonical snake_case.
+ * Keeps credit_card and debit_card as separate methods.
  */
 function displayPaymentMethod(method) {
   if (!method) return 'other';
-  const m = method.toLowerCase().trim();
-  if (m === 'credit_card' || m === 'debit_card' || m === 'creditcard' || m === 'debitcard') return 'card';
-  return m;
+  const m = method.trim();
+  const map = {
+    creditcard: 'credit_card',
+    creditCard: 'credit_card',
+    debitcard: 'debit_card',
+    debitCard: 'debit_card',
+    banktransfer: 'bank_transfer',
+    bankTransfer: 'bank_transfer',
+    ewallet: 'e_wallet',
+    eWallet: 'e_wallet',
+    e_wallet: 'e_wallet',
+  };
+  return map[m] || map[m.toLowerCase()] || m.toLowerCase();
 }
 
 /**
- * Merge payment-method rows that map to the same display name.
+ * Merge payment-method rows that map to the same canonical method.
  * Returns array of { method, total, transactionCount, detail }.
  */
 function mergePaymentMethods(rows, bankDetailMap) {
@@ -85,7 +96,7 @@ async function getFinanceDashboardOverview(req, res, next) {
       });
     }
 
-    const { start, end } = buildInclusiveDateRange(startDate, endDate);
+    const { start, end } = buildInclusiveDateRange(startDate, endDate, getTenantTimezone(req));
 
     // Calculate previous period for comparison
     const periodDuration = end.getTime() - start.getTime();

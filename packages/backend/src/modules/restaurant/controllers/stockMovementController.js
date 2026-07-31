@@ -12,6 +12,8 @@
 const { StockMovement, Product, Location, User } = require('../../../models');
 const { Op } = require('sequelize');
 const { createError } = require('../../../utils/errorCodes');
+const { getTenantTimezone } = require('../../../utils/tenantTimezone');
+const { mergeDateRangeInto, buildInclusiveDateRange, buildStartOfDay, buildEndOfDay } = require('../../../utils/dateRange');
 
 /**
  * Get all stock movements with filters
@@ -59,15 +61,7 @@ const getAllMovements = async (req, res, next) => {
     }
 
     // Date range filter
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) {
-        where.createdAt[Op.gte] = new Date(startDate);
-      }
-      if (endDate) {
-        where.createdAt[Op.lte] = new Date(endDate);
-      }
-    }
+    mergeDateRangeInto(where, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     const { count, rows: movements } = await StockMovement.findAndCountAll({
       where,
@@ -379,10 +373,13 @@ const getSummary = async (req, res, next) => {
       throw createError('VALIDATION_ERROR', 'Start date and end date are required');
     }
 
+    const tz = getTenantTimezone(req);
+    const { start, end } = buildInclusiveDateRange(startDate, endDate, tz);
+
     const summary = await StockMovement.getSummaryByDateRange(
       effectiveTenantId,
-      new Date(startDate),
-      new Date(endDate),
+      start,
+      end,
       locationId
     );
 
@@ -421,8 +418,9 @@ const getMostMovedProducts = async (req, res, next) => {
     }
 
     // Default to last 30 days if not specified
-    const end = endDate ? new Date(endDate) : new Date();
-    const start = startDate ? new Date(startDate) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const tz = getTenantTimezone(req);
+    const end = endDate ? buildEndOfDay(endDate, tz) : new Date();
+    const start = startDate ? buildStartOfDay(startDate, tz) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     const products = await StockMovement.getMostMovedProducts(
       effectiveTenantId,
@@ -647,19 +645,19 @@ const getStockReport = async (req, res, next) => {
           throw createError('VALIDATION_ERROR', 'Start date and end date are required for movements report');
         }
 
+        const tz = getTenantTimezone(req);
+        const { start, end } = buildInclusiveDateRange(startDate, endDate, tz);
+
         const movementWhere = {
           tenantId: effectiveTenantId,
-          createdAt: {
-            [Op.between]: [new Date(startDate), new Date(endDate)]
-          }
+          createdAt: { [Op.between]: [start, end] }
         };
         if (locationId) movementWhere.locationId = locationId;
 
-        // Get movement summary by type
         const summary = await StockMovement.getSummaryByDateRange(
           effectiveTenantId,
-          new Date(startDate),
-          new Date(endDate),
+          start,
+          end,
           locationId
         );
 

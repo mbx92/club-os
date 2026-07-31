@@ -14,6 +14,7 @@ const { Op, fn, col, literal } = require('sequelize');
 const logger = require('../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../utils/requestHelper');
 const { buildUtcStartOfDay, buildUtcEndOfDay } = require('../../utils/dateRange');
+const { getTenantTimezone } = require('../../utils/tenantTimezone');
 const {
   REVENUE_RECOGNIZED_TRANSACTION_STATUSES,
   REVENUE_RECOGNIZED_TRANSACTION_STATUS_SQL,
@@ -46,8 +47,9 @@ async function getTopSellingProducts(req, res, next) {
     const resultLimit = Math.min(parseInt(limit) || 10, 50);
 
     // Default: last 30 days if not provided
-    const end = endDate ? buildUtcEndOfDay(endDate) : new Date();
-    const start = startDate ? buildUtcStartOfDay(startDate) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const tz = getTenantTimezone(req);
+    const end = endDate ? buildUtcEndOfDay(endDate, tz) : new Date();
+    const start = startDate ? buildUtcStartOfDay(startDate, tz) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     // Build transaction filter
     const transactionWhere = {
@@ -204,8 +206,9 @@ async function getTopSellingServices(req, res, next) {
     const resultLimit = Math.min(parseInt(limit) || 10, 50);
 
     // Default: last 30 days if not provided
-    const end = endDate ? buildUtcEndOfDay(endDate) : new Date();
-    const start = startDate ? buildUtcStartOfDay(startDate) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const tz = getTenantTimezone(req);
+    const end = endDate ? buildUtcEndOfDay(endDate, tz) : new Date();
+    const start = startDate ? buildUtcStartOfDay(startDate, tz) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     // Determine which item types to include
     let itemTypeFilter;
@@ -353,8 +356,9 @@ async function getNotSellingProducts(req, res, next) {
     const resultLimit = Math.min(parseInt(limit) || 5, 200);
 
     // Default: last 30 days
-    const end = endDate ? buildUtcEndOfDay(endDate) : new Date();
-    const start = startDate ? buildUtcStartOfDay(startDate) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const tz = getTenantTimezone(req);
+    const end = endDate ? buildUtcEndOfDay(endDate, tz) : new Date();
+    const start = startDate ? buildUtcStartOfDay(startDate, tz) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     const notSellingProducts = await sequelize.query(`
       SELECT 
@@ -480,8 +484,9 @@ async function getNotSellingServices(req, res, next) {
     const resultLimit = Math.min(parseInt(limit) || 5, 200);
 
     // Default: last 30 days
-    const end = endDate ? buildUtcEndOfDay(endDate) : new Date();
-    const start = startDate ? buildUtcStartOfDay(startDate) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const tz = getTenantTimezone(req);
+    const end = endDate ? buildUtcEndOfDay(endDate, tz) : new Date();
+    const start = startDate ? buildUtcStartOfDay(startDate, tz) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     // Determine item type filter for the NOT EXISTS subquery
     let itemTypeFilter;

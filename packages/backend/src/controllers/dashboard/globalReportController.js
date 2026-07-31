@@ -32,6 +32,7 @@ const {
   PAID_TRANSACTION_EXISTS_SQL,
   PAID_TRANSACTION_SEQUELIZE_LITERAL_SQL,
 } = require('../../utils/reportingStatus');
+const { getTenantTimezone, todayInTz, startOfDayInTz, endOfDayInTz, addDays } = require('../../utils/tenantTimezone');
 
 // ─────────────────────────────────────────
 // Helpers
@@ -41,16 +42,12 @@ const {
  * Buat array tanggal dari startDate sampai endDate (inklusif)
  * @returns {string[]} array ISO date string 'YYYY-MM-DD'
  */
-function buildDateRange(startDate, endDate) {
+function buildDateRange(startDateStr, endDateStr) {
   const dates = [];
-  const cur = new Date(startDate);
-  cur.setHours(0, 0, 0, 0);
-  const end = new Date(endDate);
-  end.setHours(23, 59, 59, 999);
-
-  while (cur <= end) {
-    dates.push(cur.toISOString().slice(0, 10));
-    cur.setDate(cur.getDate() + 1);
+  let cur = startDateStr;
+  while (cur <= endDateStr) {
+    dates.push(cur);
+    cur = addDays(cur, 1);
   }
   return dates;
 }
@@ -74,26 +71,6 @@ function zeroFillSeries(dates, rows, defaultValues = {}) {
   }));
 }
 
-/**
- * Hitung startDate berdasarkan period string
- */
-function resolvePeriod(period, endDate) {
-  const end = new Date(endDate);
-  end.setHours(23, 59, 59, 999);
-
-  const periodMap = {
-    '7d':  7,
-    '30d': 30,
-    '90d': 90,
-    '1y':  365
-  };
-  const days = periodMap[period] || 30;
-  const start = new Date(end);
-  start.setDate(start.getDate() - (days - 1));
-  start.setHours(0, 0, 0, 0);
-  return start;
-}
-
 // ─────────────────────────────────────────
 // Controller
 // ─────────────────────────────────────────
@@ -103,16 +80,22 @@ async function getGlobalReport(req, res, next) {
     const { tenantId, isSuperAdmin } = req.user;
     const { period = '30d', startDate, endDate } = req.query;
 
-    // --- Resolve date range ---
-    const rangeEnd = endDate
-      ? new Date(new Date(endDate).setHours(23, 59, 59, 999))
-      : new Date(new Date().setHours(23, 59, 59, 999));
+    const tz = getTenantTimezone(req);
+    const todayStr = todayInTz(tz);
+    const endStr = endDate || todayStr;
+    const rangeEnd = endOfDayInTz(endStr, tz);
 
-    const rangeStart = startDate
-      ? new Date(new Date(startDate).setHours(0, 0, 0, 0))
-      : resolvePeriod(period, rangeEnd);
+    let startStr;
+    if (startDate) {
+      startStr = startDate;
+    } else {
+      const periodMap = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 };
+      const days = periodMap[period] || 30;
+      startStr = addDays(endStr, -(days - 1));
+    }
 
-    const dateList = buildDateRange(rangeStart, rangeEnd);
+    const rangeStart = startOfDayInTz(startStr, tz);
+    const dateList = buildDateRange(startStr, endStr);
     const tenantFilter = isSuperAdmin ? '' : `AND t."tenantId" = '${tenantId}'`;
     const tenantWhere = isSuperAdmin ? {} : { tenantId };
 
@@ -499,8 +482,8 @@ async function getGlobalReport(req, res, next) {
     const days = dateList.length || 1;
     const kpis = {
       period: {
-        startDate: rangeStart.toISOString().slice(0, 10),
-        endDate: rangeEnd.toISOString().slice(0, 10),
+        startDate: startStr,
+        endDate: endStr,
         days
       },
       revenue: {

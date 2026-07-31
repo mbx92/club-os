@@ -11,6 +11,7 @@ const { Op } = require('sequelize');
 const logger = require('../../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../../utils/requestHelper');
 const { createError } = require('../../../utils/errorCodes');
+const { getTenantTimezone, todayInTz, addDays } = require('../../../utils/tenantTimezone');
 
 /**
  * Get all active services across all members with interactive info
@@ -68,13 +69,13 @@ async function getAllActiveServices(req, res, next) {
     // Alert: Services expiring soon
     if (expiringInDays) {
       const daysAhead = parseInt(expiringInDays);
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + daysAhead);
-      
+      const todayStr = todayInTz(getTenantTimezone(req));
+      const futureStr = addDays(todayStr, daysAhead);
+
       where.endDate = {
-        [Op.between]: [new Date(), futureDate]
+        [Op.between]: [todayStr, futureStr]
       };
-      where.status = 'active'; // Only active services
+      where.status = 'active';
     }
 
     // Alert: Services with low remaining sessions
@@ -139,18 +140,16 @@ async function getAllActiveServices(req, res, next) {
       offset
     });
 
+    const tenantTz = getTenantTimezone(req);
+    const todayStr = todayInTz(tenantTz);
+
     // Add computed fields for interactive display
     const enrichedServices = activeServices.map(service => {
       const serviceData = service.toJSON();
-      const now = new Date();
-      // Use date-only comparison to avoid timezone issues with DATEONLY fields.
-      // new Date('2026-03-04') = midnight UTC, which in WIB (UTC+7) means it reads
-      // as expired after 7am on that day. Instead, compare date strings directly.
-      const endDateStr = String(service.endDate); // 'YYYY-MM-DD'
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const endDateLocal = new Date(`${endDateStr}T00:00:00`); // parse as local midnight
-      const todayLocal = new Date(`${todayStr}T00:00:00`);
-      const daysUntilExpiry = Math.ceil((endDateLocal - todayLocal) / (1000 * 60 * 60 * 24));
+      const endDateStr = String(service.endDate);
+      const daysUntilExpiry = Math.round(
+        (new Date(`${endDateStr}T12:00:00.000Z`) - new Date(`${todayStr}T12:00:00.000Z`)) / (1000 * 60 * 60 * 24)
+      );
 
       // Calculate usage percentage
       let usagePercentage = 0;

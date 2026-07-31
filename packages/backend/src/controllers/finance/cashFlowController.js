@@ -13,6 +13,7 @@ const { Op, fn, col, literal } = require('sequelize');
 const logger = require('../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../utils/requestHelper');
 const { buildInclusiveDateRange } = require('../../utils/dateRange');
+const { getTenantTimezone } = require('../../utils/tenantTimezone');
 const {
   REVENUE_RECOGNIZED_TRANSACTION_STATUSES,
   REVENUE_RECOGNIZED_TRANSACTION_STATUS_SQL,
@@ -49,7 +50,7 @@ async function getCashFlowSummary(req, res, next) {
       where.locationId = locationId;
     }
 
-    const { start, end } = buildInclusiveDateRange(startDate, endDate);
+    const { start, end } = buildInclusiveDateRange(startDate, endDate, getTenantTimezone(req));
 
     // Calculate inflows (from completed transactions)
     const inflows = await Transaction.findAll({
@@ -204,7 +205,7 @@ async function getCashFlowByCategory(req, res, next) {
 
     if (!type || type === 'inflow') {
       // Inflows by transaction type
-      const { start, end } = buildInclusiveDateRange(startDate, endDate);
+      const { start, end } = buildInclusiveDateRange(startDate, endDate, getTenantTimezone(req));
 
       const inflows = await Transaction.findAll({
         where: {
@@ -234,7 +235,7 @@ async function getCashFlowByCategory(req, res, next) {
 
     if (!type || type === 'outflow') {
       // Outflows by expense category
-      const { start, end } = buildInclusiveDateRange(startDate, endDate);
+      const { start, end } = buildInclusiveDateRange(startDate, endDate, getTenantTimezone(req));
 
       const outflows = await Expense.findAll({
         where: {
@@ -434,7 +435,7 @@ async function getCashFlowStatement(req, res, next) {
       });
     }
 
-    const { start, end } = buildInclusiveDateRange(startDate, endDate);
+    const { start, end } = buildInclusiveDateRange(startDate, endDate, getTenantTimezone(req));
 
     const tWhere = { status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES }, createdAt: { [Op.between]: [start, end] } };
     const eWhere = { status: { [Op.in]: ['approved', 'paid'] }, expenseDate: { [Op.between]: [start, end] } };

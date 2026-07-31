@@ -8,6 +8,8 @@ const Location = require('../../models').Location;
 const { Op, fn, col, literal } = require('sequelize');
 const { generateForecast } = require('../../utils/forecasting');
 const logger = require('../../utils/logger');
+const { getTenantTimezone } = require('../../utils/tenantTimezone');
+const { mergeDateRangeInto } = require('../../utils/dateRange');
 const {
   REVENUE_RECOGNIZED_TRANSACTION_STATUSES,
   COMPLETED_PAYMENT_STATUS,
@@ -29,8 +31,7 @@ async function getRestaurantSales(req, res, next) {
     const where = { transactionType: 'restaurant' };
     if (!isSuperAdmin) where.tenantId = tenantId;
     if (locationId) where.locationId = locationId;
-    if (startDate) where.createdAt = { ...(where.createdAt || {}), [Op.gte]: new Date(`${startDate}T00:00:00.000Z`) };
-    if (endDate) where.createdAt = { ...(where.createdAt || {}), [Op.lte]: new Date(`${endDate}T23:59:59.999Z`) };
+    mergeDateRangeInto(where, 'createdAt', startDate, endDate, Op, getTenantTimezone(req));
 
     const completedWhere = { ...where, [Op.and]: paidTxLiteral, status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES } };
 
@@ -136,8 +137,7 @@ async function getTableUtilization(req, res, next) {
     const txWhere = { transactionType: 'restaurant', status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES } };
     if (!isSuperAdmin) txWhere.tenantId = tenantId;
     if (locationId) txWhere.locationId = locationId;
-    if (startDate) txWhere.transactionDate = { ...(txWhere.transactionDate || {}), [Op.gte]: new Date(`${startDate}T00:00:00.000Z`) };
-    if (endDate) txWhere.transactionDate = { ...(txWhere.transactionDate || {}), [Op.lte]: new Date(`${endDate}T23:59:59.999Z`) };
+    mergeDateRangeInto(txWhere, 'transactionDate', startDate, endDate, Op, getTenantTimezone(req));
 
     // Orders per table
     const tableStats = await Transaction.findAll({
@@ -196,8 +196,7 @@ async function getTopRestaurantItems(req, res, next) {
 
     const txWhere = { transactionType: 'restaurant', status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES } };
     if (!isSuperAdmin) txWhere.tenantId = tenantId;
-    if (startDate) txWhere.transactionDate = { ...(txWhere.transactionDate || {}), [Op.gte]: new Date(`${startDate}T00:00:00.000Z`) };
-    if (endDate) txWhere.transactionDate = { ...(txWhere.transactionDate || {}), [Op.lte]: new Date(`${endDate}T23:59:59.999Z`) };
+    mergeDateRangeInto(txWhere, 'transactionDate', startDate, endDate, Op, getTenantTimezone(req));
 
     const topItems = await TransactionItem.findAll({
       include: [{

@@ -5,9 +5,19 @@ meta:
 </route>
 
 <script setup>
-import { ref, onMounted, computed, markRaw } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import {
+  Chart,
+  LineController,
+  LineElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  Filler,
+  Tooltip,
+  Legend,
+} from 'chart.js'
 import { useFinanceDashboard } from '@/composables/finances/useFinanceDashboard'
-import FinanceStatCard from '@/components/finances/FinanceStatCard.vue'
 import {
   IconFileInvoice,
   IconTag,
@@ -27,6 +37,17 @@ import {
   IconBuildingBank,
   IconPercentage,
 } from '@tabler/icons-vue'
+
+Chart.register(
+  LineController,
+  LineElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  Filler,
+  Tooltip,
+  Legend,
+)
 
 const { overview, summaryCards, loading, overviewLoading, summaryLoading, fetchOverview, fetchSummaryCards } = useFinanceDashboard()
 
@@ -90,9 +111,126 @@ const taxTotal = computed(() => overview.value?.summary?.totalTax ?? overview.va
 
 // Revenue trend — API returns revenueTrend[] with { date, total, count }
 const dailyTrend = computed(() => overview.value?.revenueTrend || [])
-const maxTrendValue = computed(() => {
-  const vals = dailyTrend.value.map(d => d.total || 0)
-  return Math.max(...vals, 1)
+
+const revenueTrendCanvas = ref(null)
+let revenueTrendChart = null
+
+const destroyRevenueTrendChart = () => {
+  if (revenueTrendChart) {
+    revenueTrendChart.destroy()
+    revenueTrendChart = null
+  }
+}
+
+const renderRevenueTrendChart = () => {
+  if (!revenueTrendCanvas.value || dailyTrend.value.length === 0) {
+    destroyRevenueTrendChart()
+    return
+  }
+
+  // Canvas was remounted after loading — drop stale Chart.js instance
+  if (revenueTrendChart && revenueTrendChart.canvas !== revenueTrendCanvas.value) {
+    destroyRevenueTrendChart()
+  }
+
+  const labels = dailyTrend.value.map(d => formatDate(d.date))
+  const totals = dailyTrend.value.map(d => d.total || 0)
+  const counts = dailyTrend.value.map(d => d.count || 0)
+
+  if (revenueTrendChart) {
+    revenueTrendChart.data.labels = labels
+    revenueTrendChart.data.datasets[0].data = totals
+    revenueTrendChart._trendCounts = counts
+    revenueTrendChart.update()
+    return
+  }
+
+  const ctx = revenueTrendCanvas.value.getContext('2d')
+  const gradient = ctx.createLinearGradient(0, 0, 0, 220)
+  gradient.addColorStop(0, 'rgba(0, 169, 110, 0.28)')
+  gradient.addColorStop(1, 'rgba(0, 169, 110, 0.02)')
+
+  revenueTrendChart = new Chart(revenueTrendCanvas.value, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: totals,
+        borderColor: '#00a96e',
+        borderWidth: 2.5,
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.35,
+        pointBackgroundColor: '#00a96e',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 3.5,
+        pointHoverRadius: 6,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const count = revenueTrendChart?._trendCounts?.[ctx.dataIndex] ?? 0
+              return ` ${formatCurrency(ctx.raw)} · ${count} trx`
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: 'oklch(var(--bc) / 0.5)',
+            font: { size: 11 },
+            maxRotation: 0,
+            autoSkip: true,
+            maxTicksLimit: 8,
+          },
+          grid: { display: false },
+          border: { display: false },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: 'oklch(var(--bc) / 0.5)',
+            font: { size: 11 },
+            callback: (value) => {
+              if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value % 1_000_000 === 0 ? 0 : 1)}jt`
+              if (value >= 1_000) return `${(value / 1_000).toFixed(value % 1_000 === 0 ? 0 : 1)}rb`
+              return value
+            },
+          },
+          grid: {
+            color: 'oklch(var(--bc) / 0.05)',
+            lineWidth: 0.5,
+            drawTicks: false,
+          },
+          border: { display: false },
+        },
+      },
+    },
+  })
+  revenueTrendChart._trendCounts = counts
+}
+
+watch(dailyTrend, async () => {
+  await nextTick()
+  renderRevenueTrendChart()
+}, { deep: true })
+
+watch(overviewLoading, async (loading) => {
+  if (loading) {
+    destroyRevenueTrendChart()
+    return
+  }
+  await nextTick()
+  renderRevenueTrendChart()
 })
 
 // Revenue by module
@@ -117,7 +255,7 @@ const paymentMethods = computed(() => {
 const paymentMethodLabel = (method) => {
   const map = {
     cash: 'Tunai',
-    credit_card: 'Kartu',
+    credit_card: 'Kartu Kredit',
     debit_card: 'Kartu Debit',
     bank_transfer: 'Transfer Bank',
     qris: 'QRIS',
@@ -162,8 +300,26 @@ const unifiedPaymentMethods = computed(() => {
 // For a given period's paymentMethods array, build a full row list using unifiedPaymentMethods
 const normalizedPayments = (methods) => {
   const map = Object.fromEntries((methods || []).map(p => [p.method, p]))
-  return unifiedPaymentMethods.value.map(m => map[m] || { method: m, total: 0, transactionCount: 0, percentage: 0 })
+  return unifiedPaymentMethods.value.map(m => map[m] || { method: m, total: 0, transactionCount: 0, percentage: 0, detail: [] })
 }
+
+// Period summary cards — single source so layout/divider stay aligned across columns
+const periodSummaryCards = computed(() => {
+  if (!summaryCards.value) return []
+  return [
+    { key: 'today', label: 'Today', data: summaryCards.value.today, accent: false },
+    { key: 'thisWeek', label: 'This Week', data: summaryCards.value.thisWeek, accent: false },
+    { key: 'thisMonth', label: 'This Month', data: summaryCards.value.thisMonth, accent: true },
+  ]
+})
+
+const showServiceChargeMeta = computed(() =>
+  periodSummaryCards.value.some(c => (c.data?.serviceCharge?.total || 0) > 0)
+)
+
+const showPettyCashMeta = computed(() =>
+  periodSummaryCards.value.some(c => (c.data?.pettyCash?.totalBalance || 0) > 0)
+)
 
 const formatCurrency = (amount) => {
   if (!amount && amount !== 0) return 'Rp 0'
@@ -211,6 +367,12 @@ onMounted(async () => {
     loadOverview(),
     fetchSummaryCards()
   ])
+  await nextTick()
+  renderRevenueTrendChart()
+})
+
+onUnmounted(() => {
+  destroyRevenueTrendChart()
 })
 </script>
 
@@ -247,154 +409,81 @@ onMounted(async () => {
         </div>
       </div>
     </div>
-    <div v-else-if="summaryCards" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <!-- Today -->
-      <div class="card bg-base-100 shadow-sm border border-base-200">
-        <div class="card-body py-4 px-5">
-          <p class="text-xs font-semibold uppercase text-base-content/50 tracking-widest mb-2">Today</p>
-          <div class="flex items-end justify-between">
-            <div>
-              <p class="text-2xl font-bold text-success">{{ formatCurrency(summaryCards.today?.revenueExcludingServiceCharge) }}</p>
-              <p class="text-xs text-base-content/50 mt-0.5">excl. SC · {{ summaryCards.today?.transactions ?? 0 }} trx</p>
-              <p v-if="summaryCards.today?.serviceCharge?.total > 0" class="text-xs text-base-content/40">
-                incl. SC: {{ formatCurrency(summaryCards.today?.revenue) }}
-              </p>
-            </div>
-            <div class="text-right">
-              <p class="text-base font-semibold" :class="(summaryCards.today?.netProfit ?? 0) >= 0 ? 'text-success' : 'text-error'">
-                {{ formatCurrency(summaryCards.today?.netProfit) }}
-              </p>
-              <p class="text-xs text-base-content/50">Net Profit</p>
-            </div>
-          </div>
-          <div class="divider my-1.5"></div>
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-error font-medium">{{ formatCurrency(summaryCards.today?.expenses) }}</span>
-            <span class="text-base-content/50 text-xs">Expenses</span>
-          </div>
-          <div v-if="summaryCards.today?.serviceCharge?.total > 0" class="flex items-center justify-between text-xs text-base-content/50 mt-1">
-            <span>Service charge {{ summaryCards.today?.serviceCharge?.transactionCount }}x</span>
-            <span>{{ formatCurrency(summaryCards.today?.serviceCharge?.total) }}</span>
-          </div>
-          <div v-if="summaryCards.today?.pettyCash?.totalBalance > 0" class="flex items-center justify-between text-xs text-base-content/50 mt-1">
-            <span>Petty cash · {{ summaryCards.today?.pettyCash?.fundCount }} dana</span>
-            <span>{{ formatCurrency(summaryCards.today?.pettyCash?.totalBalance) }}</span>
-          </div>
-          <!-- Payment breakdown mini bars (unified rows) -->
-          <div v-if="unifiedPaymentMethods.length" class="mt-2 space-y-1">
-            <template v-for="pm in normalizedPayments(summaryCards.today?.paymentMethods)" :key="pm.method">
-              <div class="flex items-center gap-2" :class="pm.percentage === 0 ? 'opacity-30' : ''">
-                <span class="text-xs text-base-content/50 w-20 truncate">{{ paymentMethodLabel(pm.method) }}</span>
-                <div class="flex-1 h-1.5 bg-base-200 rounded-full overflow-hidden">
-                  <div :class="paymentMethodColor(pm.method)" class="h-full rounded-full" :style="{ width: `${pm.percentage}%` }"></div>
-                </div>
-                <span class="text-xs text-base-content/60 w-8 text-right">{{ pm.percentage }}%</span>
-              </div>
-              <!-- card detail: bank breakdown -->
-              <div v-for="d in (pm.detail || [])" :key="d.bankName" class="flex items-center gap-2 pl-2 opacity-60">
-                <span class="text-xs text-base-content/40 w-20 truncate">&rsaquo; {{ d.bankName }}</span>
-                <span class="flex-1 text-xs text-base-content/50 text-right">{{ d.transactionCount }}x &nbsp; {{ formatCurrency(d.total) }}</span>
-              </div>
-            </template>
-          </div>
-        </div>
-      </div>
+    <div v-else-if="summaryCards" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-stretch">
+      <div
+        v-for="card in periodSummaryCards"
+        :key="card.key"
+        class="card h-full shadow-sm"
+        :class="card.accent ? 'bg-primary/5 border border-primary/20' : 'bg-base-100 border border-base-200'"
+      >
+        <div class="card-body py-4 px-5 h-full grid grid-rows-[auto_auto_auto_auto_1fr] gap-0">
+          <!-- Title -->
+          <p
+            class="text-xs font-semibold uppercase tracking-widest mb-2"
+            :class="card.accent ? 'text-primary/70' : 'text-base-content/50'"
+          >{{ card.label }}</p>
 
-      <!-- This Week -->
-      <div class="card bg-base-100 shadow-sm border border-base-200">
-        <div class="card-body py-4 px-5">
-          <p class="text-xs font-semibold uppercase text-base-content/50 tracking-widest mb-2">This Week</p>
-          <div class="flex items-end justify-between">
-            <div>
-              <p class="text-2xl font-bold text-success">{{ formatCurrency(summaryCards.thisWeek?.revenueExcludingServiceCharge) }}</p>
-              <p class="text-xs text-base-content/50 mt-0.5">excl. SC · {{ summaryCards.thisWeek?.transactions ?? 0 }} trx</p>
-              <p v-if="summaryCards.thisWeek?.serviceCharge?.total > 0" class="text-xs text-base-content/40">
-                incl. SC: {{ formatCurrency(summaryCards.thisWeek?.revenue) }}
+          <!-- Metrics (fixed structure so divider lines align across cards) -->
+          <div class="flex items-end justify-between min-h-[4.75rem]">
+            <div class="min-w-0">
+              <p class="text-2xl font-bold text-success leading-tight">{{ formatCurrency(card.data?.revenueExcludingServiceCharge) }}</p>
+              <p class="text-xs text-base-content/50 mt-0.5">excl. SC · {{ card.data?.transactions ?? 0 }} trx</p>
+              <p
+                class="text-xs text-base-content/40 h-4"
+                :class="{ invisible: !(card.data?.serviceCharge?.total > 0) }"
+              >
+                incl. SC: {{ formatCurrency(card.data?.revenue) }}
               </p>
             </div>
-            <div class="text-right">
-              <p class="text-base font-semibold" :class="(summaryCards.thisWeek?.netProfit ?? 0) >= 0 ? 'text-success' : 'text-error'">
-                {{ formatCurrency(summaryCards.thisWeek?.netProfit) }}
+            <div class="text-right shrink-0 pl-2">
+              <p class="text-base font-semibold" :class="(card.data?.netProfit ?? 0) >= 0 ? 'text-success' : 'text-error'">
+                {{ formatCurrency(card.data?.netProfit) }}
               </p>
               <p class="text-xs text-base-content/50">Net Profit</p>
             </div>
           </div>
-          <div class="divider my-1.5"></div>
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-error font-medium">{{ formatCurrency(summaryCards.thisWeek?.expenses) }}</span>
-            <span class="text-base-content/50 text-xs">Expenses</span>
-          </div>
-          <div v-if="summaryCards.thisWeek?.serviceCharge?.total > 0" class="flex items-center justify-between text-xs text-base-content/50 mt-1">
-            <span>Service charge {{ summaryCards.thisWeek?.serviceCharge?.transactionCount }}x</span>
-            <span>{{ formatCurrency(summaryCards.thisWeek?.serviceCharge?.total) }}</span>
-          </div>
-          <div v-if="summaryCards.thisWeek?.pettyCash?.totalBalance > 0" class="flex items-center justify-between text-xs text-base-content/50 mt-1">
-            <span>Petty cash · {{ summaryCards.thisWeek?.pettyCash?.fundCount }} dana</span>
-            <span>{{ formatCurrency(summaryCards.thisWeek?.pettyCash?.totalBalance) }}</span>
-          </div>
-          <!-- Payment breakdown mini bars (unified rows) -->
-          <div v-if="unifiedPaymentMethods.length" class="mt-2 space-y-1">
-            <template v-for="pm in normalizedPayments(summaryCards.thisWeek?.paymentMethods)" :key="pm.method">
-              <div class="flex items-center gap-2" :class="pm.percentage === 0 ? 'opacity-30' : ''">
-                <span class="text-xs text-base-content/50 w-20 truncate">{{ paymentMethodLabel(pm.method) }}</span>
-                <div class="flex-1 h-1.5 bg-base-200 rounded-full overflow-hidden">
-                  <div :class="paymentMethodColor(pm.method)" class="h-full rounded-full" :style="{ width: `${pm.percentage}%` }"></div>
-                </div>
-                <span class="text-xs text-base-content/60 w-8 text-right">{{ pm.percentage }}%</span>
-              </div>
-              <div v-for="d in (pm.detail || [])" :key="d.bankName" class="flex items-center gap-2 pl-2 opacity-60">
-                <span class="text-xs text-base-content/40 w-20 truncate">&rsaquo; {{ d.bankName }}</span>
-                <span class="flex-1 text-xs text-base-content/50 text-right">{{ d.transactionCount }}x &nbsp; {{ formatCurrency(d.total) }}</span>
-              </div>
-            </template>
-          </div>
-        </div>
-      </div>
 
-      <!-- This Month -->
-      <div class="card bg-primary/5 shadow-sm border border-primary/20">
-        <div class="card-body py-4 px-5">
-          <p class="text-xs font-semibold uppercase text-primary/70 tracking-widest mb-2">This Month</p>
-          <div class="flex items-end justify-between">
-            <div>
-              <p class="text-2xl font-bold text-success">{{ formatCurrency(summaryCards.thisMonth?.revenueExcludingServiceCharge) }}</p>
-              <p class="text-xs text-base-content/50 mt-0.5">excl. SC · {{ summaryCards.thisMonth?.transactions ?? 0 }} trx</p>
-              <p v-if="summaryCards.thisMonth?.serviceCharge?.total > 0" class="text-xs text-base-content/40">
-                incl. SC: {{ formatCurrency(summaryCards.thisMonth?.revenue) }}
-              </p>
-            </div>
-            <div class="text-right">
-              <p class="text-base font-semibold" :class="(summaryCards.thisMonth?.netProfit ?? 0) >= 0 ? 'text-success' : 'text-error'">
-                {{ formatCurrency(summaryCards.thisMonth?.netProfit) }}
-              </p>
-              <p class="text-xs text-base-content/50">Net Profit</p>
-            </div>
-          </div>
           <div class="divider my-1.5"></div>
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-error font-medium">{{ formatCurrency(summaryCards.thisMonth?.expenses) }}</span>
-            <span class="text-base-content/50 text-xs">Expenses</span>
+
+          <!-- Expenses + meta (reserved rows keep sections aligned) -->
+          <div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-error font-medium">{{ formatCurrency(card.data?.expenses) }}</span>
+              <span class="text-base-content/50 text-xs">Expenses</span>
+            </div>
+            <div
+              v-if="showServiceChargeMeta"
+              class="flex items-center justify-between text-xs text-base-content/50 mt-1 h-4"
+              :class="{ invisible: !(card.data?.serviceCharge?.total > 0) }"
+            >
+              <span>Service charge {{ card.data?.serviceCharge?.transactionCount ?? 0 }}x</span>
+              <span>{{ formatCurrency(card.data?.serviceCharge?.total) }}</span>
+            </div>
+            <div
+              v-if="showPettyCashMeta"
+              class="flex items-center justify-between text-xs text-base-content/50 mt-1 h-4"
+              :class="{ invisible: !(card.data?.pettyCash?.totalBalance > 0) }"
+            >
+              <span>Petty cash · {{ card.data?.pettyCash?.fundCount ?? 0 }} dana</span>
+              <span>{{ formatCurrency(card.data?.pettyCash?.totalBalance) }}</span>
+            </div>
           </div>
-          <div v-if="summaryCards.thisMonth?.serviceCharge?.total > 0" class="flex items-center justify-between text-xs text-base-content/50 mt-1">
-            <span>Service charge {{ summaryCards.thisMonth?.serviceCharge?.transactionCount }}x</span>
-            <span>{{ formatCurrency(summaryCards.thisMonth?.serviceCharge?.total) }}</span>
-          </div>
-          <div v-if="summaryCards.thisMonth?.pettyCash?.totalBalance > 0" class="flex items-center justify-between text-xs text-base-content/50 mt-1">
-            <span>Petty cash · {{ summaryCards.thisMonth?.pettyCash?.fundCount }} dana</span>
-            <span>{{ formatCurrency(summaryCards.thisMonth?.pettyCash?.totalBalance) }}</span>
-          </div>
+
           <!-- Payment breakdown mini bars (unified rows) -->
           <div v-if="unifiedPaymentMethods.length" class="mt-2 space-y-1">
-            <template v-for="pm in normalizedPayments(summaryCards.thisMonth?.paymentMethods)" :key="pm.method">
+            <template v-for="pm in normalizedPayments(card.data?.paymentMethods)" :key="pm.method">
               <div class="flex items-center gap-2" :class="pm.percentage === 0 ? 'opacity-30' : ''">
-                <span class="text-xs text-base-content/50 w-20 truncate">{{ paymentMethodLabel(pm.method) }}</span>
-                <div class="flex-1 h-1.5 bg-primary/20 rounded-full overflow-hidden">
+                <span class="text-xs text-base-content/50 w-24 truncate">{{ paymentMethodLabel(pm.method) }}</span>
+                <div
+                  class="flex-1 h-1.5 rounded-full overflow-hidden"
+                  :class="card.accent ? 'bg-primary/20' : 'bg-base-200'"
+                >
                   <div :class="paymentMethodColor(pm.method)" class="h-full rounded-full" :style="{ width: `${pm.percentage}%` }"></div>
                 </div>
                 <span class="text-xs text-base-content/60 w-8 text-right">{{ pm.percentage }}%</span>
               </div>
               <div v-for="d in (pm.detail || [])" :key="d.bankName" class="flex items-center gap-2 pl-2 opacity-60">
-                <span class="text-xs text-base-content/40 w-20 truncate">&rsaquo; {{ d.bankName }}</span>
+                <span class="text-xs text-base-content/40 w-24 truncate">&rsaquo; {{ d.bankName }}</span>
                 <span class="flex-1 text-xs text-base-content/50 text-right">{{ d.transactionCount }}x &nbsp; {{ formatCurrency(d.total) }}</span>
               </div>
             </template>
@@ -528,22 +617,11 @@ onMounted(async () => {
             <IconTrendingUp class="w-4 h-4 text-success" />
             Revenue Trend
           </h3>
-          <div v-if="overviewLoading" class="space-y-2">
-            <div v-for="i in 7" :key="i" class="skeleton h-6 w-full"></div>
+          <div v-if="overviewLoading" class="h-56 flex items-center justify-center">
+            <span class="loading loading-spinner loading-md text-success"></span>
           </div>
-          <div v-else-if="dailyTrend.length > 0" class="space-y-1.5">
-            <div v-for="(day, i) in dailyTrend" :key="i">
-              <div class="flex justify-between text-xs text-base-content/60 mb-0.5">
-                <span>{{ formatDate(day.date) }}</span>
-                <span class="font-medium text-success">{{ formatCurrency(day.total || 0) }}
-                  <span class="text-base-content/40 font-normal">&nbsp;·&nbsp;{{ day.count || 0 }}x</span>
-                </span>
-              </div>
-              <div class="w-full bg-base-200 rounded-full h-2.5 overflow-hidden">
-                <div class="bg-success h-full rounded-full transition-all"
-                  :style="{ width: `${Math.max(2, ((day.total || 0) / maxTrendValue) * 100)}%` }"></div>
-              </div>
-            </div>
+          <div v-else-if="dailyTrend.length > 0" class="relative h-56">
+            <canvas ref="revenueTrendCanvas"></canvas>
           </div>
           <div v-else class="text-center py-8 text-base-content/40 text-sm">No trend data available</div>
         </div>

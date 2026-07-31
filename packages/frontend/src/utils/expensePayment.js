@@ -81,7 +81,7 @@ const PAYMENT_METHOD_LABELS = {
   e_wallet: 'E-Wallet',
   payment_gateway: 'Payment Gateway',
   qris: 'QRIS',
-  credit_card: 'Kartu',
+  credit_card: 'Kartu Kredit',
   debit_card: 'Kartu Debit',
 }
 
