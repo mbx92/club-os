@@ -543,7 +543,7 @@ async function getGymComprehensive(req, res, next) {
         status: 'active',
         serviceType: 'membership',
         endDate: {
-          [Op.between]: [now, futureDate]
+          [Op.between]: [new Date(), futureDate]
         }
       }
     });
