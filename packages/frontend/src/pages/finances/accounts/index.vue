@@ -28,6 +28,8 @@ import {
   IconEyeOff,
   IconInfoCircle,
   IconX,
+  IconTransfer,
+  IconSparkles,
 } from '@tabler/icons-vue'
 
 const router = useRouter()
@@ -46,7 +48,7 @@ const dismissDeprecatedBanner = () => {
 const {
   accounts,
   loading, actionLoading,
-  fetchAccounts, createAccount, updateAccount, deleteAccount,
+  fetchAccounts, createAccount, updateAccount, deleteAccount, transferBetweenAccounts,
 } = useAccounts()
 
 const { bankOptions, loadBanks } = usePaymentBanks()
@@ -104,13 +106,49 @@ const emptyForm = () => ({
 const form = ref(emptyForm())
 
 const accountKindOptions = [
-  { value: 'cash', label: 'Tunai / Cash', hint: 'Ledger kas settled — saldo bertambah saat setoran dari laci kasir (bukan saat pembayaran POS)' },
-  { value: 'main_vault', label: 'Brankas Utama', hint: 'Brankas fisik — dana dimutasikan dari Tunai kapan saja, juga bisa dipakai untuk expense' },
-  { value: 'bank', label: 'Bank (BCA / Mandiri / ...)', hint: 'Semua QRIS, transfer, kartu dengan bank details masuk ke akun ini' },
-  { value: 'e_wallet', label: 'E-Wallet', hint: 'GoPay, OVO, DANA tanpa bank details' },
-  { value: 'payment_gateway', label: 'Payment Gateway', hint: 'Midtrans, Stripe, dll' },
-  { value: 'petty_cash', label: 'Petty Cash / Modal', hint: 'Dana kas kecil / modal — ganti modul Petty Cash lama' },
-  { value: 'custom', label: 'Lainnya', hint: 'Akun custom tanpa auto-match' },
+  {
+    value: 'cash',
+    label: 'Tunai / Cash',
+    hintTitle: 'Ledger kas settled',
+    hint: 'Saldo bertambah saat setoran dari laci kasir, bukan saat pembayaran POS.',
+  },
+  {
+    value: 'main_vault',
+    label: 'Brankas Utama',
+    hintTitle: 'Brankas fisik',
+    hint: 'Dana dimutasikan dari Tunai kapan saja, juga bisa dipakai untuk expense.',
+  },
+  {
+    value: 'bank',
+    label: 'Bank (BCA / Mandiri / ...)',
+    hintTitle: 'Auto-match pembayaran',
+    hint: 'Semua QRIS, transfer, dan kartu dengan bank details masuk ke akun bank ini.',
+    highlight: true,
+  },
+  {
+    value: 'e_wallet',
+    label: 'E-Wallet',
+    hintTitle: 'Dompet digital',
+    hint: 'GoPay, OVO, DANA tanpa bank details.',
+  },
+  {
+    value: 'payment_gateway',
+    label: 'Payment Gateway',
+    hintTitle: 'Gateway eksternal',
+    hint: 'Midtrans, Stripe, dan sejenisnya.',
+  },
+  {
+    value: 'petty_cash',
+    label: 'Petty Cash / Modal',
+    hintTitle: 'Modal kas kecil',
+    hint: 'Sumber modal kasir — menggantikan modul Petty Cash lama.',
+  },
+  {
+    value: 'custom',
+    label: 'Lainnya',
+    hintTitle: 'Akun custom',
+    hint: 'Tanpa auto-match pembayaran.',
+  },
 ]
 
 const formName = computed(() => {
@@ -123,9 +161,78 @@ const formName = computed(() => {
   return form.value.name || accountKindOptions.find(o => o.value === form.value.accountKind)?.label || ''
 })
 
-const selectedKindHint = computed(() =>
-  accountKindOptions.find(o => o.value === form.value.accountKind)?.hint || ''
+const selectedKindOption = computed(() =>
+  accountKindOptions.find(o => o.value === form.value.accountKind) || null
 )
+
+// ─── Transfer antar akun ─────────────────────────────────────────────────────
+
+const showTransferForm = ref(false)
+const transferForm = ref({
+  fromAccountId: '',
+  toAccountId: '',
+  amount: 0,
+  entryDate: new Date().toLocaleDateString('en-CA'),
+  notes: '',
+})
+
+const activeAccounts = computed(() =>
+  (accounts.value || []).filter(a => a.isActive !== false)
+)
+
+const transferFromAccount = computed(() =>
+  activeAccounts.value.find(a => a.id === transferForm.value.fromAccountId) || null
+)
+
+const transferToOptions = computed(() =>
+  activeAccounts.value.filter(a => a.id !== transferForm.value.fromAccountId)
+)
+
+const openTransfer = (fromAcc = null) => {
+  const fromId = fromAcc?.id || activeAccounts.value[0]?.id || ''
+  const toId = activeAccounts.value.find(a => a.id !== fromId)?.id || ''
+  transferForm.value = {
+    fromAccountId: fromId,
+    toAccountId: toId,
+    amount: 0,
+    entryDate: new Date().toLocaleDateString('en-CA'),
+    notes: '',
+  }
+  showTransferForm.value = true
+}
+
+const fillTransferAllBalance = () => {
+  transferForm.value.amount = Math.max(0, parseFloat(transferFromAccount.value?.balance || 0))
+}
+
+const submitTransfer = async () => {
+  if (!transferForm.value.fromAccountId || !transferForm.value.toAccountId) {
+    showWarning('Pilih akun sumber dan tujuan')
+    return
+  }
+  if (transferForm.value.fromAccountId === transferForm.value.toAccountId) {
+    showWarning('Akun sumber dan tujuan harus berbeda')
+    return
+  }
+  if (!transferForm.value.amount || parseFloat(transferForm.value.amount) <= 0) {
+    showWarning('Jumlah harus lebih dari 0')
+    return
+  }
+  if (parseFloat(transferForm.value.amount) > parseFloat(transferFromAccount.value?.balance || 0)) {
+    showWarning('Jumlah melebihi saldo akun sumber')
+    return
+  }
+
+  await transferBetweenAccounts({
+    fromAccountId: transferForm.value.fromAccountId,
+    toAccountId: transferForm.value.toAccountId,
+    amount: parseFloat(transferForm.value.amount),
+    entryDate: transferForm.value.entryDate || undefined,
+    notes: transferForm.value.notes || undefined,
+  })
+  showTransferForm.value = false
+  await fetchAccounts()
+}
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
 
@@ -297,6 +404,14 @@ onMounted(async () => {
         <button class="btn btn-ghost btn-sm" :disabled="loading" @click="fetchAccounts()">
           <IconRefresh class="w-4 h-4" :class="{ 'animate-spin': loading }" />
         </button>
+        <button
+          class="btn btn-outline btn-sm"
+          :disabled="activeAccounts.length < 2"
+          @click="openTransfer()"
+        >
+          <IconTransfer class="w-4 h-4" />
+          Transfer
+        </button>
         <button class="btn btn-primary btn-sm" @click="openCreate">
           <IconPlus class="w-4 h-4" />
           Tambah Akun
@@ -354,6 +469,13 @@ onMounted(async () => {
                 </div>
               </div>
               <div class="flex gap-1 shrink-0">
+                <button
+                  class="btn btn-ghost btn-xs"
+                  title="Transfer dari akun ini"
+                  @click.stop="openTransfer(acc)"
+                >
+                  <IconTransfer class="w-3.5 h-3.5" />
+                </button>
                 <button
                   class="btn btn-ghost btn-xs"
                   title="Edit"
@@ -426,9 +548,26 @@ onMounted(async () => {
                 {{ opt.label }}
               </option>
             </select>
-            <label class="label">
-              <span class="label-text-alt text-base-content/50">{{ selectedKindHint }}</span>
-            </label>
+          </div>
+
+          <div
+            v-if="selectedKindOption"
+            class="rounded-xl border px-3.5 py-3 flex gap-3"
+            :class="selectedKindOption.highlight
+              ? 'border-info/40 bg-info/10'
+              : 'border-base-300 bg-base-200/70'"
+          >
+            <div
+              class="mt-0.5 shrink-0 rounded-lg p-1.5"
+              :class="selectedKindOption.highlight ? 'bg-info/20 text-info' : 'bg-base-300/60 text-base-content/60'"
+            >
+              <IconSparkles v-if="selectedKindOption.highlight" class="w-4 h-4" />
+              <IconInfoCircle v-else class="w-4 h-4" />
+            </div>
+            <div class="min-w-0 text-sm">
+              <p class="font-semibold leading-snug">{{ selectedKindOption.hintTitle }}</p>
+              <p class="mt-0.5 text-base-content/70 leading-snug">{{ selectedKindOption.hint }}</p>
+            </div>
           </div>
 
           <div v-if="form.accountKind === 'bank'" class="form-control">
@@ -443,9 +582,14 @@ onMounted(async () => {
                 {{ bank.label }}
               </option>
             </select>
-            <label class="label">
-              <span class="label-text-alt text-info">QRIS / Transfer / Kartu dengan bank ini → masuk ke akun ini</span>
-            </label>
+            <div
+              v-if="form.bankName"
+              class="mt-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-base-content/80"
+            >
+              QRIS, transfer, dan kartu dengan bank
+              <strong class="uppercase">{{ form.bankName }}</strong>
+              otomatis masuk ke akun ini.
+            </div>
           </div>
 
           <div class="form-control">
@@ -506,6 +650,93 @@ onMounted(async () => {
         </div>
       </div>
       <div class="modal-backdrop" @click="closeForm"></div>
+    </dialog>
+
+    <!-- Transfer Modal -->
+    <dialog class="modal" :class="{ 'modal-open': showTransferForm }">
+      <div class="modal-box max-w-md">
+        <h3 class="font-bold text-lg mb-1 flex items-center gap-2">
+          <IconTransfer class="w-5 h-5 text-primary" />
+          Transfer Antar Akun
+        </h3>
+        <p class="text-sm text-base-content/60 mb-4">
+          Pindahkan saldo dari satu akun ke akun lain.
+        </p>
+
+        <div class="space-y-3">
+          <div class="form-control">
+            <label class="label"><span class="label-text font-medium">Dari akun</span></label>
+            <select
+              v-model="transferForm.fromAccountId"
+              class="select select-bordered w-full"
+              @change="transferForm.toAccountId = transferToOptions[0]?.id || ''"
+            >
+              <option value="" disabled>Pilih akun sumber...</option>
+              <option v-for="acc in activeAccounts" :key="acc.id" :value="acc.id">
+                {{ acc.name }} — {{ formatCurrency(acc.balance) }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-control">
+            <label class="label"><span class="label-text font-medium">Ke akun</span></label>
+            <select v-model="transferForm.toAccountId" class="select select-bordered w-full">
+              <option value="" disabled>Pilih akun tujuan...</option>
+              <option v-for="acc in transferToOptions" :key="acc.id" :value="acc.id">
+                {{ acc.name }} — {{ formatCurrency(acc.balance) }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-control">
+            <label class="label"><span class="label-text font-medium">Jumlah</span></label>
+            <div class="join w-full items-stretch">
+              <CurrencyInput
+                v-model="transferForm.amount"
+                input-class="input input-bordered join-item w-full !h-12 min-h-12"
+                placeholder="0"
+              />
+              <button
+                type="button"
+                class="btn btn-outline join-item shrink-0 !h-12 min-h-12"
+                :disabled="!(parseFloat(transferFromAccount?.balance) > 0)"
+                @click="fillTransferAllBalance"
+              >
+                Semua
+              </button>
+            </div>
+            <label v-if="transferFromAccount" class="label">
+              <span class="label-text-alt text-base-content/50">
+                Saldo tersedia: {{ formatCurrency(transferFromAccount.balance) }}
+              </span>
+            </label>
+          </div>
+
+          <div class="form-control">
+            <label class="label"><span class="label-text font-medium">Tanggal</span></label>
+            <input v-model="transferForm.entryDate" type="date" class="input input-bordered w-full" />
+          </div>
+
+          <div class="form-control">
+            <label class="label"><span class="label-text font-medium">Catatan</span></label>
+            <input
+              v-model="transferForm.notes"
+              type="text"
+              class="input input-bordered w-full"
+              placeholder="Opsional — e.g. Isi ulang modal"
+            />
+          </div>
+        </div>
+
+        <div class="modal-action">
+          <button class="btn btn-ghost" @click="showTransferForm = false">Batal</button>
+          <button class="btn btn-primary" :disabled="actionLoading" @click="submitTransfer">
+            <span v-if="actionLoading" class="loading loading-spinner loading-sm"></span>
+            <span v-else>Transfer</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal-backdrop" @click="showTransferForm = false"></div>
     </dialog>
 
     <DialogConfirm ref="confirmDialog" />

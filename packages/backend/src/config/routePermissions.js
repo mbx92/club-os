@@ -234,6 +234,7 @@ const ROUTE_TO_SUBJECT_MAP = {
     POST: { subject: 'CashRegisterSession', actions: ['create'] }
   },
   '/gym/cash-register/current': { subject: 'CashRegisterSession', actions: ['read'] },
+  '/gym/cash-register/petty-cash-accounts': { subject: 'CashRegisterSession', actions: ['create'] },
   '/gym/cash-register/:id': {
     GET: { subject: 'CashRegisterSession', actions: ['read'] },
     PUT: { subject: 'CashRegisterSession', actions: ['update'] }
@@ -905,6 +906,9 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/reports/finance/profit-loss': { subject: 'Transaction', actions: ['read'] },
   '/reports/finance/cash-flow': { subject: 'CashFlow', actions: ['read'] },
   '/reports/finance/shareholder': { subject: 'Transaction', actions: ['read'] },
+  '/reports/finance/accounts': { subject: 'FinancialReport', actions: ['read'] },
+  '/reports/finance/account-transactions': { subject: 'FinancialReport', actions: ['read'] },
+  '/reports/finance/transaction-details': { subject: 'FinancialReport', actions: ['read'] },
   
   // Commission Reports
   '/reports/commissions/summary': { subject: 'TrainerCommission', actions: ['read'] },

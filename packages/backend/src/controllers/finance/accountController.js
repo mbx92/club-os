@@ -415,7 +415,7 @@ async function createAdjustment(req, res, next) {
 /**
  * POST /finance/accounts/transfer
  * Body: { fromAccountId, toAccountId, amount, entryDate?, notes? }
- * Fase 1: Tunai (cash) → Brankas Utama (main_vault)
+ * Transfer saldo antar akun keuangan (pasangan transfer_out + transfer_in).
  */
 async function transferBetweenAccounts(req, res, next) {
   try {

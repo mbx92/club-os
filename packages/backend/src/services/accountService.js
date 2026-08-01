@@ -840,7 +840,7 @@ async function recalculateTenantBalances({ tenantId, dryRun = true }) {
 }
 
 /**
- * Transfer balance between Accounts (Tunai → Brankas Utama).
+ * Transfer balance between any two active Accounts.
  * Creates paired transfer_out + transfer_in entries atomically.
  *
  * @param {object} opts
@@ -895,15 +895,9 @@ async function transferBetweenAccounts(opts, externalTransaction = null) {
     if (!toAccount) {
       throw Object.assign(new Error('Akun tujuan tidak ditemukan'), { status: 404 });
     }
-    if (fromAccount.type !== 'cash') {
-      throw Object.assign(new Error('Mutasi ke Brankas Utama hanya bisa dari akun Tunai'), { status: 400 });
-    }
-    if (toAccount.type !== 'main_vault') {
-      throw Object.assign(new Error('Akun tujuan harus Brankas Utama'), { status: 400 });
-    }
     if (parseFloat(fromAccount.balance) < parsedAmount) {
       throw Object.assign(
-        new Error(`Saldo Tunai tidak cukup. Saldo: ${fromAccount.balance}, diminta: ${parsedAmount}`),
+        new Error(`Saldo ${fromAccount.name} tidak cukup. Saldo: ${fromAccount.balance}, diminta: ${parsedAmount}`),
         { status: 400 }
       );
     }
@@ -912,7 +906,7 @@ async function transferBetweenAccounts(opts, externalTransaction = null) {
     const date = entryDate || todayInTz(timezone || 'Asia/Makassar');
     const description = notes?.trim()
       ? notes.trim()
-      : `Mutasi Tunai → ${toAccount.name}`;
+      : `Transfer ke ${toAccount.name}`;
 
     const outResult = await createEntry({
       accountId: fromAccount.id,
@@ -936,7 +930,7 @@ async function transferBetweenAccounts(opts, externalTransaction = null) {
       referenceId: transferId,
       description: notes?.trim()
         ? notes.trim()
-        : `Mutasi dari ${fromAccount.name}`,
+        : `Transfer dari ${fromAccount.name}`,
       entryDate: date,
       performedBy,
       timezone,

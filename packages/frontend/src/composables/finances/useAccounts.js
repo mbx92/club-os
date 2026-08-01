@@ -153,10 +153,10 @@ export function useAccounts() {
     actionLoading.value = true
     try {
       const response = await api.post('/finance/accounts/transfer', data)
-      showSuccess('Mutasi ke Brankas Utama berhasil')
+      showSuccess('Transfer antar akun berhasil')
       return response
     } catch (error) {
-      handleError(error, 'Gagal mutasi ke Brankas Utama')
+      handleError(error, 'Gagal transfer antar akun')
       throw error
     } finally {
       actionLoading.value = false

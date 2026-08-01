@@ -21,6 +21,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'closedById',
         as: 'closedBy',
       });
+      CashRegisterSession.belongsTo(models.Account, {
+        foreignKey: 'pettyCashAccountId',
+        as: 'pettyCashAccount',
+      });
     }
 
     /** Hitung total cash inflow/outflow dari transaksi tunai + pengeluaran kas */
@@ -163,6 +167,11 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DECIMAL(15, 2),
         allowNull: false,
         defaultValue: 0,
+      },
+      pettyCashAccountId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        comment: 'Account type=petty_cash used as modal awal source',
       },
       openedAt: {
         type: DataTypes.DATE,

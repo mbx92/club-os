@@ -813,6 +813,27 @@ export const navigation = [
             subject: "FinancialReport",
           },
           {
+            label: "Laporan Akun",
+            to: "/finances/reports/accounts",
+            icon: "building-bank",
+            action: "read",
+            subject: "FinancialReport",
+          },
+          {
+            label: "Transaksi Akun",
+            to: "/finances/reports/account-transactions",
+            icon: "list-details",
+            action: "read",
+            subject: "FinancialReport",
+          },
+          {
+            label: "Detail Transaksi",
+            to: "/finances/reports/transaction-details",
+            icon: "receipt-2",
+            action: "read",
+            subject: "FinancialReport",
+          },
+          {
             label: "Komisi Layanan",
             to: "/finances/reports/service-commission",
             icon: "receipt-2",

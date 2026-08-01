@@ -17,10 +17,12 @@ const {
   PettyCashTransaction,
   Voucher,
   VoucherUsage,
+  Account,
 } = require('../../../models');
 const { fn, col } = require('sequelize');
 const logger = require('../../../utils/logger');
 const receiptPrinterService = require('../../../services/receiptPrinterService');
+const accountService = require('../../../services/accountService');
 const {
   CASH_REGISTER_TRANSACTION_STATUSES,
   COMPLETED_PAYMENT_STATUS,
@@ -89,24 +91,76 @@ function getPettyCashLocationInclude(locationId) {
 }
 
 /**
+ * GET /gym/cash-register/petty-cash-accounts
+ * List active Account type=petty_cash for modal awal selection.
+ */
+exports.listPettyCashAccounts = async (req, res, next) => {
+  try {
+    const { tenantId } = req.user;
+    const accounts = await Account.findAll({
+      where: { tenantId, type: 'petty_cash', isActive: true },
+      attributes: ['id', 'name', 'type', 'balance', 'openingBalance', 'currency', 'description'],
+      order: [['sortOrder', 'ASC'], ['name', 'ASC']],
+    });
+    return res.json({ success: true, data: accounts });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * POST /gym/cash-register/open
  * Open a new shift / sesi kasir
  */
 exports.openShift = async (req, res, next) => {
+  const dbTransaction = await sequelize.transaction();
   try {
     const { tenantId } = req.user;
     const {
       shiftName,
-      openingBalance = 0,
       locationId = null,
       openingNotes = null,
+      pettyCashAccountId = null,
     } = req.body;
 
     if (!shiftName) {
+      await dbTransaction.rollback();
       return res.status(400).json({ success: false, message: 'shiftName wajib diisi (e.g. pagi, siang, malam)' });
     }
-    if (openingBalance < 0) {
-      return res.status(400).json({ success: false, message: 'openingBalance tidak boleh negatif' });
+    if (!pettyCashAccountId) {
+      await dbTransaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Akun Petty Cash / Modal wajib dipilih',
+      });
+    }
+
+    const pettyCashAccount = await Account.findOne({
+      where: {
+        id: pettyCashAccountId,
+        tenantId,
+        type: 'petty_cash',
+        isActive: true,
+      },
+      lock: dbTransaction.LOCK.UPDATE,
+      transaction: dbTransaction,
+    });
+    if (!pettyCashAccount) {
+      await dbTransaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Akun Petty Cash / Modal tidak ditemukan atau tidak aktif',
+      });
+    }
+
+    // Modal awal = saldo akun petty cash saat buka shift (bukan input manual)
+    const modalAmount = parseFloat(pettyCashAccount.balance) || 0;
+    if (modalAmount <= 0) {
+      await dbTransaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `Saldo akun ${pettyCashAccount.name} harus > 0 untuk modal awal`,
+      });
     }
 
     const now = new Date();
@@ -122,9 +176,11 @@ exports.openShift = async (req, res, next) => {
         ...(locationId ? { locationId } : {}),
         deletedAt: null,
       },
+      transaction: dbTransaction,
     });
 
     if (activeSession) {
+      await dbTransaction.rollback();
       return res.status(409).json({
         success: false,
         message: 'Masih ada sesi shift yang belum ditutup',
@@ -140,6 +196,7 @@ exports.openShift = async (req, res, next) => {
         ...(locationId ? { locationId } : {}),
         deletedAt: null,
       },
+      transaction: dbTransaction,
     });
 
     // ── Opsi B: cek apakah ada transaksi hari ini sebelum shift dibuka ────────
@@ -157,6 +214,7 @@ exports.openShift = async (req, res, next) => {
         ...(locationId ? { [Op.or]: [{ locationId }, { locationId: null }] } : {}),
       },
       attributes: ['openedAt', 'closedAt'],
+      transaction: dbTransaction,
     });
 
     // Cari transaksi hari ini yang terjadi sebelum NOW dan belum masuk ke session manapun
@@ -172,6 +230,7 @@ exports.openShift = async (req, res, next) => {
       where: uncoveredTxWhere,
       attributes: ['id', 'createdAt', 'transactionNumber'],
       order: [['createdAt', 'ASC']],
+      transaction: dbTransaction,
     });
 
     // Filter: keluarkan yang sudah ter-cover oleh session sebelumnya
@@ -208,12 +267,29 @@ exports.openShift = async (req, res, next) => {
       shiftName: shiftName.trim(),
       shiftDate,
       shiftNumber: todayCount + 1,
-      openingBalance: parseFloat(openingBalance),
+      openingBalance: modalAmount,
+      pettyCashAccountId: pettyCashAccount ? pettyCashAccount.id : null,
       openedAt: effectiveOpenedAt,
       openedById: req.user.id,
       openingNotes,
       status: 'open',
-    });
+    }, { transaction: dbTransaction });
+
+    // Debit akun Petty Cash → modal masuk ke laci kasir
+    if (pettyCashAccount && modalAmount > 0) {
+      await accountService.createEntry({
+        accountId: pettyCashAccount.id,
+        tenantId,
+        type: 'outflow',
+        amount: modalAmount,
+        referenceType: 'CashRegisterSession',
+        referenceId: session.id,
+        description: `Modal awal kasir — shift ${session.shiftName} (${session.shiftDate})`,
+        entryDate: shiftDate,
+        performedBy: req.user.id,
+        timezone: tenantTz,
+      }, dbTransaction);
+    }
 
     // Inherit any pending/active restaurant orders from the previous shift.
     // These are orders whose createdAt < openedAt (created during a prior session
@@ -229,6 +305,7 @@ exports.openShift = async (req, res, next) => {
         ...(locationId ? { locationId } : {}),
       },
       attributes: ['id', 'transactionNumber', 'status'],
+      transaction: dbTransaction,
     });
 
     let inheritedCount = 0;
@@ -238,16 +315,20 @@ exports.openShift = async (req, res, next) => {
         {
           where: { id: { [Op.in]: orphanedOrders.map(o => o.id) } },
           silent: true,   // prevent Sequelize from auto-setting updatedAt
+          transaction: dbTransaction,
         }
       );
       inheritedCount = orphanedOrders.length;
       logger.info(`openShift: inherited ${inheritedCount} orphaned order(s) into session ${session.id}`, { tenantId });
     }
 
+    await dbTransaction.commit();
+
     const result = await CashRegisterSession.findByPk(session.id, {
       include: [
         { model: User, as: 'openedBy', attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: Location, as: 'location', attributes: ['id', 'name'], required: false },
+        { model: Account, as: 'pettyCashAccount', attributes: ['id', 'name', 'type', 'balance'], required: false },
       ],
     });
 
@@ -255,6 +336,9 @@ exports.openShift = async (req, res, next) => {
 
     // Bangun pesan respons
     const msgParts = [`Shift ${shiftName} berhasil dibuka`];
+    if (pettyCashAccount && modalAmount > 0) {
+      msgParts.push(`Modal ${modalAmount} diambil dari akun ${pettyCashAccount.name}.`);
+    }
     if (backdatedCount > 0) {
       msgParts.push(`${backdatedCount} transaksi sebelum shift otomatis dimasukkan ke laporan shift ini.`);
     }
@@ -281,6 +365,7 @@ exports.openShift = async (req, res, next) => {
       } : {}),
     });
   } catch (err) {
+    if (!dbTransaction.finished) await dbTransaction.rollback();
     next(err);
   }
 };
@@ -290,23 +375,29 @@ exports.openShift = async (req, res, next) => {
  * Tutup sesi shift — input actual cash, sistem hitung selisih
  */
 exports.closeShift = async (req, res, next) => {
+  const dbTransaction = await sequelize.transaction();
   try {
     const { tenantId } = req.user;
     const { id } = req.params;
     const { actualCash, tipping = 0, closingNotes = null, carryOverOrders = false } = req.body;
 
     if (actualCash === undefined || actualCash === null) {
+      await dbTransaction.rollback();
       return res.status(400).json({ success: false, message: 'actualCash wajib diisi' });
     }
     if (parseFloat(actualCash) < 0) {
+      await dbTransaction.rollback();
       return res.status(400).json({ success: false, message: 'actualCash tidak boleh negatif' });
     }
 
     const session = await CashRegisterSession.findOne({
       where: { id, tenantId, status: 'open', deletedAt: null },
+      lock: dbTransaction.LOCK.UPDATE,
+      transaction: dbTransaction,
     });
 
     if (!session) {
+      await dbTransaction.rollback();
       return res.status(404).json({ success: false, message: 'Sesi shift tidak ditemukan atau sudah ditutup' });
     }
 
@@ -323,9 +414,11 @@ exports.closeShift = async (req, res, next) => {
       },
       attributes: ['id', 'transactionNumber', 'status', 'tableId'],
       limit: 10,
+      transaction: dbTransaction,
     });
 
     if (activeTransactions.length > 0 && !carryOverOrders) {
+      await dbTransaction.rollback();
       const orderList = activeTransactions.map(t => `${t.transactionNumber} (${t.status})`).join(', ');
       return res.status(400).json({
         success: false,
@@ -342,7 +435,26 @@ exports.closeShift = async (req, res, next) => {
     }
 
     // Hitung expected cash dari transaksi tunai selama shift ini
-    const { cashIn, cashOut, expectedCash } = await session.getCashSummary();
+    const { cashIn, cashOut, cashExpenseOut, expectedCash } = await session.getCashSummary(dbTransaction);
+
+    // Pengeluaran yang benar-benar dari laci (bukan dari akun/brankas lain)
+    const drawerExpenseRows = await Expense.findAll({
+      where: getCashDrawerExpenseWhere({
+        tenantId,
+        status: { [Op.in]: ['paid'] },
+        createdAt: {
+          [Op.gte]: session.openedAt,
+          ...(session.closedAt ? { [Op.lte]: session.closedAt } : {}),
+        },
+        ...getExpenseLocationWhere(session.locationId),
+      }),
+      attributes: ['totalAmount'],
+      transaction: dbTransaction,
+    });
+    const drawerExpenseTotal = drawerExpenseRows.reduce(
+      (sum, e) => sum + parseFloat(e.totalAmount || 0),
+      0
+    );
 
     const actual = parseFloat(actualCash);
     // Tipping is physically stored in the drawer, so it increases the expected closing balance
@@ -358,13 +470,68 @@ exports.closeShift = async (req, res, next) => {
       closedAt: new Date(),
       closedById: req.user.id,
       closingNotes,
-    });
+    }, { transaction: dbTransaction });
+
+    // Kembalikan sisa modal ke akun Petty Cash:
+    // modal awal − pengeluaran dari laci (uang yang sudah keluar tidak dikembalikan).
+    let pettyCashReturned = null;
+    const openingModal = parseFloat(session.openingBalance || 0);
+    const modalReturnAmount = Math.max(0, parseFloat((openingModal - drawerExpenseTotal).toFixed(2)));
+    if (session.pettyCashAccountId && modalReturnAmount > 0) {
+      const pettyCashAccount = await Account.findOne({
+        where: {
+          id: session.pettyCashAccountId,
+          tenantId,
+          type: 'petty_cash',
+          isActive: true,
+        },
+        lock: dbTransaction.LOCK.UPDATE,
+        transaction: dbTransaction,
+      });
+      if (pettyCashAccount) {
+        const tenantTz = getTenantTimezone(req);
+        const descParts = [`Pengembalian modal kasir — shift ${session.shiftName} (${session.shiftDate})`];
+        if (drawerExpenseTotal > 0) {
+          descParts.push(`modal ${openingModal} − pengeluaran laci ${drawerExpenseTotal}`);
+        }
+        await accountService.createEntry({
+          accountId: pettyCashAccount.id,
+          tenantId,
+          type: 'inflow',
+          amount: modalReturnAmount,
+          referenceType: 'CashRegisterSession',
+          referenceId: session.id,
+          description: descParts.join(' · '),
+          entryDate: todayInTz(tenantTz),
+          performedBy: req.user.id,
+          timezone: tenantTz,
+        }, dbTransaction);
+        pettyCashReturned = {
+          accountId: pettyCashAccount.id,
+          accountName: pettyCashAccount.name,
+          amount: modalReturnAmount,
+          openingModal,
+          drawerExpenses: drawerExpenseTotal,
+        };
+      }
+    } else if (session.pettyCashAccountId && openingModal > 0 && modalReturnAmount === 0) {
+      pettyCashReturned = {
+        accountId: session.pettyCashAccountId,
+        accountName: null,
+        amount: 0,
+        openingModal,
+        drawerExpenses: drawerExpenseTotal,
+      };
+    }
+
+    await dbTransaction.commit();
 
     const result = await CashRegisterSession.findByPk(session.id, {
       include: [
         { model: User, as: 'openedBy', attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: User, as: 'closedBy', attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: Location, as: 'location', attributes: ['id', 'name'], required: false },
+        { model: Account, as: 'pettyCashAccount', attributes: ['id', 'name', 'type', 'balance'], required: false },
       ],
     });
 
@@ -379,22 +546,29 @@ exports.closeShift = async (req, res, next) => {
       success: true,
       message: carriedOverOrders.length > 0
         ? `Shift berhasil ditutup. ${carriedOverOrders.length} order dilanjutkan ke shift berikutnya.`
-        : 'Shift berhasil ditutup',
+        : (pettyCashReturned
+          ? (pettyCashReturned.amount > 0
+            ? `Shift berhasil ditutup. Sisa modal ${pettyCashReturned.amount} dikembalikan ke ${pettyCashReturned.accountName}.`
+            : `Shift berhasil ditutup. Tidak ada sisa modal dikembalikan (pengeluaran laci ≥ modal awal).`)
+          : 'Shift berhasil ditutup'),
       data: {
         session: result,
         summary: {
           openingBalance: parseFloat(session.openingBalance),
           cashIn,
           cashOut,
+          cashExpenseOut: drawerExpenseTotal,
           expectedCash: closingBalance,
           actualCash: actual,
           difference,
           status: difference === 0 ? 'balance' : difference > 0 ? 'surplus' : 'deficit',
+          pettyCashReturned,
         },
         carriedOverOrders,
       },
     });
   } catch (err) {
+    if (!dbTransaction.finished) await dbTransaction.rollback();
     next(err);
   }
 };
@@ -418,6 +592,7 @@ exports.getCurrentSession = async (req, res, next) => {
       include: [
         { model: User, as: 'openedBy', attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: Location, as: 'location', attributes: ['id', 'name'], required: false },
+        { model: Account, as: 'pettyCashAccount', attributes: ['id', 'name', 'type', 'balance'], required: false },
       ],
       order: [['openedAt', 'DESC']],
     });
@@ -429,6 +604,20 @@ exports.getCurrentSession = async (req, res, next) => {
     // Hitung summary realtime
     const { cashIn, cashOut, expectedCash } = await session.getCashSummary();
 
+    const drawerExpenseRows = await Expense.findAll({
+      where: getCashDrawerExpenseWhere({
+        tenantId,
+        status: { [Op.in]: ['paid'] },
+        createdAt: { [Op.gte]: session.openedAt },
+        ...getExpenseLocationWhere(session.locationId),
+      }),
+      attributes: ['totalAmount'],
+    });
+    const cashExpenseOut = drawerExpenseRows.reduce(
+      (sum, e) => sum + parseFloat(e.totalAmount || 0),
+      0
+    );
+
     return res.json({
       success: true,
       data: {
@@ -437,7 +626,12 @@ exports.getCurrentSession = async (req, res, next) => {
           openingBalance: parseFloat(session.openingBalance),
           cashIn,
           cashOut,
+          cashExpenseOut: parseFloat(cashExpenseOut.toFixed(2)),
           expectedCash: parseFloat(expectedCash.toFixed(2)),
+          pettyCashReturnEstimate: Math.max(
+            0,
+            parseFloat((parseFloat(session.openingBalance) - cashExpenseOut).toFixed(2))
+          ),
         },
       },
     });
@@ -481,6 +675,7 @@ exports.listSessions = async (req, res, next) => {
         { model: User, as: 'openedBy', attributes: ['id', 'firstName', 'lastName'] },
         { model: User, as: 'closedBy', attributes: ['id', 'firstName', 'lastName'], required: false },
         { model: Location, as: 'location', attributes: ['id', 'name'], required: false },
+        { model: Account, as: 'pettyCashAccount', attributes: ['id', 'name', 'type'], required: false },
       ],
       order: [['shiftDate', 'DESC'], ['shiftNumber', 'DESC']],
       limit: parseInt(limit),
@@ -660,6 +855,7 @@ exports.getSession = async (req, res, next) => {
         { model: User, as: 'openedBy', attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: User, as: 'closedBy', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
         { model: Location, as: 'location', attributes: ['id', 'name'], required: false },
+        { model: Account, as: 'pettyCashAccount', attributes: ['id', 'name', 'type', 'balance'], required: false },
       ],
     });
 

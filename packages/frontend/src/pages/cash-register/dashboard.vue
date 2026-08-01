@@ -105,14 +105,14 @@ const handlePrintReport = async (sessionId) => {
 const getPaymentMethodLabel = (method) => {
   const map = {
     cash: 'Tunai',
-    credit_card: 'Kartu',
+    credit_card: 'Kartu Kredit',
     debit_card: 'Kartu Debit',
     bank_transfer: 'Transfer Bank',
     qris: 'QRIS',
     e_wallet: 'E-Wallet',
     compliment: 'Gratis (Compliment)',
     // legacy aliases
-    card: 'Kartu',
+    card: 'Kartu Kredit',
     ewallet: 'E-Wallet',
     transfer: 'Transfer Bank',
   }

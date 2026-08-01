@@ -136,7 +136,7 @@ export function usePayments() {
     const methodMap = {
       cash: 'Cash',
       bank_transfer: 'Bank Transfer',
-      credit_card: 'Kartu',
+      credit_card: 'Kartu Kredit',
       e_wallet: 'E-Wallet',
       qris: 'QRIS',
       compliment: 'Gratis (Compliment)'

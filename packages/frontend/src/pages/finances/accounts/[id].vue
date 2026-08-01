@@ -60,7 +60,7 @@ const showAdjForm = ref(false)
 const adjForm = ref({ type: 'adjustment_credit', amount: 0, description: '' })
 const hideBalance = ref(false)
 
-// ─── Transfer Form (Tunai → Brankas Utama) ────────────────────────────────────
+// ─── Transfer Form (antar akun) ──────────────────────────────────────────────
 
 const showTransferForm = ref(false)
 const transferForm = ref({
@@ -70,11 +70,12 @@ const transferForm = ref({
   notes: '',
 })
 
-const isCashAccount = computed(() => account.value?.type === 'cash')
-const mainVaultAccounts = computed(() =>
-  (accounts.value || []).filter(a => a.type === 'main_vault' && a.isActive !== false)
+const transferToOptions = computed(() =>
+  (accounts.value || []).filter(a => a.isActive !== false && a.id !== accountId)
 )
-const canTransferToVault = computed(() => isCashAccount.value && mainVaultAccounts.value.length > 0)
+const canTransfer = computed(() =>
+  parseFloat(account.value?.balance || 0) > 0 && transferToOptions.value.length > 0
+)
 
 const HIDDEN_BALANCES_KEY = 'accounts_hidden_balances'
 const syncHideFromStorage = () => {
@@ -208,7 +209,7 @@ const submitAdjustment = async () => {
 
 const openTransferForm = () => {
   transferForm.value = {
-    toAccountId: mainVaultAccounts.value[0]?.id || '',
+    toAccountId: transferToOptions.value[0]?.id || '',
     amount: 0,
     entryDate: today,
     notes: '',
@@ -222,7 +223,7 @@ const fillAllBalance = () => {
 
 const submitTransfer = async () => {
   if (!transferForm.value.toAccountId) {
-    showWarning('Pilih Brankas Utama tujuan')
+    showWarning('Pilih akun tujuan')
     return
   }
   if (!transferForm.value.amount || parseFloat(transferForm.value.amount) <= 0) {
@@ -230,7 +231,7 @@ const submitTransfer = async () => {
     return
   }
   if (parseFloat(transferForm.value.amount) > parseFloat(account.value?.balance || 0)) {
-    showWarning('Jumlah melebihi saldo Tunai')
+    showWarning('Jumlah melebihi saldo akun')
     return
   }
 
@@ -243,7 +244,10 @@ const submitTransfer = async () => {
   })
 
   showTransferForm.value = false
-  await loadAll()
+  await Promise.all([
+    loadAll(),
+    fetchAccounts({ isActive: 'true' }).catch(() => null),
+  ])
 }
 
 onMounted(async () => {
@@ -279,19 +283,12 @@ onMounted(async () => {
       </div>
       <div class="flex items-center gap-2">
         <button
-          v-if="canTransferToVault"
           class="btn btn-primary btn-sm"
+          :disabled="!canTransfer"
           @click="openTransferForm"
         >
           <IconTransfer class="w-4 h-4" />
-          Mutasi ke Brankas
-        </button>
-        <button
-          v-else-if="isCashAccount && !mainVaultAccounts.length"
-          class="btn btn-outline btn-sm"
-          @click="router.push('/finances/accounts')"
-        >
-          Buat Brankas Utama dulu
+          Transfer
         </button>
         <button class="btn btn-outline btn-sm" @click="showAdjForm = true">
           <IconAdjustments class="w-4 h-4" />
@@ -506,19 +503,20 @@ onMounted(async () => {
       <div class="modal-backdrop" @click="showAdjForm = false"></div>
     </dialog>
 
-    <!-- Transfer Modal: Tunai → Brankas Utama -->
+    <!-- Transfer Modal -->
     <dialog class="modal" :class="{ 'modal-open': showTransferForm }">
       <div class="modal-box max-w-md">
-        <h3 class="font-bold text-lg mb-1">Mutasi ke Brankas Utama</h3>
+        <h3 class="font-bold text-lg mb-1">Transfer Antar Akun</h3>
         <p class="text-sm text-base-content/60 mb-4">
-          Pindahkan dana dari Tunai ke Brankas. Saldo Tunai: {{ formatCurrency(account?.balance) }}
+          Dari <strong>{{ account?.name }}</strong> · Saldo: {{ formatCurrency(account?.balance) }}
         </p>
         <div class="space-y-3">
           <div class="form-control">
-            <label class="label"><span class="label-text font-medium">Tujuan</span></label>
+            <label class="label"><span class="label-text font-medium">Ke akun</span></label>
             <select v-model="transferForm.toAccountId" class="select select-bordered w-full">
-              <option v-for="vault in mainVaultAccounts" :key="vault.id" :value="vault.id">
-                {{ vault.name }} — {{ formatCurrency(vault.balance) }}
+              <option value="" disabled>Pilih akun tujuan...</option>
+              <option v-for="acc in transferToOptions" :key="acc.id" :value="acc.id">
+                {{ acc.name }} — {{ formatCurrency(acc.balance) }}
               </option>
             </select>
           </div>
@@ -546,14 +544,14 @@ onMounted(async () => {
           </div>
           <div class="form-control">
             <label class="label"><span class="label-text font-medium">Catatan</span></label>
-            <input v-model="transferForm.notes" type="text" class="input input-bordered w-full" placeholder="Contoh: Setor kas sore" />
+            <input v-model="transferForm.notes" type="text" class="input input-bordered w-full" placeholder="Opsional" />
           </div>
         </div>
         <div class="modal-action">
           <button class="btn btn-ghost" @click="showTransferForm = false">Batal</button>
           <button class="btn btn-primary" :disabled="actionLoading" @click="submitTransfer">
             <span v-if="actionLoading" class="loading loading-spinner loading-sm"></span>
-            <span v-else>Simpan Mutasi</span>
+            <span v-else>Transfer</span>
           </button>
         </div>
       </div>

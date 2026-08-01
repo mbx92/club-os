@@ -10,7 +10,7 @@ import { useRouter } from 'vue-router'
 import { useCashRegister } from '@/composables/gym/cash-register'
 import { useShifts } from '@/composables/gym/useShifts'
 import { useCurrency } from '@/composables/core/useCurrency'
-import CurrencyInput from '@/components/shared/CurrencyInput.vue'
+import { useApi } from '@/composables/core/useApi'
 import dayjs from 'dayjs'
 import {
   IconCashRegister,
@@ -45,6 +45,23 @@ const {
 } = useCashRegister()
 
 const { formatCurrency } = useCurrency()
+const api = useApi()
+const pettyCashAccounts = ref([])
+const pettyCashLoading = ref(false)
+
+const fetchPettyCashAccounts = async () => {
+  pettyCashLoading.value = true
+  try {
+    const response = await api.get('/gym/cash-register/petty-cash-accounts')
+    pettyCashAccounts.value = response.data || []
+    return response
+  } catch (err) {
+    pettyCashAccounts.value = []
+    throw err
+  } finally {
+    pettyCashLoading.value = false
+  }
+}
 
 // Master data shifts
 const { shifts: masterShifts, fetchShifts: fetchMasterShifts } = useShifts()
@@ -54,14 +71,43 @@ const masterShiftsLoading = ref(false)
 let pollInterval = null
 
 // Open shift form
-const showOpenModal = ref(false)
 const openForm = ref({
   shiftId: null,
   shiftName: '',
-  openingBalance: 0,
-  openingNotes: ''
+  openingNotes: '',
+  pettyCashAccountId: '',
 })
 const customShiftName = ref(false)
+
+const selectedPettyCashAccount = computed(() =>
+  pettyCashAccounts.value.find(a => String(a.id) === String(openForm.value.pettyCashAccountId)) || null
+)
+
+const modalFromAccount = computed(() =>
+  parseFloat(selectedPettyCashAccount.value?.balance) || 0
+)
+
+const showOpenModal = ref(false)
+
+const openOpenShiftModal = async () => {
+  showOpenModal.value = true
+  await prepareOpenShiftForm()
+}
+
+const prepareOpenShiftForm = async () => {
+  try {
+    await fetchPettyCashAccounts()
+    if (pettyCashAccounts.value.length === 1 && !openForm.value.pettyCashAccountId) {
+      openForm.value.pettyCashAccountId = String(pettyCashAccounts.value[0].id)
+    }
+  } catch {
+    // akun gagal dimuat — tombol buka tetap disabled sampai akun tersedia
+  }
+}
+
+const selectPettyCashAccount = (accountId) => {
+  openForm.value.pettyCashAccountId = accountId ? String(accountId) : ''
+}
 
 const isBackOfficeShift = (shift) => {
   if (!shift) return false
@@ -178,15 +224,20 @@ const loadCurrentSession = async () => {
 
 const handleOpenShift = async () => {
   try {
+    if (!openForm.value.pettyCashAccountId || !selectedPettyCashAccount.value) return
+    if (!(modalFromAccount.value > 0)) return
+
     const data = {
       shiftName: openForm.value.shiftName,
-      openingBalance: parseFloat(openForm.value.openingBalance) || 0
+      pettyCashAccountId: openForm.value.pettyCashAccountId,
     }
     if (openForm.value.shiftId) data.shiftId = openForm.value.shiftId
     if (openForm.value.openingNotes) data.openingNotes = openForm.value.openingNotes
 
     await openShift(data)
     showOpenModal.value = false
+    openForm.value = { shiftId: null, shiftName: activeShifts.value[0]?.name || '', openingNotes: '', pettyCashAccountId: '' }
+    if (activeShifts.value[0]) selectMasterShift(activeShifts.value[0])
     startPolling()
   } catch {
     // handled by composable
@@ -257,7 +308,9 @@ const closeResultAndReset = () => {
   showResultModal.value = false
   closeResult.value = null
   carriedOverOrders.value = []
-  openForm.value = { shiftId: null, shiftName: activeShifts.value[0]?.name || '', openingBalance: 0, openingNotes: '' }
+  openForm.value = { shiftId: null, shiftName: activeShifts.value[0]?.name || '', openingNotes: '', pettyCashAccountId: '' }
+  if (activeShifts.value[0]) selectMasterShift(activeShifts.value[0])
+  prepareOpenShiftForm()
 }
 
 const startPolling = () => {
@@ -298,7 +351,8 @@ const selectMasterShift = (shift) => {
 onMounted(async () => {
   await Promise.all([
     loadCurrentSession(),
-    loadMasterShifts()
+    loadMasterShifts(),
+    prepareOpenShiftForm(),
   ])
   if (currentSession.value) startPolling()
 })
@@ -326,25 +380,34 @@ onUnmounted(() => {
 
     <!-- ═══════════════ NO ACTIVE SESSION ═══════════════ -->
     <div v-else-if="!currentSession" class="space-y-6">
-      <!-- Banner -->
-      <div class="alert alert-warning shadow-lg">
+      <div class="alert alert-warning shadow-sm">
         <IconAlertTriangle class="w-6 h-6 shrink-0" />
         <div>
           <h3 class="font-bold">Belum ada shift aktif</h3>
           <p class="text-sm">Buka shift terlebih dahulu sebelum memulai transaksi hari ini.</p>
         </div>
-        <button class="btn btn-sm btn-primary" @click="showOpenModal = true">
+        <button class="btn btn-sm btn-primary" @click="openOpenShiftModal">
           <IconDoorEnter class="w-4 h-4 mr-1" />
           Buka Shift
         </button>
       </div>
 
-      <!-- Illustration -->
+      <div class="alert alert-info shadow-sm">
+        <IconInfoCircle class="w-5 h-5 shrink-0" />
+        <div class="text-sm">
+          <p class="font-semibold">Modal kasir</p>
+          <p class="opacity-90 mt-0.5">
+            Modal diambil dari akun petty cash saat buka shift, lalu sisa modal
+            (setelah dikurangi pengeluaran dari laci) dikembalikan ke akun saat tutup shift.
+          </p>
+        </div>
+      </div>
+
       <div class="card bg-base-100 border border-base-200 shadow-sm">
         <div class="card-body items-center text-center py-16">
           <IconCashRegister class="w-16 h-16 text-base-content/20 mb-4" />
           <h3 class="text-lg font-semibold text-base-content/40">Tidak ada shift yang sedang berjalan</h3>
-          <p class="text-sm text-base-content/30 max-w-md">Klik "Buka Shift" untuk memulai. Masukkan nama shift dan modal awal kas (petty cash) untuk hari ini.</p>
+          <p class="text-sm text-base-content/30 max-w-md">Klik "Buka Shift" untuk memulai dengan akun Petty Cash sebagai modal.</p>
         </div>
       </div>
     </div>
@@ -401,6 +464,9 @@ onUnmounted(() => {
               Modal Awal
             </div>
             <div class="text-xl font-bold">{{ formatCurrency(liveSummary?.openingBalance || 0) }}</div>
+            <div v-if="currentSession?.pettyCashAccount" class="text-xs text-base-content/50 mt-0.5 truncate">
+              dari {{ currentSession.pettyCashAccount.name }}
+            </div>
           </div>
           <div class="px-6 py-4">
             <div class="text-xs text-base-content/50 flex items-center gap-1 mb-1">
@@ -448,6 +514,24 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- Petty cash return info (outside dialog) -->
+      <div
+        v-if="currentSession?.pettyCashAccount"
+        class="alert alert-info shadow-sm"
+      >
+        <IconInfoCircle class="w-5 h-5 shrink-0" />
+        <div class="text-sm">
+          <p class="font-semibold">Sisa modal ke {{ currentSession.pettyCashAccount.name }}</p>
+          <p class="opacity-90 mt-0.5">
+            Saat tutup shift, sekitar
+            <strong>{{ formatCurrency(liveSummary?.pettyCashReturnEstimate ?? Math.max(0, (liveSummary?.openingBalance || 0) - (liveSummary?.cashExpenseOut || 0))) }}</strong>
+            akan dikembalikan ke akun petty cash
+            (modal {{ formatCurrency(liveSummary?.openingBalance || 0) }}
+            dikurangi pengeluaran laci {{ formatCurrency(liveSummary?.cashExpenseOut || 0) }}).
+          </p>
+        </div>
+      </div>
+
       <!-- Inherited orders banner (from previous shift) -->
       <div v-if="inheritedOrders.length > 0" class="alert alert-info shadow-sm">
         <IconArrowRight class="w-5 h-5 shrink-0" />
@@ -476,40 +560,40 @@ onUnmounted(() => {
         </h3>
 
         <div class="space-y-4">
-          <!-- Shift Name -->
           <div class="form-control">
             <label class="label"><span class="label-text">Nama Shift <span class="text-error">*</span></span></label>
 
-            <!-- Loading master shifts -->
             <div v-if="masterShiftsLoading" class="flex items-center gap-2 py-2">
               <span class="loading loading-spinner loading-xs"></span>
               <span class="text-sm text-base-content/50">Memuat data shift...</span>
             </div>
 
-            <!-- Master shift buttons -->
             <div v-else-if="!customShiftName && activeShifts.length > 0" class="space-y-2">
               <div class="flex gap-2 flex-wrap">
                 <button
                   v-for="shift in activeShifts"
                   :key="shift.id"
+                  type="button"
                   :class="['btn btn-sm capitalize', openForm.shiftId === shift.id ? 'btn-primary' : 'btn-outline']"
                   @click="selectMasterShift(shift)"
                 >
                   <div v-if="shift.color" class="w-2.5 h-2.5 rounded-full mr-1" :style="{ backgroundColor: shift.color }"></div>
                   {{ shift.name }}
                 </button>
-                <button class="btn btn-sm btn-ghost" @click="customShiftName = true; openForm.shiftId = null; openForm.shiftName = ''">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-ghost"
+                  @click="customShiftName = true; openForm.shiftId = null; openForm.shiftName = ''"
+                >
                   Custom...
                 </button>
               </div>
-              <!-- Shift time info -->
               <div v-if="openForm.shiftId" class="text-xs text-base-content/50 flex items-center gap-1">
                 <IconClock class="w-3.5 h-3.5" />
                 Jam: {{ formatShiftTime(activeShifts.find(s => s.id === openForm.shiftId)) }}
               </div>
             </div>
 
-            <!-- Custom/fallback input -->
             <div v-else class="flex gap-2">
               <input
                 type="text"
@@ -519,6 +603,7 @@ onUnmounted(() => {
               />
               <button
                 v-if="activeShifts.length > 0"
+                type="button"
                 class="btn btn-sm btn-ghost"
                 @click="selectMasterShift(activeShifts[0])"
               >
@@ -527,36 +612,53 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Opening Balance -->
           <div class="form-control">
-            <label class="label"><span class="label-text">Modal Awal Kas (Petty Cash) <span class="text-error">*</span></span></label>
-            <CurrencyInput
-              v-model="openForm.openingBalance"
-              placeholder="0"
-              input-class="input input-bordered w-full"
-            />
             <label class="label">
-              <span class="label-text-alt text-base-content/50">Jumlah modal tunai yang disiapkan di laci</span>
+              <span class="label-text">Akun Petty Cash / Modal <span class="text-error">*</span></span>
+            </label>
+            <div v-if="pettyCashLoading" class="flex items-center gap-2 py-2 text-sm text-base-content/50">
+              <span class="loading loading-spinner loading-xs"></span> Memuat akun...
+            </div>
+            <select
+              v-else
+              class="select select-bordered w-full"
+              :value="openForm.pettyCashAccountId"
+              @change="selectPettyCashAccount($event.target.value)"
+            >
+              <option value="" disabled>Pilih akun modal...</option>
+              <option
+                v-for="acc in pettyCashAccounts"
+                :key="acc.id"
+                :value="String(acc.id)"
+              >
+                {{ acc.name }} — {{ formatCurrency(acc.balance) }}
+              </option>
+            </select>
+            <label v-if="!pettyCashAccounts.length && !pettyCashLoading" class="label">
+              <span class="label-text-alt text-warning">Belum ada akun petty cash. Hubungi admin untuk membuatnya.</span>
+            </label>
+            <label v-else-if="selectedPettyCashAccount && !(modalFromAccount > 0)" class="label">
+              <span class="label-text-alt text-error">Saldo akun harus &gt; 0.</span>
             </label>
           </div>
 
-          <!-- Notes -->
           <div class="form-control">
             <label class="label"><span class="label-text">Catatan</span></label>
             <textarea
               class="textarea textarea-bordered resize-none w-full"
               rows="2"
               v-model="openForm.openingNotes"
-              placeholder="e.g. Modal dari brankas utama"
+              placeholder="Opsional — e.g. Shift pagi, kasir A"
             ></textarea>
           </div>
         </div>
 
         <div class="modal-action">
-          <button class="btn btn-ghost" @click="showOpenModal = false">Batal</button>
+          <button type="button" class="btn btn-ghost" @click="showOpenModal = false">Batal</button>
           <button
+            type="button"
             class="btn btn-primary"
-            :disabled="loading || !openForm.shiftName || openForm.openingBalance < 0"
+            :disabled="loading || !openForm.shiftName || !openForm.pettyCashAccountId || !(modalFromAccount > 0)"
             @click="handleOpenShift"
           >
             <span v-if="loading" class="loading loading-spinner loading-xs"></span>
@@ -581,7 +683,12 @@ onUnmounted(() => {
         <div class="bg-base-200 rounded-lg p-4 mb-4 space-y-2 text-sm">
           <div class="flex justify-between">
             <span class="text-base-content/60">Modal awal</span>
-            <span class="font-medium">{{ formatCurrency(liveSummary?.openingBalance || 0) }}</span>
+            <span class="font-medium text-right">
+              {{ formatCurrency(liveSummary?.openingBalance || 0) }}
+              <span v-if="currentSession?.pettyCashAccount" class="block text-xs font-normal text-base-content/50">
+                ← {{ currentSession.pettyCashAccount.name }}
+              </span>
+            </span>
           </div>
           <div class="flex justify-between">
             <span class="text-base-content/60">Kas masuk</span>

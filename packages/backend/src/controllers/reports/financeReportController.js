@@ -2,10 +2,11 @@
  * Finance Report Controller (Dedicated Reports Module)
  * Reports: revenue breakdown, profit & loss, cash flow summary
  */
-const { Transaction, TransactionItem, TransactionPayment, Expense, ExpenseCategory, Income, IncomeCategory, CashFlow, Shareholder, sequelize } = require('../../models');
+const { Transaction, TransactionItem, TransactionPayment, Expense, ExpenseCategory, Income, IncomeCategory, CashFlow, Shareholder, Account, AccountEntry, Location, Member, sequelize } = require('../../models');
 const { Op, fn, col, literal } = require('sequelize');
 const { generateForecast } = require('../../utils/forecasting');
 const logger = require('../../utils/logger');
+const transactionSettingsService = require('../../services/transactionSettingsService');
 const {
   getTenantTimezone,
   startOfDayInTz,
@@ -941,9 +942,470 @@ async function getShareholderReport(req, res, next) {
   }
 }
 
+const ACCOUNT_INFLOW_TYPES = ['opening', 'inflow', 'transfer_in', 'settlement', 'adjustment_credit'];
+const ACCOUNT_OUTFLOW_TYPES = ['outflow', 'transfer_out', 'adjustment_debit'];
+
+/**
+ * GET /reports/finance/accounts
+ * Ringkasan saldo & mutasi per akun keuangan.
+ * Query: startDate, endDate, type?, isActive?
+ */
+async function getAccountsReport(req, res, next) {
+  try {
+    const tenantId = req.user.tenantId;
+    const { startDate, endDate, type, isActive } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ success: false, message: 'startDate dan endDate wajib diisi' });
+    }
+
+    const where = { tenantId };
+    if (type) where.type = type;
+    if (isActive === 'true') where.isActive = true;
+    if (isActive === 'false') where.isActive = false;
+
+    const accounts = await Account.findAll({
+      where,
+      order: [['sortOrder', 'ASC'], ['name', 'ASC']],
+    });
+
+    const accountIds = accounts.map((a) => a.id);
+    const emptyId = '00000000-0000-0000-0000-000000000000';
+    const entryWhere = {
+      tenantId,
+      accountId: { [Op.in]: accountIds.length ? accountIds : [emptyId] },
+      entryDate: { [Op.between]: [startDate, endDate] },
+      status: { [Op.in]: ['completed', 'pending_settlement'] },
+    };
+
+    const periodAgg = accountIds.length
+      ? await AccountEntry.findAll({
+          where: entryWhere,
+          attributes: [
+            'accountId',
+            'type',
+            [fn('SUM', col('amount')), 'total'],
+            [fn('COUNT', col('id')), 'count'],
+          ],
+          group: ['accountId', 'type'],
+          raw: true,
+        })
+      : [];
+
+    const pendingAgg = accountIds.length
+      ? await AccountEntry.findAll({
+          where: {
+            tenantId,
+            accountId: { [Op.in]: accountIds },
+            status: 'pending_settlement',
+          },
+          attributes: [
+            'accountId',
+            [fn('SUM', col('amount')), 'total'],
+          ],
+          group: ['accountId'],
+          raw: true,
+        })
+      : [];
+
+    const pendingByAccount = Object.fromEntries(
+      pendingAgg.map((r) => [r.accountId, parseFloat(r.total || 0)])
+    );
+
+    const movementByAccount = {};
+    for (const row of periodAgg) {
+      if (!movementByAccount[row.accountId]) {
+        movementByAccount[row.accountId] = { inflow: 0, outflow: 0, entryCount: 0, byType: {} };
+      }
+      const amount = parseFloat(row.total || 0);
+      const count = parseInt(row.count || 0, 10);
+      movementByAccount[row.accountId].byType[row.type] = { total: amount, count };
+      movementByAccount[row.accountId].entryCount += count;
+      if (ACCOUNT_INFLOW_TYPES.includes(row.type)) {
+        movementByAccount[row.accountId].inflow += amount;
+      } else if (ACCOUNT_OUTFLOW_TYPES.includes(row.type)) {
+        movementByAccount[row.accountId].outflow += amount;
+      }
+    }
+
+    const rows = accounts.map((acc) => {
+      const move = movementByAccount[acc.id] || { inflow: 0, outflow: 0, entryCount: 0, byType: {} };
+      const inflow = parseFloat(move.inflow.toFixed(2));
+      const outflow = parseFloat(move.outflow.toFixed(2));
+      return {
+        id: acc.id,
+        name: acc.name,
+        type: acc.type,
+        bankName: acc.bankName,
+        paymentMethod: acc.paymentMethod,
+        isActive: acc.isActive,
+        currency: acc.currency,
+        openingBalance: parseFloat(acc.openingBalance || 0),
+        openingDate: acc.openingDate,
+        balance: parseFloat(acc.balance || 0),
+        pendingSettlement: parseFloat((pendingByAccount[acc.id] || 0).toFixed(2)),
+        periodInflow: inflow,
+        periodOutflow: outflow,
+        periodNet: parseFloat((inflow - outflow).toFixed(2)),
+        entryCount: move.entryCount,
+        byType: move.byType,
+      };
+    });
+
+    const summary = {
+      accountCount: rows.length,
+      totalBalance: parseFloat(rows.reduce((s, r) => s + r.balance, 0).toFixed(2)),
+      totalPending: parseFloat(rows.reduce((s, r) => s + r.pendingSettlement, 0).toFixed(2)),
+      totalPeriodInflow: parseFloat(rows.reduce((s, r) => s + r.periodInflow, 0).toFixed(2)),
+      totalPeriodOutflow: parseFloat(rows.reduce((s, r) => s + r.periodOutflow, 0).toFixed(2)),
+      totalPeriodNet: parseFloat(rows.reduce((s, r) => s + r.periodNet, 0).toFixed(2)),
+      period: { startDate, endDate },
+    };
+
+    const byType = {};
+    for (const row of rows) {
+      if (!byType[row.type]) {
+        byType[row.type] = { type: row.type, count: 0, balance: 0, periodInflow: 0, periodOutflow: 0 };
+      }
+      byType[row.type].count += 1;
+      byType[row.type].balance += row.balance;
+      byType[row.type].periodInflow += row.periodInflow;
+      byType[row.type].periodOutflow += row.periodOutflow;
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        summary,
+        accounts: rows,
+        byType: Object.values(byType).map((g) => ({
+          ...g,
+          balance: parseFloat(g.balance.toFixed(2)),
+          periodInflow: parseFloat(g.periodInflow.toFixed(2)),
+          periodOutflow: parseFloat(g.periodOutflow.toFixed(2)),
+          periodNet: parseFloat((g.periodInflow - g.periodOutflow).toFixed(2)),
+        })),
+      },
+      filters: { startDate, endDate, type: type || null, isActive: isActive ?? null },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /reports/finance/account-transactions
+ * Mutasi/ledger akun keuangan.
+ * Query: startDate, endDate, accountId?, type?, status?, page?, limit?
+ */
+async function getAccountTransactionsReport(req, res, next) {
+  try {
+    const tenantId = req.user.tenantId;
+    const {
+      startDate,
+      endDate,
+      accountId,
+      type,
+      status,
+      page = 1,
+      limit = 50,
+    } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ success: false, message: 'startDate dan endDate wajib diisi' });
+    }
+
+    const where = {
+      tenantId,
+      entryDate: { [Op.between]: [startDate, endDate] },
+    };
+    if (accountId) where.accountId = accountId;
+    if (type) where.type = type;
+    if (status) where.status = status;
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(200, Math.max(1, parseInt(limit, 10) || 50));
+    const offset = (pageNum - 1) * limitNum;
+
+    const { count, rows } = await AccountEntry.findAndCountAll({
+      where,
+      include: [{
+        model: Account,
+        as: 'account',
+        attributes: ['id', 'name', 'type', 'bankName'],
+        required: true,
+      }],
+      order: [['entryDate', 'DESC'], ['createdAt', 'DESC']],
+      limit: limitNum,
+      offset,
+    });
+
+    let periodInflow = 0;
+    let periodOutflow = 0;
+    const summaryRows = await AccountEntry.findAll({
+      where,
+      attributes: [
+        'type',
+        [fn('SUM', col('amount')), 'total'],
+        [fn('COUNT', col('id')), 'count'],
+      ],
+      group: ['type'],
+      raw: true,
+    });
+
+    const byType = summaryRows.map((r) => {
+      const total = parseFloat(r.total || 0);
+      const entryCount = parseInt(r.count || 0, 10);
+      if (ACCOUNT_INFLOW_TYPES.includes(r.type)) periodInflow += total;
+      if (ACCOUNT_OUTFLOW_TYPES.includes(r.type)) periodOutflow += total;
+      return { type: r.type, total, count: entryCount };
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        summary: {
+          totalEntries: count,
+          periodInflow: parseFloat(periodInflow.toFixed(2)),
+          periodOutflow: parseFloat(periodOutflow.toFixed(2)),
+          periodNet: parseFloat((periodInflow - periodOutflow).toFixed(2)),
+          period: { startDate, endDate },
+          byType,
+        },
+        entries: rows,
+      },
+      meta: {
+        page: pageNum,
+        limit: limitNum,
+        total: count,
+        pages: Math.ceil(count / limitNum) || 1,
+      },
+      filters: {
+        startDate,
+        endDate,
+        accountId: accountId || null,
+        type: type || null,
+        status: status || null,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /reports/finance/transaction-details
+ * Detail transaksi gym + restaurant dengan breakdown subtotal / service charge / tax / total.
+ * Query: startDate, endDate, transactionType? (gym|restaurant|all), locationId?, status?, search?, page?, limit?
+ */
+async function getTransactionDetailsReport(req, res, next) {
+  try {
+    const tenantId = req.user.tenantId;
+    const {
+      startDate,
+      endDate,
+      transactionType,
+      locationId,
+      status,
+      search,
+      page = 1,
+      limit = 50,
+    } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ success: false, message: 'startDate dan endDate wajib diisi' });
+    }
+
+    const [taxConfig, serviceChargeConfig] = await Promise.all([
+      transactionSettingsService.getTaxConfiguration(tenantId),
+      transactionSettingsService.getServiceChargeConfiguration(tenantId),
+    ]);
+    const taxEnable = !!taxConfig.taxEnable;
+    const serviceChargeEnable = !!serviceChargeConfig.serviceChargeEnable;
+
+    const tenantTz = getTenantTimezone(req);
+    const rangeStart = startOfDayInTz(startDate, tenantTz);
+    const rangeEnd = endOfDayInTz(endDate, tenantTz);
+
+    const typeFilter = (() => {
+      if (transactionType === 'gym') return ['gym'];
+      if (transactionType === 'restaurant') return ['restaurant'];
+      // default: gym + restaurant (semua transaksi operasional utama)
+      return ['gym', 'restaurant'];
+    })();
+
+    const where = {
+      tenantId,
+      transactionType: { [Op.in]: typeFilter },
+      transactionDate: { [Op.between]: [rangeStart, rangeEnd] },
+      status: status
+        ? status
+        : { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES },
+      deletedAt: null,
+    };
+    if (locationId) where.locationId = locationId;
+    if (search) {
+      where[Op.or] = [
+        { transactionNumber: { [Op.iLike]: `%${search}%` } },
+        { notes: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(200, Math.max(1, parseInt(limit, 10) || 50));
+    const offset = (pageNum - 1) * limitNum;
+
+    const include = [
+      {
+        model: TransactionPayment,
+        as: 'payments',
+        attributes: ['id', 'paymentMethod', 'amount', 'status', 'paymentDetails'],
+        required: false,
+      },
+      {
+        model: Location,
+        as: 'location',
+        attributes: ['id', 'name'],
+        required: false,
+      },
+      {
+        model: Member,
+        as: 'member',
+        attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+        required: false,
+      },
+    ];
+
+    const { count, rows } = await Transaction.findAndCountAll({
+      where,
+      include,
+      order: [['transactionDate', 'DESC'], ['createdAt', 'DESC']],
+      limit: limitNum,
+      offset,
+      distinct: true,
+    });
+
+    const aggregate = await Transaction.findOne({
+      where,
+      attributes: [
+        [fn('COUNT', col('id')), 'transactionCount'],
+        [fn('COALESCE', fn('SUM', col('subtotal')), 0), 'totalSubtotal'],
+        [fn('COALESCE', fn('SUM', col('tax')), 0), 'totalTax'],
+        [fn('COALESCE', fn('SUM', col('serviceCharge')), 0), 'totalServiceCharge'],
+        [fn('COALESCE', fn('SUM', col('voucherDiscount')), 0), 'totalVoucherDiscount'],
+        [fn('COALESCE', fn('SUM', col('roundingAmount')), 0), 'totalRounding'],
+        [fn('COALESCE', fn('SUM', col('totalAmount')), 0), 'totalAmount'],
+      ],
+      raw: true,
+    });
+
+    const byTypeRows = await Transaction.findAll({
+      where,
+      attributes: [
+        'transactionType',
+        [fn('COUNT', col('id')), 'count'],
+        [fn('COALESCE', fn('SUM', col('subtotal')), 0), 'subtotal'],
+        [fn('COALESCE', fn('SUM', col('voucherDiscount')), 0), 'voucherDiscount'],
+        [fn('COALESCE', fn('SUM', col('tax')), 0), 'tax'],
+        [fn('COALESCE', fn('SUM', col('serviceCharge')), 0), 'serviceCharge'],
+        [fn('COALESCE', fn('SUM', col('totalAmount')), 0), 'totalAmount'],
+      ],
+      group: ['transactionType'],
+      raw: true,
+    });
+
+    const summary = {
+      transactionCount: parseInt(aggregate?.transactionCount || count || 0, 10),
+      totalSubtotal: parseFloat(parseFloat(aggregate?.totalSubtotal || 0).toFixed(2)),
+      totalTax: parseFloat(parseFloat(aggregate?.totalTax || 0).toFixed(2)),
+      totalServiceCharge: parseFloat(parseFloat(aggregate?.totalServiceCharge || 0).toFixed(2)),
+      totalVoucherDiscount: parseFloat(parseFloat(aggregate?.totalVoucherDiscount || 0).toFixed(2)),
+      totalRounding: parseFloat(parseFloat(aggregate?.totalRounding || 0).toFixed(2)),
+      totalAmount: parseFloat(parseFloat(aggregate?.totalAmount || 0).toFixed(2)),
+      period: { startDate, endDate },
+      byType: byTypeRows.map((r) => ({
+        transactionType: r.transactionType,
+        count: parseInt(r.count || 0, 10),
+        subtotal: parseFloat(parseFloat(r.subtotal || 0).toFixed(2)),
+        voucherDiscount: parseFloat(parseFloat(r.voucherDiscount || 0).toFixed(2)),
+        tax: parseFloat(parseFloat(r.tax || 0).toFixed(2)),
+        serviceCharge: parseFloat(parseFloat(r.serviceCharge || 0).toFixed(2)),
+        totalAmount: parseFloat(parseFloat(r.totalAmount || 0).toFixed(2)),
+      })),
+    };
+
+    const transactions = rows.map((tx) => {
+      const plain = tx.toJSON();
+      const memberName = plain.member
+        ? `${plain.member.firstName || ''} ${plain.member.lastName || ''}`.trim()
+        : null;
+      return {
+        id: plain.id,
+        transactionNumber: plain.transactionNumber,
+        transactionType: plain.transactionType,
+        status: plain.status,
+        transactionDate: plain.transactionDate,
+        location: plain.location,
+        memberName: memberName || null,
+        memberPhone: plain.member?.phone || null,
+        customerName: plain.customerName || memberName || null,
+        orderType: plain.orderType || null,
+        subtotal: parseFloat(plain.subtotal || 0),
+        voucherDiscount: parseFloat(plain.voucherDiscount || 0),
+        tax: parseFloat(plain.tax || 0),
+        serviceCharge: parseFloat(plain.serviceCharge || 0),
+        roundingAmount: parseFloat(plain.roundingAmount || 0),
+        totalAmount: parseFloat(plain.totalAmount || 0),
+        payments: (plain.payments || [])
+          .filter((p) => p.status === COMPLETED_PAYMENT_STATUS)
+          .map((p) => ({
+          paymentMethod: p.paymentMethod,
+          amount: parseFloat(p.amount || 0),
+          bankName: p.paymentDetails?.bank || p.paymentDetails?.bankName || null,
+        })),
+      };
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        summary,
+        transactions,
+        settings: {
+          taxEnable,
+          taxPercentage: parseFloat(taxConfig.taxPercentage || 0),
+          taxType: taxConfig.taxType || 'percentage',
+          serviceChargeEnable,
+          serviceChargePercentage: parseFloat(serviceChargeConfig.serviceChargePercentage || 0),
+          serviceChargeType: serviceChargeConfig.serviceChargeType || 'percentage',
+        },
+      },
+      meta: {
+        page: pageNum,
+        limit: limitNum,
+        total: count,
+        pages: Math.ceil(count / limitNum) || 1,
+      },
+      filters: {
+        startDate,
+        endDate,
+        transactionType: transactionType || 'all',
+        locationId: locationId || null,
+        status: status || null,
+        search: search || null,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getRevenueReport,
   getProfitLossReport,
   getCashFlowReport,
-  getShareholderReport
+  getShareholderReport,
+  getAccountsReport,
+  getAccountTransactionsReport,
+  getTransactionDetailsReport,
 };

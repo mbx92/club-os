@@ -9,7 +9,10 @@ const {
   getRevenueReport,
   getProfitLossReport,
   getCashFlowReport,
-  getShareholderReport
+  getShareholderReport,
+  getAccountsReport,
+  getAccountTransactionsReport,
+  getTransactionDetailsReport,
 } = require('../../controllers/reports/financeReportController');
 
 const router = express.Router();
@@ -61,6 +64,36 @@ router.get('/shareholder',
   authenticate,
   authorize('read', 'Transaction'),
   getShareholderReport
+);
+
+/**
+ * @route GET /reports/finance/accounts
+ * @desc Account balances & period movement summary
+ */
+router.get('/accounts',
+  authenticate,
+  authorize('read', 'FinancialReport'),
+  getAccountsReport
+);
+
+/**
+ * @route GET /reports/finance/account-transactions
+ * @desc Account ledger / mutasi report
+ */
+router.get('/account-transactions',
+  authenticate,
+  authorize('read', 'FinancialReport'),
+  getAccountTransactionsReport
+);
+
+/**
+ * @route GET /reports/finance/transaction-details
+ * @desc Detail transaksi gym + restaurant (subtotal / service charge / tax / total)
+ */
+router.get('/transaction-details',
+  authenticate,
+  authorize('read', 'FinancialReport'),
+  getTransactionDetailsReport
 );
 
 module.exports = router;

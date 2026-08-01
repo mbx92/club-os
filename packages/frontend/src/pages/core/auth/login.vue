@@ -86,7 +86,7 @@ meta:
                   v-model="email"
                   type="email"
                   class="input input-bordered h-14 w-full rounded-2xl pl-12 focus:outline-none focus:ring-0"
-                  placeholder="email"
+                  placeholder="Masukan email"
                   autocomplete="username"
                   required
                 />

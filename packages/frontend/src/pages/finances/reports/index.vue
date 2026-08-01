@@ -68,6 +68,60 @@ meta:
         </div>
       </div>
 
+      <!-- Account Summary -->
+      <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+        <div class="card-body">
+          <div class="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+            <IconBuildingBank class="w-8 h-8 text-primary" />
+          </div>
+          <h2 class="card-title">Laporan Akun</h2>
+          <p class="text-base-content/60 mb-4">
+            Ringkasan saldo dan mutasi masuk/keluar per akun keuangan
+          </p>
+          <div class="card-actions">
+            <router-link to="/finances/reports/accounts" class="btn btn-primary btn-block">
+              View Report
+            </router-link>
+          </div>
+        </div>
+      </div>
+
+      <!-- Account Transactions -->
+      <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+        <div class="card-body">
+          <div class="flex items-center justify-center w-16 h-16 rounded-full bg-secondary/10 mb-4">
+            <IconListDetails class="w-8 h-8 text-secondary" />
+          </div>
+          <h2 class="card-title">Transaksi Akun</h2>
+          <p class="text-base-content/60 mb-4">
+            Riwayat mutasi ledger akun dengan filter akun, tipe, dan periode
+          </p>
+          <div class="card-actions">
+            <router-link to="/finances/reports/account-transactions" class="btn btn-primary btn-block">
+              View Report
+            </router-link>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transaction Details -->
+      <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+        <div class="card-body">
+          <div class="flex items-center justify-center w-16 h-16 rounded-full bg-accent/10 mb-4">
+            <IconReceipt2 class="w-8 h-8 text-accent" />
+          </div>
+          <h2 class="card-title">Detail Transaksi</h2>
+          <p class="text-base-content/60 mb-4">
+            Transaksi Gym &amp; Restaurant dengan breakdown subtotal, service charge, tax, dan total
+          </p>
+          <div class="card-actions">
+            <router-link to="/finances/reports/transaction-details" class="btn btn-primary btn-block">
+              View Report
+            </router-link>
+          </div>
+        </div>
+      </div>
+
       <!-- Service Commission Report -->
       <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
         <div class="card-body">
@@ -145,6 +199,9 @@ import {
   IconChartLine,
   IconReportMoney,
   IconInfoCircle,
-  IconUserStar
+  IconUserStar,
+  IconBuildingBank,
+  IconListDetails,
+  IconReceipt2,
 } from '@tabler/icons-vue'
 </script>

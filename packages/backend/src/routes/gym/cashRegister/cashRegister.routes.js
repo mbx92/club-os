@@ -59,6 +59,18 @@ router.get(
 );
 
 /**
+ * GET /gym/cash-register/petty-cash-accounts
+ * Daftar akun Petty Cash / Modal aktif untuk modal awal shift
+ */
+router.get(
+  '/petty-cash-accounts',
+  authenticate,
+  requireModule('gym'),
+  authorize('create', 'CashRegisterSession'),
+  cashRegisterController.listPettyCashAccounts
+);
+
+/**
  * GET /gym/cash-register/:id/report
  * Laporan lengkap shift (Report Cashier + Report Gym)
  * Query: type=all|cashier|gym

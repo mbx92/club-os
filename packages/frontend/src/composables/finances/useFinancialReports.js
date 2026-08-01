@@ -115,6 +115,78 @@ export function useFinancialReports() {
     }
   }
 
+  const accountsReport = ref(null)
+  const accountTransactionsReport = ref(null)
+  const accountTransactionsMeta = ref({ page: 1, limit: 50, total: 0, pages: 0 })
+
+  /**
+   * GET /reports/finance/accounts
+   */
+  const fetchAccountsReport = async (filters = {}) => {
+    loading.value = true
+    try {
+      if (!filters.startDate || !filters.endDate) {
+        throw new Error('Start date and end date are required')
+      }
+      const response = await api.get(`/reports/finance/accounts?${buildQuery(filters)}`)
+      const data = unwrap(response)
+      accountsReport.value = data
+      return data
+    } catch (error) {
+      handleError(error, 'Gagal memuat laporan akun')
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * GET /reports/finance/account-transactions
+   */
+  const fetchAccountTransactionsReport = async (filters = {}) => {
+    loading.value = true
+    try {
+      if (!filters.startDate || !filters.endDate) {
+        throw new Error('Start date and end date are required')
+      }
+      const response = await api.get(`/reports/finance/account-transactions?${buildQuery(filters)}`)
+      const data = unwrap(response)
+      accountTransactionsReport.value = data
+      accountTransactionsMeta.value = response?.meta || data?.meta || accountTransactionsMeta.value
+      return data
+    } catch (error) {
+      handleError(error, 'Gagal memuat transaksi akun')
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const transactionDetailsReport = ref(null)
+  const transactionDetailsMeta = ref({ page: 1, limit: 50, total: 0, pages: 0 })
+
+  /**
+   * GET /reports/finance/transaction-details
+   */
+  const fetchTransactionDetailsReport = async (filters = {}) => {
+    loading.value = true
+    try {
+      if (!filters.startDate || !filters.endDate) {
+        throw new Error('Start date and end date are required')
+      }
+      const response = await api.get(`/reports/finance/transaction-details?${buildQuery(filters)}`)
+      const data = unwrap(response)
+      transactionDetailsReport.value = data
+      transactionDetailsMeta.value = response?.meta || data?.meta || transactionDetailsMeta.value
+      return data
+    } catch (error) {
+      handleError(error, 'Gagal memuat detail transaksi')
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
   const formatCurrency = (value) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value || 0)
 
@@ -123,12 +195,20 @@ export function useFinancialReports() {
     revenueReport,
     cashFlowReport,
     expenseReport,
+    accountsReport,
+    accountTransactionsReport,
+    accountTransactionsMeta,
+    transactionDetailsReport,
+    transactionDetailsMeta,
     loading,
     fetchProfitLoss,
     fetchRevenue,
     fetchCashFlow,
     fetchExpenses,
     fetchServiceCommissionIncome,
+    fetchAccountsReport,
+    fetchAccountTransactionsReport,
+    fetchTransactionDetailsReport,
     formatCurrency
   }
 }

@@ -18,7 +18,7 @@ export const ID_LABELS = {
   e_wallet: 'E-Wallet',
   payment_gateway: 'Payment Gateway',
   compliment: 'Gratis (Compliment)',
-  card: 'Kartu',
+  card: 'Kartu Kredit',
   ewallet: 'E-Wallet',
   transfer: 'Transfer Bank',
   bni: 'BNI',
