@@ -152,8 +152,8 @@ async function getFinanceDashboard(req, res, next) {
 
     const expW = buildTenantWhere(isSuperAdmin, tenantId, locationId);
     const [todayExp, monthExp, pendingExpCount] = await Promise.all([
-      Expense.sum('totalAmount', { where: { ...expW, status: { [Op.in]: ['approved', 'paid'] }, expenseDate: { [Op.between]: [dayStart, dayEnd] } } }),
-      Expense.sum('totalAmount', { where: { ...expW, status: { [Op.in]: ['approved', 'paid'] }, expenseDate: { [Op.gte]: monthStart } } }),
+      Expense.sum('totalAmount', { where: { ...expW, status: { [Op.in]: ['paid'] }, expenseDate: { [Op.between]: [dayStart, dayEnd] } } }),
+      Expense.sum('totalAmount', { where: { ...expW, status: { [Op.in]: ['paid'] }, expenseDate: { [Op.gte]: monthStart } } }),
       Expense.count({ where: { ...expW, status: 'pending' } }),
     ]);
 
@@ -284,7 +284,7 @@ async function getFinanceDashboard(req, res, next) {
     // ── Top expense categories this month ────────────────────────────────────
 
     const topExpenseCategories = await Expense.findAll({
-      where: { ...expW, status: { [Op.in]: ['approved', 'paid'] }, expenseDate: { [Op.gte]: monthStart } },
+      where: { ...expW, status: { [Op.in]: ['paid'] }, expenseDate: { [Op.gte]: monthStart } },
       attributes: [
         'categoryId',
         [fn('SUM', col('Expense.totalAmount')), 'total'],

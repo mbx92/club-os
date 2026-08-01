@@ -642,24 +642,23 @@ async function creditFromCashCollect(opts, t = null) {
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
 /**
- * Recalculate and correct an Account's balance from all completed entries.
- * Use only in audits / data-fix scripts.
- *
- * @param {string} accountId
- * @returns {Promise<{before: number, after: number}>}
+ * Compute expected balance without writing.
+ * balance = openingBalance + non-opening inflows - outflows
  */
-async function recalculateBalance(accountId) {
-  const account = await Account.findByPk(accountId);
-  if (!account) throw new Error(`Account ${accountId} not found`);
+async function computeExpectedBalance(account, t = null) {
+  const accountId = account.id;
+  const openingBalance = parseFloat(account.openingBalance || 0);
+  const nonOpeningInflows = [...INFLOW_TYPES].filter((type) => type !== 'opening');
 
   const inflowResult = await AccountEntry.findOne({
     attributes: [[db.fn('COALESCE', db.fn('SUM', db.col('amount')), 0), 'total']],
     where: {
       accountId,
-      type: { [Op.in]: [...INFLOW_TYPES] },
+      type: { [Op.in]: nonOpeningInflows },
       status: 'completed',
     },
     raw: true,
+    transaction: t || undefined,
   });
 
   const outflowResult = await AccountEntry.findOne({
@@ -670,16 +669,174 @@ async function recalculateBalance(accountId) {
       status: 'completed',
     },
     raw: true,
+    transaction: t || undefined,
   });
 
   const inflow = parseFloat(inflowResult?.total || 0);
   const outflow = parseFloat(outflowResult?.total || 0);
-  const correctedBalance = parseFloat((inflow - outflow).toFixed(2));
+  const expectedBalance = parseFloat((openingBalance + inflow - outflow).toFixed(2));
+  const currentBalance = parseFloat(account.balance || 0);
 
-  const before = parseFloat(account.balance);
-  await account.update({ balance: correctedBalance, version: account.version + 1 });
+  return {
+    accountId,
+    name: account.name,
+    type: account.type,
+    bankName: account.bankName || null,
+    openingBalance,
+    openingDate: account.openingDate,
+    inflow,
+    outflow,
+    currentBalance,
+    expectedBalance,
+    delta: parseFloat((expectedBalance - currentBalance).toFixed(2)),
+    willChange: expectedBalance !== currentBalance,
+  };
+}
 
-  return { before, after: correctedBalance };
+/**
+ * Recalculate Account.balance from openingBalance + completed non-opening entries.
+ * Also syncs the ledger "opening" entry so statement matches the openingBalance field.
+ *
+ * Formula (matches Account model comment):
+ *   balance = openingBalance + sum(inflows) - sum(outflows)
+ *   where inflows/outflows exclude type='opening'
+ *
+ * @param {string} accountId
+ * @param {object} [externalTransaction]
+ * @returns {Promise<{before: number, after: number, openingBalance: number}>}
+ */
+async function recalculateBalance(accountId, externalTransaction = null) {
+  const run = async (t) => {
+    const account = await Account.findByPk(accountId, {
+      transaction: t,
+      lock: t ? t.LOCK.UPDATE : undefined,
+    });
+    if (!account) throw new Error(`Account ${accountId} not found`);
+
+    const openingBalance = parseFloat(account.openingBalance || 0);
+
+    // Keep a single opening ledger row in sync with openingBalance (for statements).
+    const existingOpening = await AccountEntry.findOne({
+      where: { accountId, type: 'opening' },
+      order: [['entryDate', 'ASC'], ['createdAt', 'ASC']],
+      transaction: t,
+      lock: t ? t.LOCK.UPDATE : undefined,
+    });
+
+    if (openingBalance === 0) {
+      if (existingOpening) {
+        await existingOpening.destroy({ transaction: t });
+      }
+    } else if (existingOpening) {
+      if (parseFloat(existingOpening.amount) !== openingBalance) {
+        await existingOpening.update({
+          amount: openingBalance,
+          balanceBefore: 0,
+          balanceAfter: openingBalance,
+          description: existingOpening.description
+            || `Saldo awal per ${account.openingDate}`,
+          entryDate: account.openingDate || existingOpening.entryDate,
+          status: 'completed',
+        }, { transaction: t });
+      }
+    } else {
+      const entryNumber = await generateEntryNumber(account.tenantId, t);
+      await AccountEntry.create({
+        tenantId: account.tenantId,
+        accountId: account.id,
+        entryNumber,
+        type: 'opening',
+        amount: openingBalance,
+        balanceBefore: 0,
+        balanceAfter: openingBalance,
+        description: `Saldo awal per ${account.openingDate}`,
+        entryDate: account.openingDate,
+        status: 'completed',
+        performedBy: account.createdBy || null,
+      }, { transaction: t });
+    }
+
+    const breakdown = await computeExpectedBalance(account, t);
+    const before = breakdown.currentBalance;
+    const correctedBalance = breakdown.expectedBalance;
+
+    await account.update(
+      { balance: correctedBalance, version: account.version + 1 },
+      { transaction: t }
+    );
+
+    return {
+      before,
+      after: correctedBalance,
+      openingBalance,
+      name: account.name,
+      type: account.type,
+      bankName: account.bankName || null,
+      delta: parseFloat((correctedBalance - before).toFixed(2)),
+      willChange: correctedBalance !== before,
+    };
+  };
+
+  if (externalTransaction) return run(externalTransaction);
+  return db.transaction(run);
+}
+
+/**
+ * Preview or apply balance recalculation for all accounts in a tenant.
+ * @param {object} opts
+ * @param {string} opts.tenantId
+ * @param {boolean} [opts.dryRun=true]
+ */
+async function recalculateTenantBalances({ tenantId, dryRun = true }) {
+  const accounts = await Account.findAll({
+    where: { tenantId },
+    order: [['sortOrder', 'ASC'], ['name', 'ASC']],
+  });
+
+  if (dryRun) {
+    const rows = [];
+    for (const account of accounts) {
+      rows.push(await computeExpectedBalance(account));
+    }
+    return {
+      mode: 'dry_run',
+      summary: {
+        accountsScanned: rows.length,
+        accountsToFix: rows.filter((r) => r.willChange).length,
+      },
+      accounts: rows,
+    };
+  }
+
+  const applied = [];
+  await db.transaction(async (t) => {
+    for (const account of accounts) {
+      const result = await recalculateBalance(account.id, t);
+      applied.push({
+        accountId: account.id,
+        name: result.name,
+        type: result.type,
+        bankName: result.bankName,
+        openingBalance: result.openingBalance,
+        currentBalance: result.before,
+        expectedBalance: result.after,
+        before: result.before,
+        after: result.after,
+        delta: result.delta,
+        willChange: result.willChange,
+      });
+    }
+  });
+
+  return {
+    mode: 'applied',
+    summary: {
+      accountsScanned: applied.length,
+      accountsToFix: applied.filter((r) => r.willChange).length,
+      accountsUpdated: applied.filter((r) => r.willChange).length,
+    },
+    accounts: applied,
+  };
 }
 
 /**
@@ -816,6 +973,8 @@ module.exports = {
   processPendingSettlements,
   processAllPendingSettlements,
   recalculateBalance,
+  recalculateTenantBalances,
+  computeExpectedBalance,
   transferBetweenAccounts,
   resolvePaymentMethodFee,
   EXCLUDED_PAYMENT_METHODS,

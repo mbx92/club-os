@@ -391,7 +391,7 @@ async function getMainDashboard(req, res, next) {
           where: {
             ...(isSuperAdmin ? {} : { tenantId }),
             ...(locationId ? { locationId } : {}),
-            status: { [Op.in]: ['approved', 'paid'] },
+            status: { [Op.in]: ['paid'] },
             expenseDate: {
               [Op.gte]: today,
               [Op.lt]: tomorrow
@@ -406,7 +406,7 @@ async function getMainDashboard(req, res, next) {
           where: {
             ...(isSuperAdmin ? {} : { tenantId }),
             ...(locationId ? { locationId } : {}),
-            status: { [Op.in]: ['approved', 'paid'] },
+            status: { [Op.in]: ['paid'] },
             expenseDate: {
               [Op.gte]: thisMonthStart
             }

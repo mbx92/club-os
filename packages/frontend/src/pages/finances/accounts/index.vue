@@ -238,6 +238,8 @@ const submitForm = async () => {
       description: payload.description,
       settlementDays: payload.settlementDays,
       bankName: payload.bankName,
+      openingBalance: payload.openingBalance,
+      openingDate: payload.openingDate,
     })
   } else {
     await createAccount(payload)

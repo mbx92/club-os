@@ -95,7 +95,8 @@ async function previewTenantAttendanceRegeneration({
   forceAll = false,
 }) {
   const tenantTimezone = tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
-  const prevStartDate = getPreviousDateOnly(startDate);
+  // Two days back: cover overnight check-in that belongs to the day before startDate.
+  const prevStartDate = getPreviousDateOnly(getPreviousDateOnly(startDate));
   const nextEndDate = shiftDateOnly(endDate, 1);
   const scopedEmployeeIds = await resolveEmployeeIds({ tenantId: tenant.id, employeeQuery });
 
@@ -260,7 +261,9 @@ async function regenerateAttendanceForEmployee({
   transaction,
 }) {
   const tenantTimezone = tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
-  const prevStartDate = getPreviousDateOnly(startDate);
+  // Extra day back so overnight check-in (evening before window start) is rebuilt
+  // together with the morning checkout — prevents orphan corruption before off days.
+  const prevStartDate = getPreviousDateOnly(getPreviousDateOnly(startDate));
 
   const deletedCount = await StaffAttendance.destroy({
     where: {
@@ -359,7 +362,7 @@ async function regenerateAttendanceFromLogs({
 
     const tenant = tenants.find((item) => item.id === tenantPreview.tenantId);
     const tenantTimezone = tenant?.settings?.timezone || process.env.TZ || 'Asia/Jakarta';
-    const prevStartDate = getPreviousDateOnly(startDate);
+    const prevStartDate = getPreviousDateOnly(getPreviousDateOnly(startDate));
     const nextEndDate = shiftDateOnly(endDate, 1);
     const tenantEmployeeIds = tenantPreview.employees.map((item) => item.employeeId);
 

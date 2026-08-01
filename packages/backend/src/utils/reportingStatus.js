@@ -1,5 +1,11 @@
 const COMPLETED_PAYMENT_STATUS = 'completed';
 
+// Expense affects cash/balance/cashflow only after actual payment — not on approve.
+const EXPENSE_CASH_RECOGNIZED_STATUSES = Object.freeze(['paid']);
+const EXPENSE_CASH_RECOGNIZED_STATUS_SQL = EXPENSE_CASH_RECOGNIZED_STATUSES
+  .map((status) => `'${status}'`)
+  .join(', ');
+
 const ALL_TRANSACTION_STATUSES = Object.freeze(['completed', 'paid', 'served', 'split', 'merged']);
 const FINAL_TRANSACTION_STATUSES = Object.freeze(['completed', 'paid']);
 const CASH_REGISTER_TRANSACTION_STATUSES = ALL_TRANSACTION_STATUSES;
@@ -55,6 +61,8 @@ module.exports = {
   CASHIER_PARENT_TRANSACTION_STATUSES,
   CASHIER_COMPLETED_PAYMENT_REQUIRED_STATUSES,
   COMPLETED_PAYMENT_STATUS,
+  EXPENSE_CASH_RECOGNIZED_STATUSES,
+  EXPENSE_CASH_RECOGNIZED_STATUS_SQL,
   PAID_TRANSACTION_EXISTS_SQL,
   PAID_TRANSACTION_SEQUELIZE_LITERAL_SQL,
   hasCompletedPayments,

@@ -146,7 +146,7 @@ async function getDailySummaryReport(req, res, next) {
             AND e."fundSource" IS NULL
           )
         )
-        AND e."status" IN ('approved', 'paid')
+        AND e."status" IN ('paid')
         AND e."expenseDate" BETWEEN :utcStart AND :utcEnd
         AND e."deletedAt" IS NULL
         ${tenantFilterExp}
@@ -451,7 +451,7 @@ async function exportDailySummaryReport(req, res, next) {
             AND e."fundSource" IS NULL
           )
         )
-        AND e."status" IN ('approved', 'paid')
+        AND e."status" IN ('paid')
         AND e."expenseDate" BETWEEN :utcStart AND :utcEnd
         AND e."deletedAt" IS NULL
         ${isSuperAdmin ? '' : 'AND e."tenantId" = :tenantId'}

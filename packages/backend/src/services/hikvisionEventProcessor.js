@@ -77,21 +77,38 @@ function resolveAttendanceSchedule(attendance, schedulesByDate, timezone) {
   }
 
   if (candidates.length === 0) return null;
-  if (candidates.length === 1) return candidates[0];
 
   const referenceTime = attendance.checkInTime || attendance.checkOutTime;
-  if (!referenceTime) return candidates[0];
+  if (!referenceTime) return candidates.length === 1 ? candidates[0] : null;
 
-  return candidates
-    .map((schedule) => ({
-      schedule,
-      metrics: getScheduleMetricsForEvent(new Date(referenceTime), schedule, timezone),
-    }))
+  // Orphan morning checkout taps (e.g. 06:xx after overnight) must NOT bind to the
+  // same calendar day's overnight schedule — that causes the evening check-in to be
+  // misapplied as checkout, especially on the last work day before an off day.
+  const ranked = candidates
+    .map((schedule) => {
+      const metrics = getScheduleMetricsForEvent(new Date(referenceTime), schedule, timezone);
+      const checkoutShaped = isPlausibleCheckout(
+        metrics,
+        ACCESS_DOOR_GUARDS.maxCheckoutDistanceFromShiftEndMinutes
+      );
+      const checkInShaped = isPlausibleCheckIn(
+        metrics,
+        ACCESS_DOOR_GUARDS.maxCheckoutDistanceFromShiftEndMinutes
+      );
+      return { schedule, metrics, checkoutShaped, checkInShaped };
+    })
+    .filter(({ metrics, checkoutShaped, checkInShaped }) => {
+      if (!metrics) return false;
+      if (checkoutShaped && !checkInShaped) return false;
+      return true;
+    })
     .sort((a, b) => {
       const left = a.metrics ? a.metrics.distToStart : Number.MAX_SAFE_INTEGER;
       const right = b.metrics ? b.metrics.distToStart : Number.MAX_SAFE_INTEGER;
       return left - right;
-    })[0]?.schedule || null;
+    });
+
+  return ranked[0]?.schedule || null;
 }
 
 function pickPreferredAttendance(current, candidate) {
@@ -568,6 +585,28 @@ class HikvisionEventProcessor {
           shiftEnd: newScheduleCandidate.schedule.shiftEnd,
         }
       );
+      return;
+    }
+
+    // Regeneration windows often start mid overnight-cycle: the previous night's
+    // check-in is outside the rebuild scope, so the morning checkout tap finds the
+    // prior schedule already complete. Without this guard the tap falls through to
+    // orphan create, then poisons the last work day before an off day.
+    const alreadyClosedCheckout = contexts.find(({ attendance, metrics }) => {
+      if (!attendance?.checkInTime || !attendance?.checkOutTime || !metrics) return false;
+      return isPlausibleCheckout(
+        metrics,
+        ACCESS_DOOR_GUARDS.maxCheckoutDistanceFromShiftEndMinutes
+      );
+    });
+    if (alreadyClosedCheckout) {
+      logger.info('StaffAttendance skip duplicate overnight checkout tap', {
+        deviceEmployeeId: employee.id,
+        employeeNo: employee.employeeNo,
+        date: alreadyClosedCheckout.schedule.date,
+        scheduleId: alreadyClosedCheckout.schedule.id,
+        eventTime: eventDate,
+      });
       return;
     }
 

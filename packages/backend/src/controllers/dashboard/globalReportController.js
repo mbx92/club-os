@@ -375,7 +375,7 @@ async function getGlobalReport(req, res, next) {
             DATE_TRUNC('day', "expenseDate") AS date,
             SUM("totalAmount")               AS expense
           FROM "Expenses"
-          WHERE status IN ('approved', 'paid')
+          WHERE status IN ('paid')
             AND "expenseDate" >= :start
             AND "expenseDate" <= :end
             ${isSuperAdmin ? '' : `AND "tenantId" = '${tenantId}'`}

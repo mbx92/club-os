@@ -74,7 +74,7 @@ async function getCashFlowSummary(req, res, next) {
       where: {
         ...(isSuperAdmin ? {} : { tenantId }),
         ...(locationId ? { locationId } : {}),
-        status: { [Op.in]: ['approved', 'paid'] },
+        status: { [Op.in]: ['paid'] },
         expenseDate: { [Op.between]: [start, end] }
       },
       attributes: [
@@ -241,7 +241,7 @@ async function getCashFlowByCategory(req, res, next) {
         where: {
           ...(isSuperAdmin ? {} : { tenantId }),
           ...(locationId ? { locationId } : {}),
-          status: { [Op.in]: ['approved', 'paid'] },
+          status: { [Op.in]: ['paid'] },
           expenseDate: {
             [Op.between]: [start, end]
           }
@@ -329,7 +329,7 @@ async function getCashFlowProjection(req, res, next) {
     const historicalOutflows = await Expense.findAll({
       where: {
         ...(isSuperAdmin ? {} : { tenantId }),
-        status: { [Op.in]: ['approved', 'paid'] },
+        status: { [Op.in]: ['paid'] },
         expenseDate: { [Op.gte]: sixMonthsAgo }
       },
       attributes: [
@@ -438,7 +438,7 @@ async function getCashFlowStatement(req, res, next) {
     const { start, end } = buildInclusiveDateRange(startDate, endDate, getTenantTimezone(req));
 
     const tWhere = { status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES }, createdAt: { [Op.between]: [start, end] } };
-    const eWhere = { status: { [Op.in]: ['approved', 'paid'] }, expenseDate: { [Op.between]: [start, end] } };
+    const eWhere = { status: { [Op.in]: ['paid'] }, expenseDate: { [Op.between]: [start, end] } };
 
     if (!isSuperAdmin) {
       tWhere.tenantId = tenantId;

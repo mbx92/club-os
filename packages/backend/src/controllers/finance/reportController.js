@@ -90,7 +90,7 @@ async function getProfitLossReport(req, res, next) {
       where: {
         ...(isSuperAdmin ? {} : { tenantId }),
         ...(locationId ? { locationId } : {}),
-        status: { [Op.in]: ['approved', 'paid'] },
+        status: { [Op.in]: ['paid'] },
         expenseDate: {
           [Op.between]: [start, end]
         }
@@ -110,7 +110,7 @@ async function getProfitLossReport(req, res, next) {
       where: {
         ...(isSuperAdmin ? {} : { tenantId }),
         ...(locationId ? { locationId } : {}),
-        status: { [Op.in]: ['approved', 'paid'] },
+        status: { [Op.in]: ['paid'] },
         expenseDate: {
           [Op.between]: [start, end]
         }
@@ -495,7 +495,7 @@ async function getExpenseReport(req, res, next) {
     const { start, end } = buildInclusiveDateRange(startDate, endDate, getTenantTimezone(req));
 
     const where = {
-      status: { [Op.in]: ['approved', 'paid'] },
+      status: { [Op.in]: ['paid'] },
       expenseDate: {
         [Op.between]: [start, end]
       }

@@ -173,7 +173,7 @@ async function getExpenseForecast(req, res, next) {
     const { tenantId, isSuperAdmin } = req.user;
     const { months = 6, periodsAhead = 3 } = req.query;
 
-    const where = { status: { [Op.in]: ['approved', 'paid'] } };
+    const where = { status: { [Op.in]: ['paid'] } };
     if (!isSuperAdmin) where.tenantId = tenantId;
 
     const startDate = new Date();
@@ -275,7 +275,7 @@ async function getComprehensiveForecast(req, res, next) {
     const monthlyExpenses = await Expense.findAll({
       where: {
         ...baseWhere,
-        status: { [Op.in]: ['approved', 'paid'] },
+        status: { [Op.in]: ['paid'] },
         expenseDate: { [Op.gte]: startDate }
       },
       attributes: [

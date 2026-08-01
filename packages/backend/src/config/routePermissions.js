@@ -630,6 +630,7 @@ const ROUTE_TO_SUBJECT_MAP = {
     POST: { subject: 'Account', actions: ['create'] },
   },
   '/finance/accounts/process-settlements': { subject: 'Account', actions: ['update'] },
+  '/finance/accounts/recalculate-balances': { subject: 'Account', actions: ['update'] },
   '/finance/accounts/transfer': { subject: 'Account', actions: ['update'] },
   '/finance/accounts/:id': {
     GET: { subject: 'Account', actions: ['read'] },

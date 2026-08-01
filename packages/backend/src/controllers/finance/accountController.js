@@ -182,7 +182,30 @@ async function updateAccount(req, res, next) {
       updates.bankName = req.body.bankName ? String(req.body.bankName).trim().toUpperCase() : null;
     }
 
-    await account.update(updates);
+    const openingBalanceProvided = req.body.openingBalance !== undefined;
+    const openingDateProvided = req.body.openingDate !== undefined;
+    if (openingBalanceProvided) {
+      const parsed = parseFloat(req.body.openingBalance);
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        return next(createError('VALIDATION_ERROR', 'openingBalance harus angka ≥ 0', 400));
+      }
+      updates.openingBalance = parsed;
+    }
+    if (openingDateProvided) {
+      if (!req.body.openingDate) {
+        return next(createError('VALIDATION_ERROR', 'openingDate wajib diisi (YYYY-MM-DD)', 400));
+      }
+      updates.openingDate = req.body.openingDate;
+    }
+
+    await db.transaction(async (t) => {
+      await account.update(updates, { transaction: t });
+      if (openingBalanceProvided || openingDateProvided) {
+        await accountService.recalculateBalance(account.id, t);
+      }
+    });
+
+    await account.reload();
     return res.json({ success: true, data: account });
   } catch (err) {
     next(err);
@@ -458,6 +481,33 @@ async function processSettlements(req, res, next) {
   }
 }
 
+/**
+ * POST /finance/accounts/recalculate-balances
+ * Preview (dryRun=true) or apply balance = openingBalance + ledger mutations.
+ * Query/body: dryRun=true|false (default true)
+ */
+async function recalculateBalances(req, res, next) {
+  try {
+    const tenantId = req.user.tenantId;
+    const raw = req.query.dryRun ?? req.body?.dryRun;
+    const dryRun = raw === undefined ? true : !(raw === false || raw === 'false' || raw === 0 || raw === '0');
+
+    const result = await accountService.recalculateTenantBalances({ tenantId, dryRun });
+
+    logger.logInfo('Account balances recalculated', {
+      action: dryRun ? 'ACCOUNT_BALANCE_RECALC_PREVIEW' : 'ACCOUNT_BALANCE_RECALC_APPLY',
+      userId: req.user.id,
+      tenantId,
+      accountsScanned: result.summary.accountsScanned,
+      accountsToFix: result.summary.accountsToFix,
+    });
+
+    return res.json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   createAccount,
   getAllAccounts,
@@ -469,4 +519,5 @@ module.exports = {
   createAdjustment,
   transferBetweenAccounts,
   processSettlements,
+  recalculateBalances,
 };

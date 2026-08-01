@@ -147,7 +147,7 @@ async function getFinanceDashboardOverview(req, res, next) {
       where: {
         ...tenantFilter,
         ...locationFilter,
-        status: { [Op.in]: ['approved', 'paid'] },
+        status: { [Op.in]: ['paid'] },
         expenseDate: { [Op.between]: [start, end] }
       },
       attributes: [
@@ -164,7 +164,7 @@ async function getFinanceDashboardOverview(req, res, next) {
       where: {
         ...tenantFilter,
         ...locationFilter,
-        status: { [Op.in]: ['approved', 'paid'] },
+        status: { [Op.in]: ['paid'] },
         expenseDate: { [Op.between]: [prevStart, prevEnd] }
       },
       attributes: [
@@ -526,7 +526,7 @@ async function getFinanceSummaryCards(req, res, next) {
         where: {
           ...tenantFilter,
           ...locationFilter,
-          status: { [Op.in]: ['approved', 'paid'] },
+          status: { [Op.in]: ['paid'] },
           expenseDate: { [Op.between]: [from, to] }
         },
         attributes: [

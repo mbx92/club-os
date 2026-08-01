@@ -559,7 +559,7 @@ exports.listSessions = async (req, res, next) => {
           const expenseResult = await Expense.findAll({
             where: getCashDrawerExpenseWhere({
               tenantId,
-              status: { [Op.in]: ['approved', 'paid'] },
+              status: { [Op.in]: ['paid'] },
               expenseDate: { [Op.gte]: csShiftStart, [Op.lte]: csShiftEnd },
               ...getExpenseLocationWhere(session.locationId),
             }),
@@ -772,7 +772,7 @@ exports.getShiftReport = async (req, res, next) => {
     const expenses = await Expense.findAll({
       where: {
         tenantId,
-        status: { [Op.in]: ['approved', 'paid'] },
+        status: { [Op.in]: ['paid'] },
         expenseDate: { [Op.gte]: shiftDayStart, [Op.lte]: shiftDayEnd },
         ...getExpenseLocationWhere(session.locationId),
       },
@@ -1705,7 +1705,7 @@ exports.getDailyReport = async (req, res, next) => {
     const allExpenses = await Expense.findAll({
       where: {
         tenantId,
-        status: { [Op.in]: ['approved', 'paid'] },
+        status: { [Op.in]: ['paid'] },
         expenseDate: { [Op.gte]: dayStart, [Op.lte]: dayEnd },
         ...getExpenseLocationWhere(locationId),
       },
@@ -2315,7 +2315,7 @@ exports.printDailyReport = async (req, res, next) => {
     const allExpenses = await Expense.findAll({
       where: {
         tenantId,
-        status: { [Op.in]: ['approved', 'paid'] },
+        status: { [Op.in]: ['paid'] },
         expenseDate: { [Op.gte]: pDayStart, [Op.lte]: pDayEnd },
         ...getExpenseLocationWhere(locationId),
       },
@@ -2510,7 +2510,7 @@ exports.printShiftReport = async (req, res, next) => {
     const expenses = await Expense.findAll({
       where: {
         tenantId,
-        status: { [Op.in]: ['approved', 'paid'] },
+        status: { [Op.in]: ['paid'] },
         expenseDate: { [Op.gte]: pShiftStart, [Op.lte]: pShiftEnd },
         ...getExpenseLocationWhere(session.locationId),
       },
@@ -3094,7 +3094,7 @@ exports.diagnoseReport = async (req, res, next) => {
     const expenses = await Expense.findAll({
       where: {
         tenantId,
-        status: { [Op.in]: ['approved', 'paid'] },
+        status: { [Op.in]: ['paid'] },
         expenseDate: { [Op.gte]: dShiftStart, [Op.lte]: dShiftEnd },
         ...getExpenseLocationWhere(session.locationId),
       },

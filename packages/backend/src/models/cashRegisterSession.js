@@ -92,7 +92,7 @@ module.exports = (sequelize, DataTypes) => {
         where: {
           tenantId: this.tenantId,
           paymentMethod: 'cash',
-          status: { [Op.in]: ['approved', 'paid'] },
+          status: { [Op.in]: ['paid'] },
           createdAt: timeWhere,
           ...expenseLocationWhere,
         },

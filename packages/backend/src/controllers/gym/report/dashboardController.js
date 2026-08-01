@@ -862,7 +862,7 @@ async function getPettyCashDashboard(req, res, next) {
         where: {
           tenantId,
           paymentMethod: 'cash',
-          status: { [Op.in]: ['approved', 'paid'] },
+          status: { [Op.in]: ['paid'] },
           createdAt: { [Op.gte]: openSession.openedAt },
           ...(openSession.locationId ? { [Op.or]: [{ locationId: openSession.locationId }, { locationId: null }] } : {}),
         },

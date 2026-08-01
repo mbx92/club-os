@@ -38,6 +38,17 @@ function isCashierUser(user) {
   return role === 'cashier' || role === 'kasir';
 }
 
+/** Cashier may only create/update expenses as draft or pending — no approve/paid. */
+const CASHIER_ALLOWED_STATUSES = new Set(['draft', 'pending']);
+
+function rejectCashierExpenseAction(res, actionLabel) {
+  return res.status(403).json({
+    success: false,
+    code: 'FORBIDDEN',
+    message: `Kasir tidak boleh ${actionLabel}. Status maksimal: pending.`,
+  });
+}
+
 function isCashDrawerExpenseRecord(expense) {
   const fundSource = String(expense?.fundSource || '').toLowerCase();
   if (fundSource === 'cash_drawer') return true;
@@ -78,6 +89,10 @@ async function createExpense(req, res, next) {
     vaultAccountId,
     accountId = null,
   } = req.body;
+
+  if (isCashierUser(req.user) && !CASHIER_ALLOWED_STATUSES.has(String(status || 'draft'))) {
+    return rejectCashierExpenseAction(res, 'approve atau menandai paid');
+  }
 
   // Validasi: jika langsung paid dengan petty_cash, pettyCashId wajib
   if (status === 'paid' && paymentMethod === 'petty_cash' && !pettyCashId) {
@@ -619,6 +634,18 @@ async function updateExpense(req, res, next) {
       });
     }
 
+    if (isCashierUser(req.user)) {
+      const nextStatus = updateData.status !== undefined ? updateData.status : expense.status;
+      if (!CASHIER_ALLOWED_STATUSES.has(String(nextStatus || ''))) {
+        await transaction.rollback();
+        return rejectCashierExpenseAction(res, 'mengubah status ke approved/paid');
+      }
+      if (!CASHIER_ALLOWED_STATUSES.has(String(expense.status || ''))) {
+        await transaction.rollback();
+        return rejectCashierExpenseAction(res, 'mengubah expense yang sudah di-approve/paid');
+      }
+    }
+
     // Clean up empty strings for UUID, enum, and date fields
     const fieldsToClean = ['locationId', 'recurringFrequency', 'recurringEndDate', 'vendor', 'referenceNumber', 'notes', 'paymentMethod', 'bankName', 'paymentNotes', 'dueDate', 'accountId', 'vaultAccountId', 'fundSource'];
     fieldsToClean.forEach(field => {
@@ -709,6 +736,10 @@ async function deleteExpense(req, res, next) {
       });
     }
 
+    if (isCashierUser(req.user) && !CASHIER_ALLOWED_STATUSES.has(String(expense.status || ''))) {
+      return rejectCashierExpenseAction(res, 'menghapus expense yang sudah di-approve/paid');
+    }
+
     await expense.destroy();
 
     res.json({
@@ -746,6 +777,11 @@ async function approveExpense(req, res, next) {
   try {
     const { tenantId, isSuperAdmin, id: userId } = req.user;
     const { id } = req.params;
+
+    if (isCashierUser(req.user)) {
+      await transaction.rollback();
+      return rejectCashierExpenseAction(res, 'approve expense');
+    }
 
     const where = { id };
     if (!isSuperAdmin) {
@@ -826,6 +862,11 @@ async function markExpenseAsPaid(req, res, next) {
     const { tenantId, isSuperAdmin, id: userId } = req.user;
     const { id } = req.params;
     const { paymentMethod, fundSource, bankName, paymentNotes, paidDate = new Date(), pettyCashId, vaultAccountId, accountId = null } = req.body;
+
+    if (isCashierUser(req.user)) {
+      await transaction.rollback();
+      return rejectCashierExpenseAction(res, 'menandai expense sebagai paid');
+    }
 
     // Validasi: petty_cash harus menyertakan pettyCashId
     if (paymentMethod === 'petty_cash' && !pettyCashId) {
@@ -1143,6 +1184,11 @@ async function reopenExpense(req, res, next) {
     const { tenantId, isSuperAdmin, id: userId } = req.user;
     const { id } = req.params;
     const { reason } = req.body || {};
+
+    if (isCashierUser(req.user)) {
+      await transaction.rollback();
+      return rejectCashierExpenseAction(res, 'reopen expense');
+    }
 
     const where = { id };
     if (!isSuperAdmin) {

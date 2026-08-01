@@ -97,7 +97,7 @@ async function getAllCategories(req, res, next) {
           const stats = await Expense.findAll({
             where: {
               categoryId: category.id,
-              status: { [Op.in]: ['approved', 'paid'] }
+              status: { [Op.in]: ['paid'] }
             },
             attributes: [
               [fn('COUNT', col('id')), 'expenseCount'],

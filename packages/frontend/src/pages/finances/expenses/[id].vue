@@ -266,25 +266,29 @@ const handleReopen = async () => {
           </span>
 
           <!-- Approve -->
-          <button v-if="exp.status === 'pending'" class="btn btn-success btn-sm"
+          <button v-if="!isCashier && exp.status === 'pending'" class="btn btn-success btn-sm"
             :disabled="actionLoading" @click="handleApprove">
             <IconCheck class="w-4 h-4" /> Setujui
           </button>
 
           <!-- Mark as Paid -->
-          <button v-if="exp.status === 'approved'" class="btn btn-info btn-sm"
+          <button v-if="!isCashier && exp.status === 'approved'" class="btn btn-info btn-sm"
             :disabled="actionLoading" @click="handleMarkAsPaid">
             <IconCreditCard class="w-4 h-4" /> Tandai Dibayar
           </button>
 
           <!-- Edit -->
-          <button v-if="exp.status !== 'paid'" class="btn btn-ghost btn-sm"
+          <button
+            v-if="isCashier ? ['draft', 'pending'].includes(exp.status) : exp.status !== 'paid'"
+            class="btn btn-ghost btn-sm"
             :disabled="actionLoading" @click="handleEdit">
             <IconEdit class="w-4 h-4" /> Edit
           </button>
 
           <!-- Delete -->
-          <button v-if="exp.status !== 'paid'" class="btn btn-error btn-sm btn-outline"
+          <button
+            v-if="isCashier ? ['draft', 'pending'].includes(exp.status) : exp.status !== 'paid'"
+            class="btn btn-error btn-sm btn-outline"
             :disabled="actionLoading" @click="handleDelete">
             <IconTrash class="w-4 h-4" />
           </button>

@@ -218,9 +218,9 @@ meta:
                 </td>
                 <td class="text-center">
                   <div class="flex justify-center gap-2">
-                    <!-- Approve Button (only for pending) -->
+                    <!-- Approve Button (only for pending, not cashier) -->
                     <button
-                      v-if="expense.status === 'pending'"
+                      v-if="!isCashier && expense.status === 'pending'"
                       class="btn btn-success btn-sm"
                       @click="handleApprove(expense)"
                       :disabled="actionLoading"
@@ -228,9 +228,9 @@ meta:
                       <IconCheck class="w-4 h-4" />
                     </button>
                     
-                    <!-- Mark as Paid Button (only for approved) -->
+                    <!-- Mark as Paid Button (only for approved, not cashier) -->
                     <button
-                      v-if="expense.status === 'approved'"
+                      v-if="!isCashier && expense.status === 'approved'"
                       class="btn btn-info btn-sm"
                       @click="handleMarkAsPaid(expense)"
                       :disabled="actionLoading"
@@ -238,9 +238,9 @@ meta:
                       <IconCreditCard class="w-4 h-4" />
                     </button>
                     
-                    <!-- Edit Button (not for paid) -->
+                    <!-- Edit Button (cashier: draft/pending only; others: not paid) -->
                     <button
-                      v-if="expense.status !== 'paid'"
+                      v-if="isCashier ? ['draft', 'pending'].includes(expense.status) : expense.status !== 'paid'"
                       class="btn btn-ghost btn-sm"
                       @click="openEditModal(expense)"
                       :disabled="actionLoading"
@@ -248,9 +248,9 @@ meta:
                       <IconEdit class="w-4 h-4" />
                     </button>
                     
-                    <!-- Delete Button (not for paid) -->
+                    <!-- Delete Button (cashier: draft/pending only; others: not paid) -->
                     <button
-                      v-if="expense.status !== 'paid'"
+                      v-if="isCashier ? ['draft', 'pending'].includes(expense.status) : expense.status !== 'paid'"
                       class="btn btn-error btn-sm"
                       @click="handleDelete(expense)"
                       :disabled="actionLoading"

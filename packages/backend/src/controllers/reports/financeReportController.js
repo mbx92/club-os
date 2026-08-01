@@ -324,7 +324,7 @@ async function getProfitLossReport(req, res, next) {
     if (startDate) txWhere.createdAt = { ...(txWhere.createdAt || {}), [Op.gte]: startOfDayInTz(startDate, tz) };
     if (endDate) txWhere.createdAt = { ...(txWhere.createdAt || {}), [Op.lte]: endOfDayInTz(endDate, tz) };
 
-    const expWhere = { status: { [Op.in]: ['approved', 'paid'] } };
+    const expWhere = { status: { [Op.in]: ['paid'] } };
     if (!isSuperAdmin) expWhere.tenantId = tenantId;
     if (startDate) expWhere.expenseDate = { ...(expWhere.expenseDate || {}), [Op.gte]: startOfDayInTz(startDate, tz) };
     if (endDate) expWhere.expenseDate = { ...(expWhere.expenseDate || {}), [Op.lte]: endOfDayInTz(endDate, tz) };
@@ -472,7 +472,7 @@ async function getCashFlowReport(req, res, next) {
 
     const expWhere = {
       ...tenantWhere,
-      status: { [Op.in]: ['approved', 'paid'] }
+      status: { [Op.in]: ['paid'] }
     };
     if (dateStart) expWhere.expenseDate = { ...(expWhere.expenseDate || {}), [Op.gte]: dateStart };
     if (dateEnd)   expWhere.expenseDate = { ...(expWhere.expenseDate || {}), [Op.lte]: dateEnd };
@@ -797,7 +797,7 @@ async function getShareholderReport(req, res, next) {
 
     const expWhere = {
       ...tenantFilter,
-      status: { [Op.in]: ['approved', 'paid'] },
+      status: { [Op.in]: ['paid'] },
       expenseDate: { [Op.between]: [dateStart, dateEnd] }
     };
 

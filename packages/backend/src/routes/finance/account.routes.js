@@ -14,6 +14,7 @@ const {
   createAdjustment,
   transferBetweenAccounts,
   processSettlements,
+  recalculateBalances,
 } = require('../../controllers/finance/accountController');
 
 const router = express.Router();
@@ -25,6 +26,12 @@ router.use(authenticate, requireModule('finance'));
 router.post('/process-settlements',
   authorize('update', 'Account'),
   processSettlements
+);
+
+router.post('/recalculate-balances',
+  authorize('update', 'Account'),
+  recalculateBalances,
+  auditLog('ACCOUNT_BALANCE_RECALCULATE')
 );
 
 router.post('/transfer',

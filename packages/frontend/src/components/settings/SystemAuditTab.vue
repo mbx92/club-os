@@ -170,6 +170,13 @@
               Audit Shift Malam
             </button>
             <button
+              class="btn btn-secondary btn-sm gap-2"
+              @click="openAccountBalanceRecalculateCanvas"
+            >
+              <IconCalculator class="w-4 h-4" />
+              Recalculate Saldo
+            </button>
+            <button
               class="btn btn-primary btn-sm gap-2"
               @click="openAuditLogCanvas"
             >
@@ -183,7 +190,7 @@
           <IconInfoCircle class="w-5 h-5" />
           <div>
             <p class="text-sm">Click "View Logs" to access comprehensive audit trail with filtering, statistics, and export capabilities</p>
-            <p class="text-xs mt-1 opacity-80">Menu kecil <strong>Audit Shift Malam</strong> dipakai untuk preview kandidat data overnight yang salah tanggal dan apply fix via UI.</p>
+            <p class="text-xs mt-1 opacity-80">Menu <strong>Audit Shift Malam</strong> untuk fix overnight. <strong>Recalculate Saldo</strong> untuk sync balance akun = saldo awal + mutasi (setelah inject openingBalance).</p>
           </div>
         </div>
       </div>
@@ -587,6 +594,12 @@
     v-model="showAttendanceRegenerationCanvas"
     @close="closeAttendanceRegenerationCanvas"
   />
+
+  <!-- Account Balance Recalculate Canvas -->
+  <AccountBalanceRecalculateCanvas
+    v-model="showAccountBalanceRecalculateCanvas"
+    @close="closeAccountBalanceRecalculateCanvas"
+  />
 </template>
 
 <script setup>
@@ -603,6 +616,7 @@ import DeviceEmployeeDuplicateCanvas from '@/components/settings/DeviceEmployeeD
 import SmartFixCheckInCanvas from '@/components/settings/SmartFixCheckInCanvas.vue'
 import OvernightShiftAuditCanvas from '@/components/settings/OvernightShiftAuditCanvas.vue'
 import AttendanceRegenerationCanvas from '@/components/settings/AttendanceRegenerationCanvas.vue'
+import AccountBalanceRecalculateCanvas from '@/components/settings/AccountBalanceRecalculateCanvas.vue'
 import {
   IconEye,
   IconPackage,
@@ -664,6 +678,7 @@ const showDuplicateCanvas = ref(false)
 const showSmartFixCanvas = ref(false)
 const showOvernightAuditCanvas = ref(false)
 const showAttendanceRegenerationCanvas = ref(false)
+const showAccountBalanceRecalculateCanvas = ref(false)
 
 // Computed stats
 const hasMetadata = computed(() => metadata.value.length > 0)
@@ -724,6 +739,14 @@ const openAttendanceRegenerationCanvas = () => {
 
 const closeAttendanceRegenerationCanvas = () => {
   showAttendanceRegenerationCanvas.value = false
+}
+
+const openAccountBalanceRecalculateCanvas = () => {
+  showAccountBalanceRecalculateCanvas.value = true
+}
+
+const closeAccountBalanceRecalculateCanvas = () => {
+  showAccountBalanceRecalculateCanvas.value = false
 }
 
 // Duplicate canvas
