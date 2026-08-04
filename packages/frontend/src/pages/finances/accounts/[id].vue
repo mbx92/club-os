@@ -145,8 +145,11 @@ const isInflowType = (type) =>
 const entryAmountSign = (type) => isInflowType(type) ? '+' : '-'
 
 const entrySummary = computed(() => {
+  // 'opening' is the account's static baseline, not a period cash movement — excluding it
+  // here mirrors the backend report fix (it can be backfilled/backdated by balance
+  // recalculation long after real activity started, inflating this period's total otherwise).
   const inflow = entries.value
-    .filter(e => isInflowType(e.type) && e.status === 'completed')
+    .filter(e => isInflowType(e.type) && e.type !== 'opening' && e.status === 'completed')
     .reduce((s, e) => s + parseFloat(e.amount), 0)
   const outflow = entries.value
     .filter(e => !isInflowType(e.type) && e.status === 'completed')

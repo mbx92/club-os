@@ -944,6 +944,12 @@ async function getShareholderReport(req, res, next) {
 
 const ACCOUNT_INFLOW_TYPES = ['opening', 'inflow', 'transfer_in', 'settlement', 'adjustment_credit'];
 const ACCOUNT_OUTFLOW_TYPES = ['outflow', 'transfer_out', 'adjustment_debit'];
+// 'opening' is the account's static baseline (already reflected in Account.openingBalance /
+// Account.balance via accountService's own formula), not a period cash movement. A ledger
+// sync (recalculateBalance) can backfill/backdate this row to entryDate=account.openingDate
+// long after the account started being used — if a report's date range includes that date,
+// counting it as period inflow double-counts the baseline for every day after (#selisih-modal).
+const ACCOUNT_PERIOD_INFLOW_TYPES = ACCOUNT_INFLOW_TYPES.filter((t) => t !== 'opening');
 
 /**
  * GET /reports/finance/accounts
@@ -1021,7 +1027,7 @@ async function getAccountsReport(req, res, next) {
       const count = parseInt(row.count || 0, 10);
       movementByAccount[row.accountId].byType[row.type] = { total: amount, count };
       movementByAccount[row.accountId].entryCount += count;
-      if (ACCOUNT_INFLOW_TYPES.includes(row.type)) {
+      if (ACCOUNT_PERIOD_INFLOW_TYPES.includes(row.type)) {
         movementByAccount[row.accountId].inflow += amount;
       } else if (ACCOUNT_OUTFLOW_TYPES.includes(row.type)) {
         movementByAccount[row.accountId].outflow += amount;
@@ -1156,7 +1162,7 @@ async function getAccountTransactionsReport(req, res, next) {
     const byType = summaryRows.map((r) => {
       const total = parseFloat(r.total || 0);
       const entryCount = parseInt(r.count || 0, 10);
-      if (ACCOUNT_INFLOW_TYPES.includes(r.type)) periodInflow += total;
+      if (ACCOUNT_PERIOD_INFLOW_TYPES.includes(r.type)) periodInflow += total;
       if (ACCOUNT_OUTFLOW_TYPES.includes(r.type)) periodOutflow += total;
       return { type: r.type, total, count: entryCount };
     });

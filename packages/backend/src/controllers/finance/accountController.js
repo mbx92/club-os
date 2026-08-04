@@ -1,7 +1,7 @@
 'use strict';
 
 const { Op } = require('sequelize');
-const { Account, AccountEntry, sequelize: db } = require('../../models');
+const { Account, AccountEntry, User, sequelize: db } = require('../../models');
 const accountService = require('../../services/accountService');
 const { getTenantTimezone, todayInTz } = require('../../utils/tenantTimezone');
 const { createError } = require('../../utils/errorCodes');
@@ -508,6 +508,159 @@ async function recalculateBalances(req, res, next) {
   }
 }
 
+// ─── Adjustment audit (fix data yang sudah lewat) ────────────────────────────
+
+const REVERSIBLE_TYPES = ['adjustment_credit', 'adjustment_debit'];
+const BACKDATED_OPENING_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
+
+/**
+ * GET /finance/accounts/adjustment-audit
+ * Surface data most likely to need manual review after the account-report
+ * period bug (#selisih-modal): manual adjustment_credit/adjustment_debit
+ * entries (often created by staff trying to patch a phantom discrepancy),
+ * plus 'opening' ledger rows that were backfilled well after the account
+ * itself was created (the actual source of the phantom discrepancy).
+ * Query: startDate?, endDate?, accountId? — filters the adjustments list only.
+ */
+async function listAdjustmentAudit(req, res, next) {
+  try {
+    const tenantId = req.user.tenantId;
+    const { startDate, endDate, accountId } = req.query;
+
+    const entryWhere = {
+      tenantId,
+      type: { [Op.in]: REVERSIBLE_TYPES },
+    };
+    if (accountId) entryWhere.accountId = accountId;
+    if (startDate || endDate) {
+      entryWhere.entryDate = {};
+      if (startDate) entryWhere.entryDate[Op.gte] = startDate;
+      if (endDate) entryWhere.entryDate[Op.lte] = endDate;
+    }
+
+    const adjustments = await AccountEntry.findAll({
+      where: entryWhere,
+      include: [
+        { model: Account, as: 'account', attributes: ['id', 'name', 'type', 'bankName'] },
+        { model: User, as: 'performer', attributes: ['id', 'firstName', 'lastName'], required: false },
+      ],
+      order: [['entryDate', 'DESC'], ['createdAt', 'DESC']],
+    });
+
+    const adjustmentIds = adjustments.map((e) => e.id);
+    const reversals = adjustmentIds.length
+      ? await AccountEntry.findAll({
+          where: {
+            tenantId,
+            referenceType: 'AccountEntry',
+            referenceId: { [Op.in]: adjustmentIds },
+          },
+          attributes: ['entryNumber', 'referenceId', 'amount', 'createdAt'],
+        })
+      : [];
+    const reversalByOriginal = new Map(reversals.map((r) => [r.referenceId, r]));
+
+    const openingEntries = await AccountEntry.findAll({
+      where: { tenantId, type: 'opening' },
+      include: [{ model: Account, as: 'account', attributes: ['id', 'name', 'createdAt'], required: true }],
+    });
+    const backdatedOpenings = openingEntries
+      .filter((e) => (new Date(e.createdAt) - new Date(e.account.createdAt)) > BACKDATED_OPENING_THRESHOLD_MS)
+      .map((e) => ({
+        accountId: e.accountId,
+        accountName: e.account.name,
+        entryNumber: e.entryNumber,
+        amount: parseFloat(e.amount),
+        entryDate: e.entryDate,
+        accountCreatedAt: e.account.createdAt,
+        entryCreatedAt: e.createdAt,
+        delayHours: parseFloat(((new Date(e.createdAt) - new Date(e.account.createdAt)) / 3600000).toFixed(1)),
+      }));
+
+    return res.json({
+      success: true,
+      data: {
+        adjustments: adjustments.map((e) => {
+          const reversal = reversalByOriginal.get(e.id) || null;
+          return {
+            id: e.id,
+            entryNumber: e.entryNumber,
+            type: e.type,
+            amount: parseFloat(e.amount),
+            entryDate: e.entryDate,
+            description: e.description,
+            status: e.status,
+            createdAt: e.createdAt,
+            accountId: e.accountId,
+            accountName: e.account?.name || null,
+            accountType: e.account?.type || null,
+            performedByName: e.performer
+              ? `${e.performer.firstName || ''} ${e.performer.lastName || ''}`.trim() || null
+              : null,
+            reversedBy: reversal ? {
+              entryNumber: reversal.entryNumber,
+              amount: parseFloat(reversal.amount),
+              createdAt: reversal.createdAt,
+            } : null,
+          };
+        }),
+        backdatedOpenings,
+      },
+      filters: { startDate: startDate || null, endDate: endDate || null, accountId: accountId || null },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /finance/accounts/adjustment-audit/:entryId/reverse
+ * Create the opposite adjustment entry to cancel out a manual correction that
+ * turned out to be unnecessary. Entries are never deleted/edited (immutable
+ * ledger) — a reversal is itself a new, fully audited entry.
+ * Body: { reason? }
+ */
+async function reverseAdjustmentEntry(req, res, next) {
+  try {
+    const tenantId = req.user.tenantId;
+    const { entryId } = req.params;
+    const { reason } = req.body;
+
+    const original = await AccountEntry.findOne({
+      where: { id: entryId, tenantId, type: { [Op.in]: REVERSIBLE_TYPES } },
+    });
+    if (!original) {
+      return next(createError('NOT_FOUND', 'Entry penyesuaian tidak ditemukan', 404));
+    }
+
+    const alreadyReversed = await AccountEntry.findOne({
+      where: { tenantId, referenceType: 'AccountEntry', referenceId: original.id },
+    });
+    if (alreadyReversed) {
+      return next(createError('VALIDATION_ERROR', 'Entry ini sudah pernah dibalik sebelumnya', 400));
+    }
+
+    const reverseType = original.type === 'adjustment_debit' ? 'adjustment_credit' : 'adjustment_debit';
+    const tz = getTenantTimezone(req);
+
+    const result = await accountService.createEntry({
+      accountId: original.accountId,
+      tenantId,
+      type: reverseType,
+      amount: parseFloat(original.amount),
+      referenceType: 'AccountEntry',
+      referenceId: original.id,
+      description: `Pembalikan ${original.entryNumber}${reason ? ` — ${reason}` : ''}`,
+      performedBy: req.user.id,
+      timezone: tz,
+    });
+
+    return res.status(201).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   createAccount,
   getAllAccounts,
@@ -520,4 +673,6 @@ module.exports = {
   transferBetweenAccounts,
   processSettlements,
   recalculateBalances,
+  listAdjustmentAudit,
+  reverseAdjustmentEntry,
 };

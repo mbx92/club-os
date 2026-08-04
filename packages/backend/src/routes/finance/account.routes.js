@@ -15,6 +15,8 @@ const {
   transferBetweenAccounts,
   processSettlements,
   recalculateBalances,
+  listAdjustmentAudit,
+  reverseAdjustmentEntry,
 } = require('../../controllers/finance/accountController');
 
 const router = express.Router();
@@ -38,6 +40,17 @@ router.post('/transfer',
   authorize('update', 'Account'),
   transferBetweenAccounts,
   auditLog('ACCOUNT_TRANSFER')
+);
+
+router.get('/adjustment-audit',
+  authorize('read', 'Account'),
+  listAdjustmentAudit
+);
+
+router.post('/adjustment-audit/:entryId/reverse',
+  authorize('update', 'Account'),
+  reverseAdjustmentEntry,
+  auditLog('ACCOUNT_ADJUSTMENT_REVERSE')
 );
 
 // ─── CRUD ─────────────────────────────────────────────────────────────────────

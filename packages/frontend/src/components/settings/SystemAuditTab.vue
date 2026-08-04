@@ -177,6 +177,13 @@
               Recalculate Saldo
             </button>
             <button
+              class="btn btn-warning btn-sm gap-2"
+              @click="openAdjustmentAuditCanvas"
+            >
+              <IconReceipt2 class="w-4 h-4" />
+              Audit Penyesuaian Manual
+            </button>
+            <button
               class="btn btn-primary btn-sm gap-2"
               @click="openAuditLogCanvas"
             >
@@ -185,12 +192,12 @@
             </button>
           </div>
         </div>
-        
+
         <div class="alert alert-info">
           <IconInfoCircle class="w-5 h-5" />
           <div>
             <p class="text-sm">Click "View Logs" to access comprehensive audit trail with filtering, statistics, and export capabilities</p>
-            <p class="text-xs mt-1 opacity-80">Menu <strong>Audit Shift Malam</strong> untuk fix overnight. <strong>Recalculate Saldo</strong> untuk sync balance akun = saldo awal + mutasi (setelah inject openingBalance).</p>
+            <p class="text-xs mt-1 opacity-80">Menu <strong>Audit Shift Malam</strong> untuk fix overnight. <strong>Recalculate Saldo</strong> untuk sync balance akun = saldo awal + mutasi (setelah inject openingBalance). <strong>Audit Penyesuaian Manual</strong> untuk cek/balik koreksi manual yang mungkin dibuat menambal selisih laporan akun.</p>
           </div>
         </div>
       </div>
@@ -600,6 +607,12 @@
     v-model="showAccountBalanceRecalculateCanvas"
     @close="closeAccountBalanceRecalculateCanvas"
   />
+
+  <!-- Adjustment Audit Canvas -->
+  <AdjustmentAuditCanvas
+    v-model="showAdjustmentAuditCanvas"
+    @close="closeAdjustmentAuditCanvas"
+  />
 </template>
 
 <script setup>
@@ -617,6 +630,7 @@ import SmartFixCheckInCanvas from '@/components/settings/SmartFixCheckInCanvas.v
 import OvernightShiftAuditCanvas from '@/components/settings/OvernightShiftAuditCanvas.vue'
 import AttendanceRegenerationCanvas from '@/components/settings/AttendanceRegenerationCanvas.vue'
 import AccountBalanceRecalculateCanvas from '@/components/settings/AccountBalanceRecalculateCanvas.vue'
+import AdjustmentAuditCanvas from '@/components/settings/AdjustmentAuditCanvas.vue'
 import {
   IconEye,
   IconPackage,
@@ -641,6 +655,7 @@ import {
   IconCalculator,
   IconPencil,
   IconMoon,
+  IconReceipt2,
 } from '@tabler/icons-vue'
 
 const isDev = import.meta.env.DEV
@@ -679,6 +694,7 @@ const showSmartFixCanvas = ref(false)
 const showOvernightAuditCanvas = ref(false)
 const showAttendanceRegenerationCanvas = ref(false)
 const showAccountBalanceRecalculateCanvas = ref(false)
+const showAdjustmentAuditCanvas = ref(false)
 
 // Computed stats
 const hasMetadata = computed(() => metadata.value.length > 0)
@@ -747,6 +763,14 @@ const openAccountBalanceRecalculateCanvas = () => {
 
 const closeAccountBalanceRecalculateCanvas = () => {
   showAccountBalanceRecalculateCanvas.value = false
+}
+
+const openAdjustmentAuditCanvas = () => {
+  showAdjustmentAuditCanvas.value = true
+}
+
+const closeAdjustmentAuditCanvas = () => {
+  showAdjustmentAuditCanvas.value = false
 }
 
 // Duplicate canvas
