@@ -23,6 +23,7 @@ const {
   Expense,
   Transaction,
   TransactionPayment,
+  AccountEntry,
 } = require('../../models');
 const logger = require('../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../utils/requestHelper');
@@ -81,6 +82,35 @@ function paginate(page = 1, limit = 20) {
   const p = Math.max(1, parseInt(page));
   const l = Math.min(Math.max(1, parseInt(limit)), 200);
   return { offset: (p - 1) * l, limit: l, page: p, limitSize: l };
+}
+
+/**
+ * Sum of "Pengembalian modal kasir" AccountEntry inflows per CashRegisterSession.
+ *
+ * When a shift closes, closeShift() returns the unused petty-cash modal on paper
+ * (an AccountEntry type='inflow' crediting the petty cash Account) — but that cash
+ * never physically leaves the drawer. actualCash/closingBalance therefore still
+ * include it. If drawer→vault collection also swept the full actualCash, that same
+ * rupiah would be double-counted: once as "back in petty cash", once as "collected
+ * to vault". Subtract this amount from the collectible base to avoid that.
+ */
+async function getPettyCashModalReturnMap(tenantId, sessionIds, transaction) {
+  if (!sessionIds.length) return {};
+  const rows = await AccountEntry.findAll({
+    where: {
+      tenantId,
+      referenceType: 'CashRegisterSession',
+      referenceId: { [Op.in]: sessionIds },
+      type: 'inflow',
+    },
+    attributes: ['referenceId', [fn('SUM', col('amount')), 'total']],
+    group: ['referenceId'],
+    raw: true,
+    ...(transaction ? { transaction } : {}),
+  });
+  const map = {};
+  rows.forEach(r => { map[r.referenceId] = parseFloat(r.total || 0); });
+  return map;
 }
 
 // ── Vault Account CRUD ────────────────────────────────────────────────────────
@@ -483,9 +513,15 @@ async function getCollectibles(req, res, next) {
       collectedMap[c.shiftSessionId] = parseFloat(c.collected || 0);
     });
 
+    const modalReturnMap = await getPettyCashModalReturnMap(tenantId, sessionIds);
+
     // Build session list
     const sessionList = sessions.map(s => {
-      const base = parseFloat(s.actualCash || s.closingBalance || 0);
+      const rawCash = parseFloat(s.actualCash || s.closingBalance || 0);
+      const modalReturned = modalReturnMap[s.id] || 0;
+      // Exclude the petty-cash modal already returned on paper — it's still
+      // physically in the drawer but is not collectible revenue.
+      const base = Math.max(0, rawCash - modalReturned);
       const collected = collectedMap[s.id] || 0;
       const remaining = Math.max(0, base - collected);
       const status = remaining <= 0 ? 'collected' : collected > 0 ? 'partially_collected' : 'uncollected';
@@ -497,6 +533,7 @@ async function getCollectibles(req, res, next) {
         location: s.location || null,
         closingBalance: parseFloat(s.closingBalance || 0),
         actualCash: parseFloat(s.actualCash || 0),
+        pettyCashModalReturned: modalReturned,
         collectibleBase: base,
         collectedAmount: collected,
         remainingAmount: remaining,
@@ -632,7 +669,13 @@ async function collectToVault(req, res, next) {
             return { error: `Shift session ${sessionId} tidak ditemukan` };
           }
 
-          const baseAmount = parseFloat(session.actualCash || session.closingBalance || 0);
+          const rawCashAmount = parseFloat(session.actualCash || session.closingBalance || 0);
+          const modalReturnMap = await getPettyCashModalReturnMap(tenantId, [session.id], transaction);
+          const modalReturned = modalReturnMap[session.id] || 0;
+          // Exclude the petty-cash modal already returned on paper (still physically
+          // in the drawer, but already credited back to the petty cash Account) —
+          // collecting it too would double-count that cash across two ledgers.
+          const baseAmount = Math.max(0, rawCashAmount - modalReturned);
 
           // Hitung sudah berapa banyak yang sudah di-collect
           const collectedResult = await CashMutation.findOne({
@@ -689,6 +732,8 @@ async function collectToVault(req, res, next) {
             notes: itemNotes || notes || null,
             metadata: {
               shiftDate: session.shiftDate,
+              rawCashAmount,
+              pettyCashModalReturned: modalReturned,
               collectibleBase: baseAmount,
               alreadyCollected,
             },

@@ -170,6 +170,24 @@ async function getDailySummaryReport(req, res, next) {
       ORDER BY date
     `, { replacements: { utcStart: startDate, utcEnd: endDate, ...(isSuperAdmin ? {} : { tenantId }) } });
 
+    // ─── 4b. Opening balance (modal) of ALL sessions, closed or still open ──
+    // Needed for the no-closed-session fallback below: once a shift withdraws
+    // a petty-cash modal, that cash physically sits in the drawer from the
+    // moment it opens — the fallback must not undercount it just because the
+    // shift hasn't closed yet (openingBalance was always 0 pre-petty-cash,
+    // which is why this term was missing without anyone noticing).
+    const [openingBalanceRows] = await sequelize.query(`
+      SELECT
+        crs."shiftDate" AS date,
+        COALESCE(SUM(crs."openingBalance"), 0) AS opening_balance
+      FROM "CashRegisterSessions" crs
+      WHERE crs."shiftDate" BETWEEN :utcStart AND :utcEnd
+        AND crs."deletedAt" IS NULL
+        ${tenantFilterCrs}
+      GROUP BY crs."shiftDate"
+      ORDER BY date
+    `, { replacements: { utcStart: startDate, utcEnd: endDate, ...(isSuperAdmin ? {} : { tenantId }) } });
+
     // ─── Build date range ──────────────────────────────────────────────
     const dates = [];
     let cur = startDate;
@@ -240,6 +258,12 @@ async function getDailySummaryReport(req, res, next) {
       };
     }
 
+    const openingBalanceMap = {};
+    for (const o of openingBalanceRows) {
+      const key = o.date instanceof Date ? o.date.toISOString().slice(0, 10) : String(o.date).slice(0, 10);
+      openingBalanceMap[key] = parseFloat(o.opening_balance);
+    }
+
     // ─── Assemble daily rows ───────────────────────────────────────────
     const totals = {
       resto: 0, service: 0, tax: 0, gym: 0,
@@ -257,8 +281,11 @@ async function getDailySummaryReport(req, res, next) {
       const totalNonCash = pay.qris + pay.mandiri + pay.bca + pay.other;
 
       // Use the stored shift closing balance/difference when available so daily summary
-      // matches the authoritative shift-close cash calculation.
-      const computedTotalCash = pay.cash - exp.pengeluaran;
+      // matches the authoritative shift-close cash calculation. When no shift has closed
+      // yet for this date, fall back to cash sales minus cash expenses — but still include
+      // any modal (openingBalance) already withdrawn into the drawer for a still-open shift,
+      // otherwise this figure undercounts the real drawer total by exactly that modal amount.
+      const computedTotalCash = (openingBalanceMap[date] || 0) + pay.cash - exp.pengeluaran;
       const totalCash = cr ? cr.expectedCash : computedTotalCash;
       const actualCash = cr ? cr.actualCash : null;
       const selisihCash = cr ? cr.difference : null;
