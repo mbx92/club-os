@@ -174,6 +174,7 @@ meta:
                 <th>Vendor</th>
                 <th class="text-right">Jumlah</th>
                 <th class="text-center">Status</th>
+                <th>Dibuat Oleh</th>
                 <th class="text-center">Aksi</th>
               </tr>
             </thead>
@@ -216,6 +217,7 @@ meta:
                     {{ formatStatus(expense.status) }}
                   </div>
                 </td>
+                <td>{{ formatCreator(expense.creator) }}</td>
                 <td class="text-center">
                   <div class="flex justify-center gap-2">
                     <!-- Approve Button (only for pending, not cashier) -->
@@ -582,6 +584,12 @@ const formatStatus = (status) => {
     cancelled: 'Cancelled'
   }
   return statusMap[status] || status
+}
+
+const formatCreator = (creator) => {
+  if (!creator) return '-'
+  const name = [creator.firstName, creator.lastName].filter(Boolean).join(' ')
+  return name || creator.email || '-'
 }
 
 const getStatusBadgeClass = (status) => {
