@@ -232,6 +232,23 @@ async function getFinanceDashboardOverview(req, res, next) {
     });
 
     // =====================
+    // Tax (current period)
+    // =====================
+    const currentTax = await Transaction.findOne({
+      where: {
+        ...tenantFilter,
+        ...locationFilter,
+        status: { [Op.in]: REVENUE_RECOGNIZED_TRANSACTION_STATUSES },
+        createdAt: { [Op.between]: [start, end] }
+      },
+      attributes: [
+        [fn('COALESCE', fn('SUM', col('tax')), 0), 'totalTax'],
+        [fn('COUNT', literal('CASE WHEN "tax" > 0 THEN 1 END')), 'taxCount']
+      ],
+      raw: true
+    });
+
+    // =====================
     // Payment Method Grouping (current period)
     // =====================
     const paymentMethodQuery = `
@@ -373,6 +390,8 @@ async function getFinanceDashboardOverview(req, res, next) {
     const totalExpenses = parseFloat(currentExpenses.total || 0);
     const totalServiceCharge = parseFloat(currentServiceCharge.totalServiceCharge || 0);
     const serviceChargeTransactionCount = parseInt(currentServiceCharge.serviceChargeCount || 0);
+    const totalTax = parseFloat(currentTax.totalTax || 0);
+    const taxTransactionCount = parseInt(currentTax.taxCount || 0);
 
     // Revenue excluding service charge (pure product/service revenue)
     const revenueExcludingServiceCharge = totalRevenue - totalServiceCharge;
@@ -407,6 +426,7 @@ async function getFinanceDashboardOverview(req, res, next) {
           totalRevenue: parseFloat(totalRevenue.toFixed(2)),
           revenueExcludingServiceCharge: parseFloat(revenueExcludingServiceCharge.toFixed(2)),
           totalExpenses: parseFloat(totalExpenses.toFixed(2)),
+          totalTax: parseFloat(totalTax.toFixed(2)),
           netProfit: parseFloat(netProfit.toFixed(2)),
           profitMargin,
           totalTransactions,
@@ -418,6 +438,13 @@ async function getFinanceDashboardOverview(req, res, next) {
           transactionCount: serviceChargeTransactionCount,
           percentageOfRevenue: totalRevenue > 0
             ? parseFloat(((totalServiceCharge / totalRevenue) * 100).toFixed(2))
+            : 0
+        },
+        tax: {
+          total: parseFloat(totalTax.toFixed(2)),
+          transactionCount: taxTransactionCount,
+          percentageOfRevenue: totalRevenue > 0
+            ? parseFloat(((totalTax / totalRevenue) * 100).toFixed(2))
             : 0
         },
         pettyCash: pettyCashData,

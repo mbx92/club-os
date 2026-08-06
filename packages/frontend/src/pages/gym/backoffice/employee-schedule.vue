@@ -1735,13 +1735,23 @@ const dateAssignExisting = computed(() => {
   return periodDetailData.value.byDate[dateAssignDate.value] || []
 })
 
-// Filter staff list: exclude staff already assigned & already picked in other entries
+// Filter staff list: exclude staff who already have THIS exact slot (same shift, or already OFF)
+// on this date — either from an existing assignment or another entry in this form. Staff CAN be
+// picked for a different shift on the same date (double shift, e.g. morning + midnight).
 const availableDateStaff = (currentIdx) => {
-  const existingIds = dateAssignExisting.value.map(a => a.deviceEmployeeId || a.deviceEmployee?.id || a.userId)
+  const entry = dateAssignEntries.value[currentIdx]
+  const isSameSlot = (other) => {
+    if (entry?.isOff) return !!other.isOff
+    if (entry?.shiftId) return !other.isOff && (other.shiftId || other.shift?.id) === entry.shiftId
+    return false // shift not chosen yet — don't exclude anyone based on slot
+  }
+
+  const existingIds = dateAssignExisting.value
+    .filter(isSameSlot)
+    .map(a => a.deviceEmployeeId || a.deviceEmployee?.id || a.userId)
   const pickedIds = dateAssignEntries.value
-    .filter((_, i) => i !== currentIdx)
+    .filter((e, i) => i !== currentIdx && e.userId && isSameSlot(e))
     .map(e => e.userId)
-    .filter(Boolean)
   const excluded = new Set([...existingIds, ...pickedIds])
   return staffList.value.filter(u => !excluded.has(u.id))
 }

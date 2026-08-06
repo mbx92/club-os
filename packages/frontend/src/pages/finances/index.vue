@@ -588,13 +588,10 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
-      <!-- TODO: Tax card — always shown in dev; add v-if="taxEnabled" once tax settings endpoint is ready -->
-      <div class="card bg-base-100 border border-base-200 shadow-sm opacity-70">
+      <!-- Tax -->
+      <div class="card bg-base-100 border border-base-200 shadow-sm">
         <div class="card-body p-4">
-          <div class="flex items-center justify-between mb-1">
-            <span class="text-xs text-base-content/50 font-medium uppercase tracking-wide">Tax</span>
-            <span class="badge badge-xs badge-ghost">dev</span>
-          </div>
+          <span class="text-xs text-base-content/50 font-medium uppercase tracking-wide mb-1 block">Tax</span>
           <p class="text-xl font-bold text-warning">{{ formatCurrency(taxTotal) }}</p>
           <p class="text-xs text-base-content/50 mt-0.5">
             {{ tax.transactionCount != null ? `${tax.transactionCount} trx` : '—' }}

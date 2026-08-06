@@ -164,47 +164,41 @@ meta:
     <div v-else-if="hasExpenses" class="card bg-base-100 shadow-xl">
       <div class="card-body">
         <div class="overflow-x-auto">
-          <table class="table table-zebra">
+          <table class="table table-zebra table-sm">
             <thead>
               <tr>
-                <th>Nomor Pengeluaran</th>
-                <th>Judul</th>
-                <th>Kategori</th>
                 <th>Tanggal</th>
+                <th>Pengeluaran</th>
                 <th>Vendor</th>
                 <th class="text-right">Jumlah</th>
                 <th class="text-center">Status</th>
+                <th>Dibuat Oleh</th>
                 <th class="text-center">Aksi</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="expense in expenses" :key="expense.id">
                 <td>
-                  <span class="font-mono text-sm">{{ expense.expenseNumber }}</span>
-                </td>
-                <td>
-                  <div class="font-semibold">{{ expense.title }}</div>
-                  <div v-if="expense.description" class="text-sm text-base-content/60 truncate max-w-xs">
-                    {{ expense.description }}
-                  </div>
-                </td>
-                <td>
-                  <div class="flex items-center gap-2">
-                    <div
-                      v-if="expense.category?.color"
-                      class="w-3 h-3 rounded-full"
-                      :style="{ backgroundColor: expense.category.color }"
-                    ></div>
-                    <span>{{ expense.category?.name || '-' }}</span>
-                  </div>
-                </td>
-                <td>
-                  <div>{{ formatDate(expense.expenseDate) }}</div>
+                  <div class="text-sm">{{ formatDate(expense.expenseDate) }}</div>
                   <div v-if="expense.dueDate" class="text-xs text-base-content/60">
                     Due: {{ formatDate(expense.dueDate) }}
                   </div>
                 </td>
-                <td>{{ expense.vendor || '-' }}</td>
+                <td>
+                  <div class="font-mono text-xs text-base-content/50">{{ expense.expenseNumber }}</div>
+                  <div class="font-semibold truncate max-w-[220px]">{{ expense.title }}</div>
+                  <div class="flex items-center gap-1 text-xs text-base-content/60">
+                    <div
+                      v-if="expense.category?.color"
+                      class="w-2 h-2 rounded-full shrink-0"
+                      :style="{ backgroundColor: expense.category.color }"
+                    ></div>
+                    <span class="truncate max-w-[180px]">{{ expense.category?.name || '-' }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="truncate max-w-[100px] block text-sm">{{ expense.vendor || '-' }}</span>
+                </td>
                 <td class="text-right">
                   <div class="font-semibold">{{ formatCurrency(expense.totalAmount) }}</div>
                   <div v-if="expense.taxAmount > 0" class="text-xs text-base-content/60">
@@ -216,65 +210,64 @@ meta:
                     {{ formatStatus(expense.status) }}
                   </div>
                 </td>
+                <td>
+                  <span
+                    class="text-sm truncate max-w-[120px] block"
+                    :title="formatCreator(expense.creator)"
+                  >{{ formatCreator(expense.creator) }}</span>
+                </td>
                 <td class="text-center">
-                  <div class="flex justify-center gap-2">
-                    <!-- Approve Button (only for pending, not cashier) -->
+                  <div class="dropdown dropdown-end">
                     <button
-                      v-if="!isCashier && expense.status === 'pending'"
-                      class="btn btn-success btn-sm"
-                      @click="handleApprove(expense)"
+                      tabindex="0"
+                      class="btn btn-ghost btn-sm btn-circle"
                       :disabled="actionLoading"
                     >
-                      <IconCheck class="w-4 h-4" />
+                      <IconDotsVertical class="w-4 h-4" />
                     </button>
-                    
-                    <!-- Mark as Paid Button (only for approved, not cashier) -->
-                    <button
-                      v-if="!isCashier && expense.status === 'approved'"
-                      class="btn btn-info btn-sm"
-                      @click="handleMarkAsPaid(expense)"
-                      :disabled="actionLoading"
-                    >
-                      <IconCreditCard class="w-4 h-4" />
-                    </button>
-                    
-                    <!-- Edit Button (cashier: draft/pending only; others: not paid) -->
-                    <button
-                      v-if="isCashier ? ['draft', 'pending'].includes(expense.status) : expense.status !== 'paid'"
-                      class="btn btn-ghost btn-sm"
-                      @click="openEditModal(expense)"
-                      :disabled="actionLoading"
-                    >
-                      <IconEdit class="w-4 h-4" />
-                    </button>
-                    
-                    <!-- Delete Button (cashier: draft/pending only; others: not paid) -->
-                    <button
-                      v-if="isCashier ? ['draft', 'pending'].includes(expense.status) : expense.status !== 'paid'"
-                      class="btn btn-error btn-sm"
-                      @click="handleDelete(expense)"
-                      :disabled="actionLoading"
-                    >
-                      <IconTrash class="w-4 h-4" />
-                    </button>
+                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 rounded-box w-52">
+                      <!-- Approve (only for pending, not cashier) -->
+                      <li v-if="!isCashier && expense.status === 'pending'">
+                        <a @click="handleApprove(expense)">
+                          <IconCheck class="w-4 h-4 text-success" /> Approve
+                        </a>
+                      </li>
 
-                    <!-- Reopen Button (admin only, for paid/cancelled/approved) -->
-                    <!-- <button
-                      v-if="isAdmin && ['paid', 'approved', 'cancelled'].includes(expense.status)"
-                      class="btn btn-warning btn-sm"
-                      @click="handleReopen(expense)"
-                      :disabled="actionLoading"
-                    >
-                      <IconRefresh class="w-4 h-4" />
-                    </button> -->
+                      <!-- Mark as Paid (only for approved, not cashier) -->
+                      <li v-if="!isCashier && expense.status === 'approved'">
+                        <a @click="handleMarkAsPaid(expense)">
+                          <IconCreditCard class="w-4 h-4 text-info" /> Mark as Paid
+                        </a>
+                      </li>
 
-                    <!-- View Button -->
-                    <button
-                      class="btn btn-ghost btn-sm"
-                      @click="viewExpense(expense)"
-                    >
-                      <IconEye class="w-4 h-4" />
-                    </button>
+                      <!-- Edit (cashier: draft/pending only; others: not paid) -->
+                      <li v-if="isCashier ? ['draft', 'pending'].includes(expense.status) : expense.status !== 'paid'">
+                        <a @click="openEditModal(expense)">
+                          <IconEdit class="w-4 h-4" /> Edit
+                        </a>
+                      </li>
+
+                      <!-- View -->
+                      <li>
+                        <a @click="viewExpense(expense)">
+                          <IconEye class="w-4 h-4" /> Lihat Detail
+                        </a>
+                      </li>
+
+                      <!-- Reopen (admin only, for paid/cancelled/approved) -->
+                      <!-- <li v-if="isAdmin && ['paid', 'approved', 'cancelled'].includes(expense.status)">
+                        <a @click="handleReopen(expense)">
+                          <IconRefresh class="w-4 h-4 text-warning" /> Reopen
+                        </a>
+                      </li> -->
+
+                      <!-- Delete (cashier: draft/pending only; others: not paid) -->
+                      <li v-if="isCashier ? ['draft', 'pending'].includes(expense.status) : expense.status !== 'paid'">
+                        <a class="text-error" @click="handleDelete(expense)">
+                          <IconTrash class="w-4 h-4" /> Hapus
+                        </a>
+                      </li>
+                    </ul>
                   </div>
                 </td>
               </tr>
@@ -469,6 +462,7 @@ import {
   IconCreditCard,
   IconFileInvoice,
   IconRefresh,
+  IconDotsVertical,
 } from '@tabler/icons-vue'
 
 const {
@@ -599,6 +593,12 @@ const formatStatus = (status) => {
     cancelled: 'Cancelled'
   }
   return statusMap[status] || status
+}
+
+const formatCreator = (creator) => {
+  if (!creator) return '-'
+  const name = [creator.firstName, creator.lastName].filter(Boolean).join(' ')
+  return name || creator.email || '-'
 }
 
 const getStatusBadgeClass = (status) => {
