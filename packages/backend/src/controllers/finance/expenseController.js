@@ -8,7 +8,7 @@
  * @module controllers/finance/expenseController
  */
 
-const { Expense, ExpenseCategory, User, Location, PettyCash, PettyCashTransaction, VaultAccount, CashMutation, Account, sequelize } = require('../../models');
+const { Expense, ExpenseCategory, User, Location, PettyCash, PettyCashTransaction, VaultAccount, CashMutation, Account, CashRegisterSession, sequelize } = require('../../models');
 const { Op, Transaction: SequelizeTransaction } = require('sequelize');
 const logger = require('../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../utils/requestHelper');
@@ -18,11 +18,37 @@ const accountService = require('../../services/accountService');
 const { getTenantTimezone } = require('../../utils/tenantTimezone');
 const { getRoleName } = require('../../utils/rbacUtils');
 
-/** Expense yang dibayar dari laci kasir (termasuk legacy cash tanpa fundSource/account). */
-function getCashDrawerExpenseWhere() {
+/** Apakah kombinasi fundSource/paymentMethod ini berarti dibayar dari laci kasir? */
+function isCashDrawerFundSource({ fundSource, paymentMethod, accountId, vaultAccountId }) {
+  const fs = String(fundSource || '').toLowerCase();
+  if (fs === 'cash_drawer') return true;
+  if (fs) return false;
+  if (accountId || vaultAccountId) return false;
+  return String(paymentMethod || '').toLowerCase() === 'cash';
+}
+
+/**
+ * Saldo kas laci yang tersedia saat ini (dari sesi shift yang sedang open).
+ * Return null jika tidak ada sesi shift open — artinya tidak bisa divalidasi (dibiarkan lolos).
+ */
+async function getOpenSessionExpectedCash(tenantId, locationId, transaction) {
+  const where = { tenantId, status: 'open', deletedAt: null };
+  if (locationId) where.locationId = locationId;
+  const session = await CashRegisterSession.findOne({ where, transaction });
+  if (!session) return null;
+  const { expectedCash } = await session.getCashSummary(transaction);
+  return parseFloat(expectedCash) || 0;
+}
+
+/**
+ * Expense yang boleh dilihat kasir: dari laci (cash_drawer, termasuk legacy cash
+ * tanpa fundSource/account) atau dari Petty Cash (berangkas kecil, entitas terpisah dari laci).
+ */
+function getCashierVisibleExpenseWhere() {
   return {
     [Op.or]: [
       { fundSource: 'cash_drawer' },
+      { fundSource: 'petty_cash' },
       {
         paymentMethod: 'cash',
         accountId: { [Op.is]: null },
@@ -49,10 +75,10 @@ function rejectCashierExpenseAction(res, actionLabel) {
   });
 }
 
-function isCashDrawerExpenseRecord(expense) {
+function isCashierVisibleExpenseRecord(expense) {
   const fundSource = String(expense?.fundSource || '').toLowerCase();
-  if (fundSource === 'cash_drawer') return true;
-  if (fundSource && fundSource !== 'cash_drawer') return false;
+  if (fundSource === 'cash_drawer' || fundSource === 'petty_cash') return true;
+  if (fundSource) return false;
   if (expense?.accountId || expense?.vaultAccountId) return false;
   return String(expense?.paymentMethod || '').toLowerCase() === 'cash';
 }
@@ -94,12 +120,13 @@ async function createExpense(req, res, next) {
     return rejectCashierExpenseAction(res, 'approve atau menandai paid');
   }
 
-  // Validasi: jika langsung paid dengan petty_cash, pettyCashId wajib
-  if (status === 'paid' && paymentMethod === 'petty_cash' && !pettyCashId) {
+  // Validasi: jika langsung paid dengan petty_cash (legacy PettyCash model), pettyCashId wajib —
+  // kecuali sudah pakai accountId (Petty Cash sebagai Account, entitas terpisah dari laci).
+  if (status === 'paid' && paymentMethod === 'petty_cash' && !pettyCashId && !accountId) {
     return res.status(400).json({
       success: false,
       code: 'VALIDATION_ERROR',
-      message: 'pettyCashId wajib disertakan saat paymentMethod adalah petty_cash'
+      message: 'pettyCashId atau accountId wajib disertakan saat paymentMethod adalah petty_cash'
     });
   }
 
@@ -112,12 +139,12 @@ async function createExpense(req, res, next) {
     });
   }
 
-  // Validasi: account wajib jika fundSource = account dan langsung paid
-  if (status === 'paid' && fundSource === 'account' && !accountId) {
+  // Validasi: account wajib jika fundSource = account/petty_cash dan langsung paid
+  if (status === 'paid' && ['account', 'petty_cash'].includes(fundSource) && !accountId) {
     return res.status(400).json({
       success: false,
       code: 'VALIDATION_ERROR',
-      message: 'accountId wajib disertakan saat fundSource adalah account'
+      message: 'accountId wajib disertakan saat fundSource adalah account atau petty_cash'
     });
   }
 
@@ -138,6 +165,16 @@ async function createExpense(req, res, next) {
         if (!category) {
           await transaction.rollback();
           return { categoryNotFound: true };
+        }
+
+        // Jika langsung paid dari laci, kas laci yang tersedia harus cukup
+        if (status === 'paid' && isCashDrawerFundSource({ fundSource, paymentMethod, accountId, vaultAccountId })) {
+          const expenseAmount = parseFloat(amount) + parseFloat(taxAmount);
+          const expectedCash = await getOpenSessionExpectedCash(tenantId, locationId, transaction);
+          if (expectedCash !== null && expectedCash < expenseAmount) {
+            await transaction.rollback();
+            return { drawerInsufficientBalance: true, currentBalance: expectedCash, needed: expenseAmount };
+          }
         }
 
         // Generate expense number (uses LOCK.UPDATE internally for atomicity)
@@ -176,7 +213,7 @@ async function createExpense(req, res, next) {
           attachments,
           fundSource: fundSource || null,
           vaultAccountId: fundSource === 'vault' ? (vaultAccountId || null) : null,
-          accountId: fundSource === 'account' ? (accountId || null) : null,
+          accountId: ['account', 'petty_cash'].includes(fundSource) ? (accountId || null) : null,
           createdBy: userId
         }, { transaction });
 
@@ -275,8 +312,8 @@ async function createExpense(req, res, next) {
           }, { transaction });
         }
 
-        // Jika langsung paid dari akun keuangan, debit Account
-        if (status === 'paid' && fundSource === 'account' && accountId) {
+        // Jika langsung paid dari akun keuangan (Tunai/Brankas/Bank) atau Petty Cash, debit Account
+        if (status === 'paid' && ['account', 'petty_cash'].includes(fundSource) && accountId) {
           const { Account } = require('../../models');
           const financeAccount = await Account.findOne({
             where: { id: accountId, tenantId, isActive: true },
@@ -286,6 +323,10 @@ async function createExpense(req, res, next) {
           if (!financeAccount) {
             await transaction.rollback();
             return { accountNotFound: true };
+          }
+          if (fundSource === 'petty_cash' && financeAccount.type !== 'petty_cash') {
+            await transaction.rollback();
+            return { accountTypeMismatch: true, expected: 'petty_cash', actual: financeAccount.type };
           }
           const expenseAmount = parseFloat(amount) + parseFloat(taxAmount);
           if (parseFloat(financeAccount.balance) < expenseAmount) {
@@ -363,11 +404,27 @@ async function createExpense(req, res, next) {
       });
     }
 
+    if (result.drawerInsufficientBalance) {
+      return res.status(400).json({
+        success: false,
+        code: 'DRAWER_INSUFFICIENT_BALANCE',
+        message: `Kas di laci tidak cukup. Kas tersedia: ${result.currentBalance}, dibutuhkan: ${result.needed}`
+      });
+    }
+
     if (result.accountNotFound) {
       return res.status(404).json({
         success: false,
         code: 'ACCOUNT_NOT_FOUND',
         message: 'Akun keuangan tidak ditemukan atau tidak aktif'
+      });
+    }
+
+    if (result.accountTypeMismatch) {
+      return res.status(400).json({
+        success: false,
+        code: 'ACCOUNT_TYPE_MISMATCH',
+        message: `Akun yang dipilih bukan akun Petty Cash (tipe: ${result.actual})`
       });
     }
 
@@ -462,7 +519,7 @@ async function getAllExpenses(req, res, next) {
 
     // Kasir hanya melihat pengeluaran dari laci (bukan Tunai/Brankas/petty cash)
     if (isCashierUser(req.user)) {
-      andConditions.push(getCashDrawerExpenseWhere());
+      andConditions.push(getCashierVisibleExpenseWhere());
     }
 
     if (status) {
@@ -572,7 +629,7 @@ async function getExpenseById(req, res, next) {
       });
     }
 
-    if (isCashierUser(req.user) && !isCashDrawerExpenseRecord(expense)) {
+    if (isCashierUser(req.user) && !isCashierVisibleExpenseRecord(expense)) {
       return res.status(404).json({
         success: false,
         code: 'EXPENSE_NOT_FOUND',
@@ -868,16 +925,6 @@ async function markExpenseAsPaid(req, res, next) {
       return rejectCashierExpenseAction(res, 'menandai expense sebagai paid');
     }
 
-    // Validasi: petty_cash harus menyertakan pettyCashId
-    if (paymentMethod === 'petty_cash' && !pettyCashId) {
-      await transaction.rollback();
-      return res.status(400).json({
-        success: false,
-        code: 'VALIDATION_ERROR',
-        message: 'pettyCashId wajib disertakan saat paymentMethod adalah petty_cash'
-      });
-    }
-
     // Validasi: vault account wajib jika fundSource = vault
     if (fundSource === 'vault' && !vaultAccountId) {
       await transaction.rollback();
@@ -917,13 +964,24 @@ async function markExpenseAsPaid(req, res, next) {
     const resolvedAccountId = accountId || expense.accountId || null;
     const resolvedVaultAccountId = vaultAccountId || expense.vaultAccountId || null;
 
-    // Validasi: account wajib jika fundSource = account
-    if (resolvedFundSource === 'account' && !resolvedAccountId) {
+    // Validasi: petty_cash (legacy PettyCash model) harus menyertakan pettyCashId —
+    // kecuali sudah pakai accountId (Petty Cash sebagai Account, entitas terpisah dari laci).
+    if (paymentMethod === 'petty_cash' && !pettyCashId && !resolvedAccountId) {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
         code: 'VALIDATION_ERROR',
-        message: 'accountId wajib disertakan saat fundSource adalah account'
+        message: 'pettyCashId atau accountId wajib disertakan saat paymentMethod adalah petty_cash'
+      });
+    }
+
+    // Validasi: account wajib jika fundSource = account/petty_cash
+    if (['account', 'petty_cash'].includes(resolvedFundSource) && !resolvedAccountId) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        code: 'VALIDATION_ERROR',
+        message: 'accountId wajib disertakan saat fundSource adalah account atau petty_cash'
       });
     }
 
@@ -936,11 +994,27 @@ async function markExpenseAsPaid(req, res, next) {
       });
     }
 
+    // Validasi: kas laci yang tersedia harus cukup sebelum menandai paid dari laci
+    if (isCashDrawerFundSource({ fundSource: resolvedFundSource, paymentMethod, accountId: resolvedAccountId, vaultAccountId: resolvedVaultAccountId })) {
+      const expenseAmount = parseFloat(expense.totalAmount);
+      const expectedCash = await getOpenSessionExpectedCash(tenantId, expense.locationId, transaction);
+      if (expectedCash !== null && expectedCash < expenseAmount) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          code: 'DRAWER_INSUFFICIENT_BALANCE',
+          message: `Kas di laci tidak cukup. Kas tersedia: ${expectedCash}, dibutuhkan: ${expenseAmount}`
+        });
+      }
+    }
+
     // --- Petty Cash deduction ---
     let pctTransaction = null;
     let vaultMutation = null;
 
-    if (paymentMethod === 'petty_cash') {
+    // Legacy PettyCash model deduction — only when pettyCashId is explicitly provided.
+    // New flow (Petty Cash as Account, entitas terpisah dari laci) uses accountId below instead.
+    if (paymentMethod === 'petty_cash' && pettyCashId) {
       const pettyCash = await PettyCash.findOne({
         where: { id: pettyCashId, tenantId, status: 'active' },
         lock: transaction.LOCK.UPDATE,
@@ -1070,6 +1144,14 @@ async function markExpenseAsPaid(req, res, next) {
           message: 'Akun keuangan tidak ditemukan atau tidak aktif',
         });
       }
+      if (resolvedFundSource === 'petty_cash' && financeAccount.type !== 'petty_cash') {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          code: 'ACCOUNT_TYPE_MISMATCH',
+          message: `Akun yang dipilih bukan akun Petty Cash (tipe: ${financeAccount.type})`,
+        });
+      }
       const expenseAmount = parseFloat(expense.totalAmount);
       if (parseFloat(financeAccount.balance) < expenseAmount) {
         await transaction.rollback();
@@ -1081,7 +1163,7 @@ async function markExpenseAsPaid(req, res, next) {
       }
     }
 
-    const paidFromAccount = resolvedFundSource === 'account' && !!resolvedAccountId;
+    const paidFromAccount = ['account', 'petty_cash'].includes(resolvedFundSource) && !!resolvedAccountId;
     const paidFromVault = resolvedFundSource === 'vault' && !!resolvedVaultAccountId;
 
     await expense.update({
@@ -1096,7 +1178,7 @@ async function markExpenseAsPaid(req, res, next) {
       vaultAccountId: paidFromVault ? resolvedVaultAccountId : null,
     }, { transaction });
 
-    // Debit Account only when paying from finance account (not vault / drawer / petty cash)
+    // Debit Account when paying from finance account or Petty Cash (not vault / drawer)
     if (paidFromAccount) {
       await accountService.debitFromExpense(
         {

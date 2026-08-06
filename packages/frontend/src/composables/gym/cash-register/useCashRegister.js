@@ -23,6 +23,8 @@ export function useCashRegister() {
   const loading = ref(false)
   const error = ref(null)
   const inheritedOrders = ref([])  // orders inherited from previous shift when opening
+  const pettyCashAccounts = ref([])  // Account(type=petty_cash) — standalone fund, not tied to shift open/close
+  const pettyCashAccountsLoading = ref(false)
 
   /**
    * Get current active cash register session
@@ -61,6 +63,24 @@ export function useCashRegister() {
       throw err
     } finally {
       loading.value = false
+    }
+  }
+
+  /**
+   * List active Petty Cash accounts (Account type=petty_cash) — a standalone fund
+   * separate from the cash drawer, used as an expense fund-source option.
+   */
+  const listPettyCashAccounts = async () => {
+    pettyCashAccountsLoading.value = true
+    try {
+      const response = await api.get('/gym/cash-register/petty-cash-accounts')
+      pettyCashAccounts.value = unwrapResponse(response) || []
+      return pettyCashAccounts.value
+    } catch (err) {
+      pettyCashAccounts.value = []
+      throw err
+    } finally {
+      pettyCashAccountsLoading.value = false
     }
   }
 
@@ -331,6 +351,8 @@ export function useCashRegister() {
     loading,
     error,
     inheritedOrders,
+    pettyCashAccounts,
+    pettyCashAccountsLoading,
 
     // Methods
     getCurrentSession,
@@ -342,6 +364,7 @@ export function useCashRegister() {
     getShiftReport,
     printShiftReport,
     getDailyReport,
-    printDailyReport
+    printDailyReport,
+    listPettyCashAccounts
   }
 }

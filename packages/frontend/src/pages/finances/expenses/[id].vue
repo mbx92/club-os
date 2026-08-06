@@ -69,7 +69,14 @@ const isAdmin = computed(() => {
 const PAYMENT_OPTION_MAP = EXPENSE_PAYMENT_OPTION_MAP
 
 const { accounts: financeAccounts, fetchAccounts: fetchFinanceAccounts, loading: financeAccountsLoading } = useAccounts()
-const { currentSession, liveSummary, getCurrentSession } = useCashRegister()
+const {
+  currentSession,
+  liveSummary,
+  getCurrentSession,
+  pettyCashAccounts,
+  pettyCashAccountsLoading,
+  listPettyCashAccounts,
+} = useCashRegister()
 
 const drawerExpectedCash = computed(() => {
   const value = liveSummary.value?.expectedCash
@@ -80,6 +87,9 @@ const paymentOptions = computed(() => getExpensePaymentOptionsWithDrawer({
   isCashier: isCashier.value,
   hasSession: !!currentSession.value,
   expectedCash: drawerExpectedCash.value,
+  pettyCashAccount: exp.value?.account
+    || (pettyCashAccounts.value.length === 1 ? pettyCashAccounts.value[0] : null),
+  hasAccounts: pettyCashAccountsLoading.value ? true : (!!exp.value?.account || pettyCashAccounts.value.length > 0),
 }))
 
 const expenseAccounts = computed(() => filterExpenseAccounts(financeAccounts.value))
@@ -158,6 +168,11 @@ const handleMarkAsPaid = () => {
     accountId: exp.value?.accountId ? String(exp.value.accountId) : '',
   }
   getCurrentSession().catch(() => null)
+  listPettyCashAccounts().then((accounts) => {
+    if (payForm.value.paymentOption === 'petty_cash' && !payForm.value.accountId && accounts.length === 1) {
+      payForm.value.accountId = String(accounts[0].id)
+    }
+  }).catch(() => null)
   if (payForm.value.paymentOption === 'from_account') {
     fetchFinanceAccounts({ isActive: 'true' })
   }
@@ -168,11 +183,31 @@ watch(() => payForm.value.paymentOption, (value) => {
   if (value === 'from_account' && !financeAccounts.value.length) {
     fetchFinanceAccounts({ isActive: 'true' })
   }
+  if (value === 'petty_cash' && !payForm.value.accountId && pettyCashAccounts.value.length === 1) {
+    payForm.value.accountId = String(pettyCashAccounts.value[0].id)
+  }
 })
 
 const submitMarkAsPaid = async () => {
   if (payForm.value.paymentOption === 'from_account' && !payForm.value.accountId) {
     return
+  }
+  if (payForm.value.paymentOption === 'petty_cash' && !payForm.value.accountId) {
+    return
+  }
+  if (payForm.value.paymentOption === 'cash_drawer_cash') {
+    const amountNeeded = parseFloat(exp.value?.totalAmount ?? exp.value?.amount ?? 0)
+    const availableCash = drawerExpectedCash.value ?? 0
+    if (amountNeeded > availableCash) {
+      await confirmDialog.value?.open({
+        title: 'Saldo Laci Tidak Cukup',
+        message: `Kas yang tersedia di laci saat ini hanya ${fmt(availableCash)}, sedangkan pengeluaran ini membutuhkan ${fmt(amountNeeded)}. Pengeluaran tidak bisa ditandai sebagai paid dari Laci / Cash Drawer.`,
+        showConfirm: false,
+        cancelText: 'Tutup',
+        type: 'warning',
+      })
+      return
+    }
   }
 
   const paymentConfig = PAYMENT_OPTION_MAP[payForm.value.paymentOption] || PAYMENT_OPTION_MAP.from_account
@@ -186,7 +221,7 @@ const submitMarkAsPaid = async () => {
   if (paymentConfig.fundSource) {
     payload.fundSource = paymentConfig.fundSource
   }
-  if (payForm.value.paymentOption === 'from_account' && payForm.value.accountId) {
+  if (['from_account', 'petty_cash'].includes(payForm.value.paymentOption) && payForm.value.accountId) {
     payload.accountId = payForm.value.accountId
     if (selectedAccount?.bankName) payload.bankName = selectedAccount.bankName
   }
@@ -467,6 +502,13 @@ const handleReopen = async () => {
                 {{ currentSession
                   ? `Kas tersedia di laci: ${fmt(drawerExpectedCash ?? 0)}`
                   : 'Tidak ada shift kasir yang aktif' }}
+              </span>
+            </label>
+            <label v-if="payForm.paymentOption === 'petty_cash'" class="label">
+              <span class="label-text-alt" :class="payForm.accountId ? 'text-base-content/60' : 'text-warning'">
+                {{ payForm.accountId
+                  ? `Akun Petty Cash: ${exp?.account?.name || '-'}`
+                  : 'Akun Petty Cash tidak ditemukan pada pengeluaran ini' }}
               </span>
             </label>
           </div>

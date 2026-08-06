@@ -58,6 +58,17 @@ function isCashDrawerExpense(expense) {
   return String(expense?.paymentMethod || '').toLowerCase() === 'cash';
 }
 
+/**
+ * Expense dibayar dari akun Petty Cash (entitas terpisah dari laci — "berangkas kecil").
+ * fundSource='petty_cash' adalah sumber kebenaran; paymentMethod dicek juga untuk data lama.
+ */
+function isPettyCashFundExpense(expense) {
+  const fundSource = String(expense?.fundSource || '').toLowerCase();
+  if (fundSource === 'petty_cash') return true;
+  if (fundSource) return false;
+  return String(expense?.paymentMethod || '').toLowerCase() === 'petty_cash';
+}
+
 /** Sequelize WHERE untuk expense yang mengurangi saldo laci. */
 function getCashDrawerExpenseWhere(extra = {}) {
   return {
@@ -92,7 +103,8 @@ function getPettyCashLocationInclude(locationId) {
 
 /**
  * GET /gym/cash-register/petty-cash-accounts
- * List active Account type=petty_cash for modal awal selection.
+ * List active Account type=petty_cash. Petty Cash is a standalone fund (entitas
+ * terpisah dari laci) — used as an expense fund-source option, not tied to shift open/close.
  */
 exports.listPettyCashAccounts = async (req, res, next) => {
   try {
@@ -120,48 +132,18 @@ exports.openShift = async (req, res, next) => {
       shiftName,
       locationId = null,
       openingNotes = null,
-      pettyCashAccountId = null,
+      openingBalance = 0,
     } = req.body;
 
     if (!shiftName) {
       await dbTransaction.rollback();
       return res.status(400).json({ success: false, message: 'shiftName wajib diisi (e.g. pagi, siang, malam)' });
     }
-    if (!pettyCashAccountId) {
-      await dbTransaction.rollback();
-      return res.status(400).json({
-        success: false,
-        message: 'Akun Petty Cash / Modal wajib dipilih',
-      });
-    }
 
-    const pettyCashAccount = await Account.findOne({
-      where: {
-        id: pettyCashAccountId,
-        tenantId,
-        type: 'petty_cash',
-        isActive: true,
-      },
-      lock: dbTransaction.LOCK.UPDATE,
-      transaction: dbTransaction,
-    });
-    if (!pettyCashAccount) {
-      await dbTransaction.rollback();
-      return res.status(404).json({
-        success: false,
-        message: 'Akun Petty Cash / Modal tidak ditemukan atau tidak aktif',
-      });
-    }
-
-    // Modal awal = saldo akun petty cash saat buka shift (bukan input manual)
-    const modalAmount = parseFloat(pettyCashAccount.balance) || 0;
-    if (modalAmount <= 0) {
-      await dbTransaction.rollback();
-      return res.status(400).json({
-        success: false,
-        message: `Saldo akun ${pettyCashAccount.name} harus > 0 untuk modal awal`,
-      });
-    }
+    // Opening balance = kas fisik yang benar-benar ada di laci saat buka shift (input manual,
+    // default 0). Tidak lagi diambil/disapu otomatis dari akun Petty Cash — Petty Cash adalah
+    // entitas terpisah (berangkas kecil), hanya dipakai sebagai sumber dana expense.
+    const modalAmount = Math.max(0, parseFloat(openingBalance) || 0);
 
     const now = new Date();
     // Use tenant timezone (or server TZ) for shiftDate to avoid UTC date mismatch
@@ -268,28 +250,11 @@ exports.openShift = async (req, res, next) => {
       shiftDate,
       shiftNumber: todayCount + 1,
       openingBalance: modalAmount,
-      pettyCashAccountId: pettyCashAccount ? pettyCashAccount.id : null,
       openedAt: effectiveOpenedAt,
       openedById: req.user.id,
       openingNotes,
       status: 'open',
     }, { transaction: dbTransaction });
-
-    // Debit akun Petty Cash → modal masuk ke laci kasir
-    if (pettyCashAccount && modalAmount > 0) {
-      await accountService.createEntry({
-        accountId: pettyCashAccount.id,
-        tenantId,
-        type: 'outflow',
-        amount: modalAmount,
-        referenceType: 'CashRegisterSession',
-        referenceId: session.id,
-        description: `Modal awal kasir — shift ${session.shiftName} (${session.shiftDate})`,
-        entryDate: shiftDate,
-        performedBy: req.user.id,
-        timezone: tenantTz,
-      }, dbTransaction);
-    }
 
     // Inherit any pending/active restaurant orders from the previous shift.
     // These are orders whose createdAt < openedAt (created during a prior session
@@ -336,8 +301,8 @@ exports.openShift = async (req, res, next) => {
 
     // Bangun pesan respons
     const msgParts = [`Shift ${shiftName} berhasil dibuka`];
-    if (pettyCashAccount && modalAmount > 0) {
-      msgParts.push(`Modal ${modalAmount} diambil dari akun ${pettyCashAccount.name}.`);
+    if (modalAmount > 0) {
+      msgParts.push(`Modal awal laci: ${modalAmount}.`);
     }
     if (backdatedCount > 0) {
       msgParts.push(`${backdatedCount} transaksi sebelum shift otomatis dimasukkan ke laporan shift ini.`);
@@ -472,57 +437,9 @@ exports.closeShift = async (req, res, next) => {
       closingNotes,
     }, { transaction: dbTransaction });
 
-    // Kembalikan sisa modal ke akun Petty Cash:
-    // modal awal − pengeluaran dari laci (uang yang sudah keluar tidak dikembalikan).
-    let pettyCashReturned = null;
-    const openingModal = parseFloat(session.openingBalance || 0);
-    const modalReturnAmount = Math.max(0, parseFloat((openingModal - drawerExpenseTotal).toFixed(2)));
-    if (session.pettyCashAccountId && modalReturnAmount > 0) {
-      const pettyCashAccount = await Account.findOne({
-        where: {
-          id: session.pettyCashAccountId,
-          tenantId,
-          type: 'petty_cash',
-          isActive: true,
-        },
-        lock: dbTransaction.LOCK.UPDATE,
-        transaction: dbTransaction,
-      });
-      if (pettyCashAccount) {
-        const tenantTz = getTenantTimezone(req);
-        const descParts = [`Pengembalian modal kasir — shift ${session.shiftName} (${session.shiftDate})`];
-        if (drawerExpenseTotal > 0) {
-          descParts.push(`modal ${openingModal} − pengeluaran laci ${drawerExpenseTotal}`);
-        }
-        await accountService.createEntry({
-          accountId: pettyCashAccount.id,
-          tenantId,
-          type: 'inflow',
-          amount: modalReturnAmount,
-          referenceType: 'CashRegisterSession',
-          referenceId: session.id,
-          description: descParts.join(' · '),
-          entryDate: todayInTz(tenantTz),
-          performedBy: req.user.id,
-          timezone: tenantTz,
-        }, dbTransaction);
-        pettyCashReturned = {
-          accountId: pettyCashAccount.id,
-          accountName: pettyCashAccount.name,
-          amount: modalReturnAmount,
-          openingModal,
-          drawerExpenses: drawerExpenseTotal,
-        };
-      }
-    } else if (session.pettyCashAccountId && openingModal > 0 && modalReturnAmount === 0) {
-      pettyCashReturned = {
-        accountId: session.pettyCashAccountId,
-        accountName: null,
-        amount: 0,
-        openingModal,
-        drawerExpenses: drawerExpenseTotal,
-      };
-    }
+    // Catatan: opening balance adalah kas fisik laci (input manual saat buka shift), bukan
+    // lagi modal dari akun Petty Cash — jadi tidak ada lagi "pengembalian modal ke Petty Cash"
+    // saat shift ditutup. Petty Cash berdiri sendiri, hanya dipakai sebagai sumber dana expense.
 
     await dbTransaction.commit();
 
@@ -546,11 +463,7 @@ exports.closeShift = async (req, res, next) => {
       success: true,
       message: carriedOverOrders.length > 0
         ? `Shift berhasil ditutup. ${carriedOverOrders.length} order dilanjutkan ke shift berikutnya.`
-        : (pettyCashReturned
-          ? (pettyCashReturned.amount > 0
-            ? `Shift berhasil ditutup. Sisa modal ${pettyCashReturned.amount} dikembalikan ke ${pettyCashReturned.accountName}.`
-            : `Shift berhasil ditutup. Tidak ada sisa modal dikembalikan (pengeluaran laci ≥ modal awal).`)
-          : 'Shift berhasil ditutup'),
+        : 'Shift berhasil ditutup',
       data: {
         session: result,
         summary: {
@@ -562,7 +475,6 @@ exports.closeShift = async (req, res, next) => {
           actualCash: actual,
           difference,
           status: difference === 0 ? 'balance' : difference > 0 ? 'surplus' : 'deficit',
-          pettyCashReturned,
         },
         carriedOverOrders,
       },
@@ -1915,6 +1827,9 @@ exports.getDailyReport = async (req, res, next) => {
     const cashExpenses  = allExpenses
       .filter(isCashDrawerExpense)
       .reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0);
+    const pettyCashFundExpenses = allExpenses
+      .filter(isPettyCashFundExpense)
+      .reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0);
     const transferExpenses = allExpenses
       .filter(e => {
         const pm = (e.paymentMethod || '').toLowerCase();
@@ -2055,13 +1970,10 @@ exports.getDailyReport = async (req, res, next) => {
         allExpenses:         parseFloat((totalExpenses + dayPettyCashReturnTotal).toFixed(2)),
         cashExpenses:        parseFloat(cashExpenses.toFixed(2)),
         transferExpenses:    parseFloat(transferExpenses.toFixed(2)),
-        // Expense dari petty cash fund — tidak mempengaruhi kas register
-        pettyCashPaidExpenses: parseFloat(
-          allExpenses
-            .filter(e => (e.paymentMethod || '').toLowerCase() === 'petty_cash')
-            .reduce((s, e) => s + parseFloat(e.totalAmount || 0), 0)
-            .toFixed(2)
-        ),
+        // Expense dari akun Petty Cash (berangkas kecil, entitas terpisah dari laci) —
+        // tidak mempengaruhi kas register/laci. Dilaporkan terpisah dari cashExpenses,
+        // bukan digabung — Petty Cash dan Laci adalah entitas yang berbeda.
+        pettyCashPaidExpenses: parseFloat(pettyCashFundExpenses.toFixed(2)),
         pettyCashIncomeTotal: parseFloat(dayPettyCashReturnTotal.toFixed(2)),
         cashExpensesWithPettyCash: parseFloat(dayCashExpensesWithPettyCash.toFixed(2)),
       },

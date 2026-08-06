@@ -1,28 +1,34 @@
 /**
- * Expense fund-source options — intentionally minimal:
+ * Expense fund-source options.
  *
- * - Cashier on shift  → Laci / Cash Drawer only
- * - Owner / admin     → Akun Keuangan + Laci / Cash Drawer
+ * Petty Cash (akun type=petty_cash — "berangkas kecil") is a separate entity from
+ * the cash drawer (uang hasil jualan/tunai di laci): it has its own Account balance
+ * and ledger, and spending from it never affects the shift's drawer expectedCash/closingBalance.
+ *
+ * - Cashier on shift  → Laci / Cash Drawer, atau Petty Cash (akun petty cash shift-nya)
+ * - Owner / admin     → Akun Keuangan (Tunai/Brankas/Bank), Laci / Cash Drawer, atau Petty Cash
  */
 
 export const EXPENSE_PAYMENT_OPTION_MAP = {
   cash_drawer_cash: { paymentMethod: 'cash', fundSource: 'cash_drawer' },
   from_account: { fundSource: 'account' },
+  petty_cash: { paymentMethod: 'petty_cash', fundSource: 'petty_cash' },
   // Legacy keys kept for resolve/display of old expenses
   vault_cash: { paymentMethod: 'cash', fundSource: 'vault' },
-  petty_cash: { paymentMethod: 'petty_cash', fundSource: 'petty_cash' },
   bank_transfer: { paymentMethod: 'bank_transfer', fundSource: 'bank' },
 }
 
-/** Owner/admin: can use accounts (settled cash + bank) and cash drawer. */
+/** Owner/admin: can use accounts (settled cash + bank), cash drawer, or petty cash. */
 export const EXPENSE_PAYMENT_OPTIONS_OWNER = [
   { value: 'from_account', label: 'Dari Akun Keuangan' },
   { value: 'cash_drawer_cash', label: 'Laci / Cash Drawer' },
+  { value: 'petty_cash', label: 'Petty Cash' },
 ]
 
-/** Cashier on duty: pay from the open cash drawer only. */
+/** Cashier on duty: pay from the open cash drawer or the shift's petty cash. */
 export const EXPENSE_PAYMENT_OPTIONS_CASHIER = [
   { value: 'cash_drawer_cash', label: 'Laci / Cash Drawer' },
+  { value: 'petty_cash', label: 'Petty Cash' },
 ]
 
 /** @deprecated use getExpensePaymentOptions({ isCashier }) */
@@ -53,16 +59,40 @@ export function formatCashDrawerPaymentLabel({ expectedCash = null, hasSession =
 }
 
 /**
- * Enrich payment options with live cash-drawer balance when available.
+ * Label for Petty Cash option, including the linked account's balance when known.
+ * Petty Cash is a separate entity from the cash drawer (its own Account/ledger, not tied
+ * to any shift session) — spending from it never touches the drawer's expectedCash.
+ * @param {{ pettyCashAccount?: {name: string, balance: number}|null, hasAccounts?: boolean }} opts
+ */
+export function formatPettyCashPaymentLabel({ pettyCashAccount = null, hasAccounts = true } = {}) {
+  const base = 'Petty Cash'
+  if (pettyCashAccount) {
+    const nominal = new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(Number(pettyCashAccount.balance) || 0)
+    return `${base} (${pettyCashAccount.name}) — ${nominal}`
+  }
+  if (!hasAccounts) return `${base} — Akun tidak tersedia`
+  return base
+}
+
+/**
+ * Enrich payment options with live cash-drawer balance and petty-cash account balance
+ * when available. `hasAccounts` defaults to true so the option reads as plain "Petty Cash"
+ * until the caller actually knows whether any Petty Cash account exists.
  */
 export function getExpensePaymentOptionsWithDrawer(opts = {}) {
-  const { isCashier = false, expectedCash = null, hasSession = false } = opts
+  const { isCashier = false, expectedCash = null, hasSession = false, pettyCashAccount = null, hasAccounts = true } = opts
   return getExpensePaymentOptions({ isCashier }).map((option) => {
-    if (option.value !== 'cash_drawer_cash') return option
-    return {
-      ...option,
-      label: formatCashDrawerPaymentLabel({ expectedCash, hasSession }),
+    if (option.value === 'cash_drawer_cash') {
+      return { ...option, label: formatCashDrawerPaymentLabel({ expectedCash, hasSession }) }
     }
+    if (option.value === 'petty_cash') {
+      return { ...option, label: formatPettyCashPaymentLabel({ pettyCashAccount, hasAccounts }) }
+    }
+    return option
   })
 }
 
@@ -87,11 +117,13 @@ const PAYMENT_METHOD_LABELS = {
 
 /**
  * Map stored expense fields back to a UI payment option.
- * Cashier always forced to drawer; owner/admin can use either option.
+ * Petty Cash is checked before the generic accountId→from_account rule, since a
+ * Petty Cash expense also carries an accountId (the linked petty_cash Account).
  */
 export function resolveExpensePaymentOption(expense = null, { isCashier = false } = {}) {
-  if (isCashier) return 'cash_drawer_cash'
-  if (!expense) return 'from_account'
+  if (!expense) return isCashier ? 'cash_drawer_cash' : 'from_account'
+
+  if (expense.fundSource === 'petty_cash') return 'petty_cash'
 
   if (expense.accountId || expense.fundSource === 'account') return 'from_account'
   if (expense.fundSource === 'cash_drawer') return 'cash_drawer_cash'
@@ -103,12 +135,14 @@ export function resolveExpensePaymentOption(expense = null, { isCashier = false 
   if (expense.fundSource === 'bank' || expense.paymentMethod === 'bank_transfer' || expense.paymentMethod === 'transfer') {
     return 'from_account'
   }
-  if (expense.fundSource === 'petty_cash' || expense.paymentMethod === 'petty_cash') return 'from_account'
+  // Legacy petty cash (old PettyCash model — no fundSource/accountId, identified by paymentMethod only)
+  if (expense.paymentMethod === 'petty_cash') return isCashier ? 'petty_cash' : 'from_account'
   if (['e_wallet', 'payment_gateway', 'qris', 'credit_card', 'debit_card'].includes(expense.paymentMethod)) {
     return 'from_account'
   }
 
   if (expense.paymentMethod === 'cash') return 'cash_drawer_cash'
+  if (isCashier) return 'cash_drawer_cash'
   return expense.paymentMethod ? 'from_account' : 'from_account'
 }
 

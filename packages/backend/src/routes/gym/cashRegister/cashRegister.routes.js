@@ -60,7 +60,7 @@ router.get(
 
 /**
  * GET /gym/cash-register/petty-cash-accounts
- * Daftar akun Petty Cash / Modal aktif untuk modal awal shift
+ * Daftar akun Petty Cash aktif (entitas terpisah dari laci) — untuk pilihan sumber dana expense
  */
 router.get(
   '/petty-cash-accounts',
@@ -97,7 +97,7 @@ router.get(
 
 /**
  * POST /gym/cash-register/open
- * Buka shift baru — input openingBalance (petty cash)
+ * Buka shift baru — input openingBalance (kas fisik di laci, manual, default 0)
  */
 router.post(
   '/open',

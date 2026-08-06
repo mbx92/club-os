@@ -261,11 +261,11 @@ const shiftStatusBadge = (status) =>
         <div
           class="stat bg-base-100 border border-base-200 rounded-xl p-4 shadow-sm"
         >
-          <div class="stat-title text-xs">Total Pengeluaran</div>
+          <div class="stat-title text-xs">Total Pengeluaran Cash</div>
           <div class="stat-value text-lg text-error">
             {{ formatCurrency(summary.totalExpenses ?? 0) }}
           </div>
-          <div class="stat-desc text-xs">Petty cash</div>
+          <div class="stat-desc text-xs">Laci + retur ke petty cash</div>
         </div>
         <div
           class="stat rounded-xl p-4 shadow-sm border"
@@ -1026,6 +1026,25 @@ const shiftStatusBadge = (status) =>
                 <td class="text-error">Total Pengeluaran Cash</td>
                 <td class="text-right font-medium text-error">
                   {{ formatCurrency(summary.totalExpenses ?? 0) }}
+                </td>
+              </tr>
+              <!-- Petty Cash dan Laci adalah entitas terpisah — dipisah, bukan digabung -->
+              <tr class="hover">
+                <td class="pl-4 text-error/80">
+                  <span class="inline-block w-2 h-2 rounded-full bg-error mr-2"></span>
+                  Pengeluaran Laci
+                </td>
+                <td class="text-right font-medium text-error/80">
+                  {{ formatCurrency(summary.cashExpenses ?? 0) }}
+                </td>
+              </tr>
+              <tr class="hover">
+                <td class="pl-4 text-error/80">
+                  <span class="inline-block w-2 h-2 rounded-full bg-warning mr-2"></span>
+                  Pengeluaran Petty Cash
+                </td>
+                <td class="text-right font-medium text-error/80">
+                  {{ formatCurrency(summary.pettyCashPaidExpenses ?? 0) }}
                 </td>
               </tr>
               <tr class="bg-primary/5 font-bold">

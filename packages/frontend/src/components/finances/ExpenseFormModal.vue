@@ -242,6 +242,33 @@
           </label>
         </div>
 
+        <!-- Petty Cash account selector (entitas terpisah dari laci) -->
+        <div v-if="formData.paymentOption === 'petty_cash'" class="form-control">
+          <label class="label">
+            <span class="label-text font-medium">Akun Petty Cash <span class="text-error">*</span></span>
+          </label>
+          <div v-if="pettyCashAccountsLoading" class="flex items-center gap-2 text-sm text-base-content/60 py-2">
+            <span class="loading loading-spinner loading-xs"></span> Memuat akun...
+          </div>
+          <select
+            v-else
+            v-model="formData.accountId"
+            class="select select-bordered w-full"
+            :class="{ 'select-error': errors.accountId }"
+          >
+            <option value="">Pilih akun Petty Cash</option>
+            <option v-for="account in pettyCashAccounts" :key="account.id" :value="String(account.id)">
+              {{ account.name }} — {{ formatCurrency(account.balance) }}
+            </option>
+          </select>
+          <label v-if="!pettyCashAccounts.length && !pettyCashAccountsLoading" class="label">
+            <span class="label-text-alt text-warning">Belum ada akun Petty Cash. Buat di menu Finances → Akun.</span>
+          </label>
+          <label v-if="errors.accountId" class="label">
+            <span class="label-text-alt text-error">{{ errors.accountId }}</span>
+          </label>
+        </div>
+
         <!-- Description -->
         <div class="form-control">
           <label class="label">
@@ -413,7 +440,14 @@ const tagsInput = ref('')
 
 const { suppliers: supplierList, fetchSuppliers } = useSuppliers()
 const { accounts: financeAccounts, fetchAccounts: fetchFinanceAccounts, loading: financeAccountsLoading } = useAccounts()
-const { currentSession, liveSummary, getCurrentSession } = useCashRegister()
+const {
+  currentSession,
+  liveSummary,
+  getCurrentSession,
+  pettyCashAccounts,
+  pettyCashAccountsLoading,
+  listPettyCashAccounts,
+} = useCashRegister()
 const vendorMode = ref('select') // 'select' | 'manual'
 
 const PAYMENT_OPTION_MAP = EXPENSE_PAYMENT_OPTION_MAP
@@ -423,10 +457,16 @@ const drawerExpectedCash = computed(() => {
   return value == null ? null : Number(value)
 })
 
+const selectedPettyCashAccount = computed(() =>
+  pettyCashAccounts.value.find(a => String(a.id) === String(formData.value.accountId)) || null
+)
+
 const paymentOptions = computed(() => getExpensePaymentOptionsWithDrawer({
   isCashier: props.isCashier,
   hasSession: !!currentSession.value,
   expectedCash: drawerExpectedCash.value,
+  pettyCashAccount: selectedPettyCashAccount.value,
+  hasAccounts: pettyCashAccountsLoading.value ? true : pettyCashAccounts.value.length > 0,
 }))
 
 const expenseAccounts = computed(() => filterExpenseAccounts(financeAccounts.value))
@@ -516,6 +556,10 @@ const validate = () => {
     errors.value.accountId = 'Pilih akun sumber dana'
   }
 
+  if (formData.value.paymentOption === 'petty_cash' && !formData.value.accountId) {
+    errors.value.accountId = 'Pilih akun Petty Cash'
+  }
+
   return Object.keys(errors.value).length === 0
 }
 
@@ -538,6 +582,12 @@ const handleSubmit = () => {
       submitData.fundSource = 'account'
       if (selectedAccount?.bankName) submitData.bankName = selectedAccount.bankName
       delete submitData.vaultAccountId
+    } else if (submitData.paymentOption === 'petty_cash') {
+      submitData.paymentMethod = paymentConfig.paymentMethod
+      submitData.fundSource = paymentConfig.fundSource
+      // submitData.accountId already holds the selected Petty Cash account id
+      delete submitData.vaultAccountId
+      delete submitData.bankName
     } else {
       // cash_drawer_cash (cashier)
       submitData.paymentMethod = paymentConfig.paymentMethod
@@ -586,11 +636,21 @@ const onSupplierSelect = (event) => {
   }
 }
 
+const isNewExpense = ref(true)
+
 const open = (expense = null) => {
   // Fetch active suppliers for dropdown
   fetchSuppliers({ isActive: 'true', limit: 200, sortBy: 'name', sortOrder: 'ASC' })
   fetchFinanceAccounts({ isActive: 'true' })
   getCurrentSession().catch(() => null)
+  listPettyCashAccounts().then((accounts) => {
+    // Auto-select when there's only one Petty Cash account and none chosen yet
+    if (accounts.length === 1 && !formData.value.accountId && formData.value.paymentOption === 'petty_cash') {
+      formData.value.accountId = String(accounts[0].id)
+    }
+  }).catch(() => null)
+
+  isNewExpense.value = !expense
 
   if (expense) {
     formData.value = {
@@ -666,6 +726,22 @@ watch(() => formData.value.isRecurring, (newVal) => {
 
 watch(() => props.isCashier, (newVal) => {
   formData.value.paymentOption = newVal ? 'cash_drawer_cash' : 'from_account'
+})
+
+// Cashier default: if the drawer has no cash, default a new expense to Petty Cash instead.
+watch(drawerExpectedCash, (val) => {
+  if (!props.isCashier || !isNewExpense.value) return
+  if (formData.value.paymentOption !== 'cash_drawer_cash') return
+  if (val != null && val <= 0) {
+    formData.value.paymentOption = 'petty_cash'
+  }
+})
+
+// Auto-select the only available Petty Cash account when switching to that option.
+watch(() => formData.value.paymentOption, (val) => {
+  if (val === 'petty_cash' && !formData.value.accountId && pettyCashAccounts.value.length === 1) {
+    formData.value.accountId = String(pettyCashAccounts.value[0].id)
+  }
 })
 
 defineExpose({
