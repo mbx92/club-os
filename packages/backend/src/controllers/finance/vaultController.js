@@ -85,14 +85,8 @@ function paginate(page = 1, limit = 20) {
 }
 
 /**
- * Sum of "Pengembalian modal kasir" AccountEntry inflows per CashRegisterSession.
- *
- * When a shift closes, closeShift() returns the unused petty-cash modal on paper
- * (an AccountEntry type='inflow' crediting the petty cash Account) — but that cash
- * never physically leaves the drawer. actualCash/closingBalance therefore still
- * include it. If drawer→vault collection also swept the full actualCash, that same
- * rupiah would be double-counted: once as "back in petty cash", once as "collected
- * to vault". Subtract this amount from the collectible base to avoid that.
+ * Sum of legacy "Pengembalian modal kasir" AccountEntry inflows per CashRegisterSession.
+ * Kept for sessions closed before petty-cash modal was decoupled from the drawer.
  */
 async function getPettyCashModalReturnMap(tenantId, sessionIds, transaction) {
   if (!sessionIds.length) return {};
@@ -111,6 +105,26 @@ async function getPettyCashModalReturnMap(tenantId, sessionIds, transaction) {
   const map = {};
   rows.forEach(r => { map[r.referenceId] = parseFloat(r.total || 0); });
   return map;
+}
+
+/**
+ * Amount that should settle into the Tunai Account on drawer collect.
+ *
+ * physicalCash (actualCash/closingBalance) = opening + cash sales − drawer expenses ± selisih.
+ * Setoran ke akun = physicalCash − opening float
+ *                 = cash sales − pengeluaran laci ± selisih.
+ *
+ * Legacy closeShift credited (opening − expenses) back to petty cash on paper while
+ * that cash stayed in the drawer. Subtracting only that modal return left collectible
+ * = full cash sales (expenses were NOT deducted from the Tunai credit). Prefer
+ * excluding openingBalance so expenses always reduce the settled amount; still honor
+ * modalReturned when it exceeds opening (defensive for odd legacy rows).
+ */
+function computeCollectibleBase(session, modalReturned = 0) {
+  const physicalCash = parseFloat(session.actualCash ?? session.closingBalance ?? 0) || 0;
+  const opening = parseFloat(session.openingBalance || 0) || 0;
+  const nonSettle = Math.max(opening, parseFloat(modalReturned || 0) || 0);
+  return Math.max(0, parseFloat((physicalCash - nonSettle).toFixed(2)));
 }
 
 // ── Vault Account CRUD ────────────────────────────────────────────────────────
@@ -393,7 +407,7 @@ async function getSummary(req, res, next) {
 
     const pendingSessions = await CashRegisterSession.findAll({
       where: sessionWhere,
-      attributes: ['id', 'shiftDate', 'shiftName', 'shiftNumber', 'closingBalance', 'actualCash', 'locationId'],
+      attributes: ['id', 'shiftDate', 'shiftName', 'shiftNumber', 'openingBalance', 'closingBalance', 'actualCash', 'locationId'],
       include: [
         { model: Location, as: 'location', attributes: ['id', 'name'], required: false },
       ],
@@ -418,9 +432,11 @@ async function getSummary(req, res, next) {
       collectedMap[c.shiftSessionId] = parseFloat(c.collected || 0);
     });
 
+    const modalReturnMap = await getPettyCashModalReturnMap(tenantId, sessionIds);
+
     const pendingItems = pendingSessions
       .map(s => {
-        const base = parseFloat(s.actualCash || s.closingBalance || 0);
+        const base = computeCollectibleBase(s, modalReturnMap[s.id] || 0);
         const collected = collectedMap[s.id] || 0;
         const remaining = Math.max(0, base - collected);
         return {
@@ -519,9 +535,9 @@ async function getCollectibles(req, res, next) {
     const sessionList = sessions.map(s => {
       const rawCash = parseFloat(s.actualCash || s.closingBalance || 0);
       const modalReturned = modalReturnMap[s.id] || 0;
-      // Exclude the petty-cash modal already returned on paper — it's still
-      // physically in the drawer but is not collectible revenue.
-      const base = Math.max(0, rawCash - modalReturned);
+      const openingBalance = parseFloat(s.openingBalance || 0);
+      // Setoran = kas fisik − modal awal (= penjualan tunai − pengeluaran laci ± selisih)
+      const base = computeCollectibleBase(s, modalReturned);
       const collected = collectedMap[s.id] || 0;
       const remaining = Math.max(0, base - collected);
       const status = remaining <= 0 ? 'collected' : collected > 0 ? 'partially_collected' : 'uncollected';
@@ -531,6 +547,7 @@ async function getCollectibles(req, res, next) {
         shiftName: s.shiftName,
         shiftNumber: s.shiftNumber,
         location: s.location || null,
+        openingBalance,
         closingBalance: parseFloat(s.closingBalance || 0),
         actualCash: parseFloat(s.actualCash || 0),
         pettyCashModalReturned: modalReturned,
@@ -672,10 +689,10 @@ async function collectToVault(req, res, next) {
           const rawCashAmount = parseFloat(session.actualCash || session.closingBalance || 0);
           const modalReturnMap = await getPettyCashModalReturnMap(tenantId, [session.id], transaction);
           const modalReturned = modalReturnMap[session.id] || 0;
-          // Exclude the petty-cash modal already returned on paper (still physically
-          // in the drawer, but already credited back to the petty cash Account) —
-          // collecting it too would double-count that cash across two ledgers.
-          const baseAmount = Math.max(0, rawCashAmount - modalReturned);
+          const openingBalance = parseFloat(session.openingBalance || 0);
+          // Setoran ke akun Tunai = kas fisik − modal awal
+          // (= penjualan tunai − pengeluaran laci ± selisih). Jangan sweep modal float.
+          const baseAmount = computeCollectibleBase(session, modalReturned);
 
           // Hitung sudah berapa banyak yang sudah di-collect
           const collectedResult = await CashMutation.findOne({
@@ -733,6 +750,7 @@ async function collectToVault(req, res, next) {
             metadata: {
               shiftDate: session.shiftDate,
               rawCashAmount,
+              openingBalance,
               pettyCashModalReturned: modalReturned,
               collectibleBase: baseAmount,
               alreadyCollected,

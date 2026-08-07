@@ -34,6 +34,10 @@ const {
   endOfDayInTz,
   todayInTz,
 } = require('../../../utils/tenantTimezone');
+const {
+  getCashDrawerExpenseWhere,
+  isCashDrawerExpense,
+} = require('../../../utils/cashDrawerExpense');
 
 function getTransactionLocationWhere(locationId) {
   return locationId ? { locationId } : {};
@@ -46,19 +50,6 @@ function getExpenseLocationWhere(locationId) {
 }
 
 /**
- * Expense mengurangi laci kasir HANYA jika dibayar dari cash drawer.
- * Expense dari akun Tunai/Brankas juga paymentMethod=cash tapi fundSource=account — tidak masuk cash register.
- * Legacy: paymentMethod=cash tanpa fundSource/accountId dianggap dari laci.
- */
-function isCashDrawerExpense(expense) {
-  const fundSource = String(expense?.fundSource || '').toLowerCase();
-  if (fundSource === 'cash_drawer') return true;
-  if (fundSource && fundSource !== 'cash_drawer') return false;
-  if (expense?.accountId || expense?.vaultAccountId) return false;
-  return String(expense?.paymentMethod || '').toLowerCase() === 'cash';
-}
-
-/**
  * Expense dibayar dari akun Petty Cash (entitas terpisah dari laci — "berangkas kecil").
  * fundSource='petty_cash' adalah sumber kebenaran; paymentMethod dicek juga untuk data lama.
  */
@@ -67,22 +58,6 @@ function isPettyCashFundExpense(expense) {
   if (fundSource === 'petty_cash') return true;
   if (fundSource) return false;
   return String(expense?.paymentMethod || '').toLowerCase() === 'petty_cash';
-}
-
-/** Sequelize WHERE untuk expense yang mengurangi saldo laci. */
-function getCashDrawerExpenseWhere(extra = {}) {
-  return {
-    ...extra,
-    [Op.or]: [
-      { fundSource: 'cash_drawer' },
-      {
-        paymentMethod: 'cash',
-        accountId: { [Op.is]: null },
-        vaultAccountId: { [Op.is]: null },
-        fundSource: { [Op.is]: null },
-      },
-    ],
-  };
 }
 
 function getPettyCashLocationInclude(locationId) {

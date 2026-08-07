@@ -27,10 +27,11 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
 
-    /** Hitung total cash inflow/outflow dari transaksi tunai + pengeluaran kas */
+    /** Hitung total cash inflow/outflow dari transaksi tunai + pengeluaran laci */
     async getCashSummary(t) {
       const { Transaction, TransactionPayment, Expense, PettyCashTransaction, PettyCash } = sequelize.models;
       const { Op } = require('sequelize');
+      const { getCashDrawerExpenseWhere } = require('../utils/cashDrawerExpense');
 
       const timeWhere = {
         [Op.gte]: this.openedAt,
@@ -91,15 +92,27 @@ module.exports = (sequelize, DataTypes) => {
         .filter((p) => ['refunded', 'partially_refunded'].includes(p.transaction.status))
         .reduce((sum, p) => sum + Math.max(0, parseFloat(p.amount || 0) - parseFloat(p.transaction.changeAmount || 0)), 0);
 
-      // ── Cash expenses (pengeluaran kas) ───────────────────────────────────
+      // ── Pengeluaran dari laci saja (bukan dari akun Tunai/Brankas/Petty Cash) ──
+      // Prefer paidDate (kapan uang benar keluar dari laci); fallback createdAt untuk data lama.
+      const expenseTimeWhere = {
+        [Op.or]: [
+          { paidDate: timeWhere },
+          {
+            paidDate: { [Op.is]: null },
+            createdAt: timeWhere,
+          },
+        ],
+      };
+      const expenseExtra = {
+        tenantId: this.tenantId,
+        status: { [Op.in]: ['paid'] },
+        [Op.and]: [
+          expenseTimeWhere,
+          ...(Object.keys(expenseLocationWhere).length ? [expenseLocationWhere] : []),
+        ],
+      };
       const cashExpenses = await Expense.findAll({
-        where: {
-          tenantId: this.tenantId,
-          paymentMethod: 'cash',
-          status: { [Op.in]: ['paid'] },
-          createdAt: timeWhere,
-          ...expenseLocationWhere,
-        },
+        where: getCashDrawerExpenseWhere(expenseExtra),
         attributes: ['totalAmount'],
         transaction: t,
       });
