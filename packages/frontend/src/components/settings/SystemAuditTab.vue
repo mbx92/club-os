@@ -178,6 +178,13 @@
             </button>
             <button
               class="btn btn-warning btn-sm gap-2"
+              @click="openDrawerExpenseRecalcCanvas"
+            >
+              <IconCash class="w-4 h-4" />
+              Recalc Expense Laci
+            </button>
+            <button
+              class="btn btn-warning btn-sm gap-2"
               @click="openAdjustmentAuditCanvas"
             >
               <IconReceipt2 class="w-4 h-4" />
@@ -197,7 +204,7 @@
           <IconInfoCircle class="w-5 h-5" />
           <div>
             <p class="text-sm">Click "View Logs" to access comprehensive audit trail with filtering, statistics, and export capabilities</p>
-            <p class="text-xs mt-1 opacity-80">Menu <strong>Audit Shift Malam</strong> untuk fix overnight. <strong>Recalculate Saldo</strong> untuk sync balance akun = saldo awal + mutasi (setelah inject openingBalance). <strong>Audit Penyesuaian Manual</strong> untuk cek/balik koreksi manual yang mungkin dibuat menambal selisih laporan akun.</p>
+            <p class="text-xs mt-1 opacity-80">Menu <strong>Audit Shift Malam</strong> untuk fix overnight. <strong>Recalculate Saldo</strong> untuk sync balance akun. <strong>Recalc Expense Laci</strong> untuk bind expense historis ke shift + sync collectible (dry-run dulu). <strong>Audit Penyesuaian Manual</strong> untuk cek/balik koreksi manual.</p>
           </div>
         </div>
       </div>
@@ -608,6 +615,12 @@
     @close="closeAccountBalanceRecalculateCanvas"
   />
 
+  <!-- Drawer Expense Recalc Canvas -->
+  <DrawerExpenseRecalcCanvas
+    v-model="showDrawerExpenseRecalcCanvas"
+    @close="closeDrawerExpenseRecalcCanvas"
+  />
+
   <!-- Adjustment Audit Canvas -->
   <AdjustmentAuditCanvas
     v-model="showAdjustmentAuditCanvas"
@@ -630,6 +643,7 @@ import SmartFixCheckInCanvas from '@/components/settings/SmartFixCheckInCanvas.v
 import OvernightShiftAuditCanvas from '@/components/settings/OvernightShiftAuditCanvas.vue'
 import AttendanceRegenerationCanvas from '@/components/settings/AttendanceRegenerationCanvas.vue'
 import AccountBalanceRecalculateCanvas from '@/components/settings/AccountBalanceRecalculateCanvas.vue'
+import DrawerExpenseRecalcCanvas from '@/components/settings/DrawerExpenseRecalcCanvas.vue'
 import AdjustmentAuditCanvas from '@/components/settings/AdjustmentAuditCanvas.vue'
 import {
   IconEye,
@@ -653,6 +667,7 @@ import {
   IconCircleCheck,
   IconRefresh,
   IconCalculator,
+  IconCash,
   IconPencil,
   IconMoon,
   IconReceipt2,
@@ -694,6 +709,7 @@ const showSmartFixCanvas = ref(false)
 const showOvernightAuditCanvas = ref(false)
 const showAttendanceRegenerationCanvas = ref(false)
 const showAccountBalanceRecalculateCanvas = ref(false)
+const showDrawerExpenseRecalcCanvas = ref(false)
 const showAdjustmentAuditCanvas = ref(false)
 
 // Computed stats
@@ -763,6 +779,14 @@ const openAccountBalanceRecalculateCanvas = () => {
 
 const closeAccountBalanceRecalculateCanvas = () => {
   showAccountBalanceRecalculateCanvas.value = false
+}
+
+const openDrawerExpenseRecalcCanvas = () => {
+  showDrawerExpenseRecalcCanvas.value = true
+}
+
+const closeDrawerExpenseRecalcCanvas = () => {
+  showDrawerExpenseRecalcCanvas.value = false
 }
 
 const openAdjustmentAuditCanvas = () => {

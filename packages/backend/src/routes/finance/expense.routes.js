@@ -10,7 +10,8 @@ const {
   deleteExpense,
   approveExpense,
   markExpenseAsPaid,
-  reopenExpense
+  reopenExpense,
+  recalculateDrawerExpenseBinding,
 } = require('../../controllers/finance');
 
 const router = express.Router();
@@ -25,6 +26,18 @@ router.post('/',
   authorize('create', 'Expense'),
   createExpense,
   auditLog('CREATE_EXPENSE')
+);
+
+/**
+ * @route POST /finance/expenses/recalculate-drawer-binding
+ * @desc Dry-run/apply bind historical drawer expenses to cash register sessions
+ * @access Private (update Expense)
+ */
+router.post('/recalculate-drawer-binding',
+  authenticate,
+  authorize('update', 'Expense'),
+  recalculateDrawerExpenseBinding,
+  auditLog('RECALCULATE_DRAWER_EXPENSE_BINDING')
 );
 
 /**

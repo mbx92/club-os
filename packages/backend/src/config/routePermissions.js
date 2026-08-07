@@ -609,6 +609,7 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/finance/expenses/:id/approve': { subject: 'Expense', actions: ['update'] },
   '/finance/expenses/:id/pay': { subject: 'Expense', actions: ['update'] },
   '/finance/expenses/:id/reopen': { subject: 'Expense', actions: ['update'] },
+  '/finance/expenses/recalculate-drawer-binding': { subject: 'Expense', actions: ['update'] },
   
   '/finance/expense-categories': {
     GET: { subject: 'ExpenseCategory', actions: ['read'] },

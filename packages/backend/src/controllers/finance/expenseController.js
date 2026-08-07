@@ -1919,6 +1919,55 @@ async function reopenExpense(req, res, next) {
   }
 }
 
+/**
+ * POST /finance/expenses/recalculate-drawer-binding
+ * Dry-run / apply: bind expense laci historis ke CashRegisterSession + sync collectible.
+ * Query: dryRun=true|false (default true)
+ * Body: { startDate, endDate, locationId, syncSessions, clawbackCollect }
+ */
+async function recalculateDrawerExpenseBinding(req, res, next) {
+  try {
+    const { tenantId, id: userId } = req.user;
+    const dryRun = req.query.dryRun !== 'false';
+    const {
+      startDate = null,
+      endDate = null,
+      locationId = null,
+      syncSessions = true,
+      clawbackCollect = false,
+    } = req.body || {};
+
+    const { recalculateDrawerExpenseHistory } = require('../../services/drawerExpenseRecalcService');
+    const data = await recalculateDrawerExpenseHistory({
+      tenantId,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      locationId: locationId || null,
+      dryRun,
+      syncSessions: syncSessions !== false,
+      clawbackCollect: clawbackCollect === true,
+      userId,
+      timezone: getTenantTimezone(req),
+    });
+
+    return res.json({
+      success: true,
+      message: dryRun
+        ? 'Preview recalculate drawer expense selesai'
+        : 'Recalculate drawer expense diterapkan',
+      ...data,
+    });
+  } catch (error) {
+    logger.logError('Error recalculating drawer expense binding', {
+      action: 'DRAWER_EXPENSE_RECALC_ERROR',
+      userId: req.user?.id,
+      tenantId: req.user?.tenantId,
+      error: error.message,
+    });
+    next(error);
+  }
+}
+
 module.exports = {
   createExpense,
   getAllExpenses,
@@ -1927,5 +1976,6 @@ module.exports = {
   deleteExpense,
   approveExpense,
   markExpenseAsPaid,
-  reopenExpense
+  reopenExpense,
+  recalculateDrawerExpenseBinding,
 };
