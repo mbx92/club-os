@@ -31,6 +31,7 @@ const { buildInclusiveDateRange } = require('../../utils/dateRange');
 const { generateUniqueSequence, withRetry } = require('../../utils/concurrency');
 const accountService = require('../../services/accountService');
 const { getTenantTimezone, todayInTz } = require('../../utils/tenantTimezone');
+const { getCashDrawerExpenseWhere } = require('../../utils/cashDrawerExpense');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -531,16 +532,50 @@ async function getCollectibles(req, res, next) {
 
     const modalReturnMap = await getPettyCashModalReturnMap(tenantId, sessionIds);
 
+    // Expenses bound to these sessions (pending + paid) for Drawer UI
+    const sessionExpenses = sessionIds.length > 0 ? await Expense.findAll({
+      where: getCashDrawerExpenseWhere({
+        tenantId,
+        cashRegisterSessionId: { [Op.in]: sessionIds },
+        status: { [Op.in]: ['pending', 'approved', 'paid'] },
+      }),
+      attributes: [
+        'id', 'expenseNumber', 'title', 'totalAmount', 'status',
+        'paidDate', 'expenseDate', 'cashRegisterSessionId', 'fundSource',
+      ],
+      order: [['expenseDate', 'ASC'], ['createdAt', 'ASC']],
+    }) : [];
+
+    const expensesBySession = {};
+    sessionExpenses.forEach((e) => {
+      const sid = e.cashRegisterSessionId;
+      if (!expensesBySession[sid]) expensesBySession[sid] = [];
+      expensesBySession[sid].push({
+        id: e.id,
+        expenseNumber: e.expenseNumber,
+        title: e.title,
+        totalAmount: parseFloat(e.totalAmount || 0),
+        status: e.status,
+        paidDate: e.paidDate,
+        expenseDate: e.expenseDate,
+      });
+    });
+
     // Build session list
     const sessionList = sessions.map(s => {
-      const rawCash = parseFloat(s.actualCash || s.closingBalance || 0);
       const modalReturned = modalReturnMap[s.id] || 0;
       const openingBalance = parseFloat(s.openingBalance || 0);
-      // Setoran = kas fisik − modal awal (= penjualan tunai − pengeluaran laci ± selisih)
       const base = computeCollectibleBase(s, modalReturned);
       const collected = collectedMap[s.id] || 0;
       const remaining = Math.max(0, base - collected);
       const status = remaining <= 0 ? 'collected' : collected > 0 ? 'partially_collected' : 'uncollected';
+      const expenses = expensesBySession[s.id] || [];
+      const paidExpenseTotal = expenses
+        .filter((e) => e.status === 'paid')
+        .reduce((sum, e) => sum + e.totalAmount, 0);
+      const pendingExpenseTotal = expenses
+        .filter((e) => e.status !== 'paid')
+        .reduce((sum, e) => sum + e.totalAmount, 0);
       return {
         id: s.id,
         shiftDate: s.shiftDate,
@@ -555,6 +590,9 @@ async function getCollectibles(req, res, next) {
         collectedAmount: collected,
         remainingAmount: remaining,
         collectionStatus: status,
+        drawerExpenseTotal: paidExpenseTotal,
+        pendingDrawerExpenseTotal: pendingExpenseTotal,
+        expenses,
       };
     });
 
@@ -570,6 +608,8 @@ async function getCollectibles(req, res, next) {
           collectibleBase: 0,
           collectedAmount: 0,
           remainingAmount: 0,
+          drawerExpenseTotal: 0,
+          pendingDrawerExpenseTotal: 0,
           collectionStatus: 'uncollected',
           sessions: [],
         };
@@ -579,6 +619,8 @@ async function getCollectibles(req, res, next) {
       d.collectibleBase += s.collectibleBase;
       d.collectedAmount += s.collectedAmount;
       d.remainingAmount += s.remainingAmount;
+      d.drawerExpenseTotal += s.drawerExpenseTotal;
+      d.pendingDrawerExpenseTotal += s.pendingDrawerExpenseTotal;
       if (d.remainingAmount <= 0) d.collectionStatus = 'collected';
       else if (d.collectedAmount > 0) d.collectionStatus = 'partially_collected';
       d.sessions.push(s);

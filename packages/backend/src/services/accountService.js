@@ -639,6 +639,59 @@ async function creditFromCashCollect(opts, t = null) {
   }, t);
 }
 
+/**
+ * Reverse (partial) cash-collect settlement when collectible shrinks after the fact
+ * (e.g. drawer expense paid after admin already collected the shift).
+ */
+async function debitFromCashCollectReversal(opts, t = null) {
+  const {
+    tenantId,
+    amount,
+    accountId = null,
+    entryDate,
+    description,
+    referenceType = 'Expense',
+    referenceId = null,
+    performedBy,
+    timezone,
+  } = opts;
+
+  const cashAmount = parseFloat(amount);
+  if (!tenantId || !cashAmount || cashAmount <= 0) return null;
+
+  let account = null;
+  if (accountId) {
+    account = await Account.findOne({
+      where: { id: accountId, tenantId, type: 'cash', isActive: true },
+      transaction: t || undefined,
+    });
+  }
+  if (!account) {
+    account = await findCashAccount(tenantId, t);
+  }
+  if (!account) {
+    logger.logInfo('No cash Account configured — skip collect clawback debit', {
+      action: 'CASH_COLLECT_CLAWBACK_NO_ACCOUNT',
+      tenantId,
+      amount: cashAmount,
+    });
+    return null;
+  }
+
+  return createEntry({
+    accountId: account.id,
+    tenantId,
+    type: 'outflow',
+    amount: cashAmount,
+    referenceType,
+    referenceId,
+    description: description || 'Penyesuaian setoran kas (pengeluaran laci setelah collect)',
+    entryDate,
+    performedBy,
+    timezone,
+  }, t);
+}
+
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
 /**
@@ -961,6 +1014,7 @@ module.exports = {
   createEntry,
   creditFromPayment,
   creditFromCashCollect,
+  debitFromCashCollectReversal,
   reversePaymentCredit,
   debitFromExpense,
   creditFromExpenseReversal,

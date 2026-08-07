@@ -196,17 +196,30 @@ const submitMarkAsPaid = async () => {
     return
   }
   if (payForm.value.paymentOption === 'cash_drawer_cash') {
-    const amountNeeded = parseFloat(exp.value?.totalAmount ?? exp.value?.amount ?? 0)
-    const availableCash = drawerExpectedCash.value ?? 0
-    if (amountNeeded > availableCash) {
+    const boundToShift = !!exp.value?.cashRegisterSessionId
+    if (!boundToShift && !currentSession.value) {
       await confirmDialog.value?.open({
-        title: 'Saldo Laci Tidak Cukup',
-        message: `Kas yang tersedia di laci saat ini hanya ${fmt(availableCash)}, sedangkan pengeluaran ini membutuhkan ${fmt(amountNeeded)}. Pengeluaran tidak bisa ditandai sebagai paid dari Laci / Cash Drawer.`,
+        title: 'Shift Kasir Belum Dibuka',
+        message: 'Pengeluaran ini belum terikat ke shift. Buka shift dulu, atau buat ulang expense saat shift aktif.',
         showConfirm: false,
         cancelText: 'Tutup',
         type: 'warning',
       })
       return
+    }
+    if (currentSession.value && (!boundToShift || currentSession.value.id === exp.value?.cashRegisterSessionId)) {
+      const amountNeeded = parseFloat(exp.value?.totalAmount ?? exp.value?.amount ?? 0)
+      const availableCash = drawerExpectedCash.value ?? 0
+      if (amountNeeded > availableCash) {
+        await confirmDialog.value?.open({
+          title: 'Saldo Laci Tidak Cukup',
+          message: `Kas yang tersedia di laci saat ini hanya ${fmt(availableCash)}, sedangkan pengeluaran ini membutuhkan ${fmt(amountNeeded)}. Pengeluaran tidak bisa ditandai sebagai paid dari Laci / Cash Drawer.`,
+          showConfirm: false,
+          cancelText: 'Tutup',
+          type: 'warning',
+        })
+        return
+      }
     }
   }
 
@@ -369,6 +382,14 @@ const handleReopen = async () => {
                 <div v-if="exp.paymentMethod || exp.fundSource || exp.accountId" class="flex justify-between pt-1">
                   <span class="text-base-content/50">Sumber Dana</span>
                   <span class="text-right">{{ formatExpenseFundSource(exp) }}</span>
+                </div>
+                <div v-if="exp.cashRegisterSession" class="flex justify-between pt-1">
+                  <span class="text-base-content/50">Shift Laci</span>
+                  <span class="text-right">
+                    {{ exp.cashRegisterSession.shiftName || '-' }}
+                    · {{ exp.cashRegisterSession.shiftDate || '-' }}
+                    <span class="badge badge-xs ml-1">{{ exp.cashRegisterSession.status }}</span>
+                  </span>
                 </div>
                 <div v-if="exp.paymentMethod" class="flex justify-between pt-1">
                   <span class="text-base-content/50">Metode Bayar</span>

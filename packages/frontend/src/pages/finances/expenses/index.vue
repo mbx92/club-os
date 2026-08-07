@@ -741,17 +741,31 @@ const submitMarkAsPaid = async () => {
     return
   }
   if (payForm.value.paymentOption === 'cash_drawer_cash') {
-    const amountNeeded = parseFloat(payTarget.value?.totalAmount ?? payTarget.value?.amount ?? 0)
-    const availableCash = drawerExpectedCash.value ?? 0
-    if (amountNeeded > availableCash) {
+    const boundToShift = !!payTarget.value?.cashRegisterSessionId
+    if (!boundToShift && !currentSession.value) {
       await confirmDialog.value?.open({
-        title: 'Saldo Laci Tidak Cukup',
-        message: `Kas yang tersedia di laci saat ini hanya ${formatCurrency(availableCash)}, sedangkan pengeluaran ini membutuhkan ${formatCurrency(amountNeeded)}. Pengeluaran tidak bisa ditandai sebagai paid dari Laci / Cash Drawer.`,
+        title: 'Shift Kasir Belum Dibuka',
+        message: 'Pengeluaran ini belum terikat ke shift. Buka shift dulu, atau buat ulang expense saat shift aktif.',
         showConfirm: false,
         cancelText: 'Tutup',
         type: 'warning',
       })
       return
+    }
+    // Hanya cek saldo live jika shift masih open (paid setelah close: sync di backend)
+    if (currentSession.value && (!boundToShift || currentSession.value.id === payTarget.value?.cashRegisterSessionId)) {
+      const amountNeeded = parseFloat(payTarget.value?.totalAmount ?? payTarget.value?.amount ?? 0)
+      const availableCash = drawerExpectedCash.value ?? 0
+      if (amountNeeded > availableCash) {
+        await confirmDialog.value?.open({
+          title: 'Saldo Laci Tidak Cukup',
+          message: `Kas yang tersedia di laci saat ini hanya ${formatCurrency(availableCash)}, sedangkan pengeluaran ini membutuhkan ${formatCurrency(amountNeeded)}. Pengeluaran tidak bisa ditandai sebagai paid dari Laci / Cash Drawer.`,
+          showConfirm: false,
+          cancelText: 'Tutup',
+          type: 'warning',
+        })
+        return
+      }
     }
   }
 

@@ -25,6 +25,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'pettyCashAccountId',
         as: 'pettyCashAccount',
       });
+      CashRegisterSession.hasMany(models.Expense, {
+        foreignKey: 'cashRegisterSessionId',
+        as: 'drawerExpenses',
+      });
     }
 
     /** Hitung total cash inflow/outflow dari transaksi tunai + pengeluaran laci */
@@ -93,7 +97,8 @@ module.exports = (sequelize, DataTypes) => {
         .reduce((sum, p) => sum + Math.max(0, parseFloat(p.amount || 0) - parseFloat(p.transaction.changeAmount || 0)), 0);
 
       // ── Pengeluaran dari laci saja (bukan dari akun Tunai/Brankas/Petty Cash) ──
-      // Prefer paidDate (kapan uang benar keluar dari laci); fallback createdAt untuk data lama.
+      // Prefer expenses stamped to this session at pay-time (no time-window gap).
+      // Legacy fallback: paidDate/createdAt within session window + no session link.
       const expenseTimeWhere = {
         [Op.or]: [
           { paidDate: timeWhere },
@@ -106,9 +111,15 @@ module.exports = (sequelize, DataTypes) => {
       const expenseExtra = {
         tenantId: this.tenantId,
         status: { [Op.in]: ['paid'] },
-        [Op.and]: [
-          expenseTimeWhere,
-          ...(Object.keys(expenseLocationWhere).length ? [expenseLocationWhere] : []),
+        [Op.or]: [
+          { cashRegisterSessionId: this.id },
+          {
+            cashRegisterSessionId: { [Op.is]: null },
+            [Op.and]: [
+              expenseTimeWhere,
+              ...(Object.keys(expenseLocationWhere).length ? [expenseLocationWhere] : []),
+            ],
+          },
         ],
       };
       const cashExpenses = await Expense.findAll({

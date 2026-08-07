@@ -374,27 +374,9 @@ exports.closeShift = async (req, res, next) => {
       });
     }
 
-    // Hitung expected cash dari transaksi tunai selama shift ini
+    // Hitung expected cash dari transaksi tunai + pengeluaran laci selama shift ini
     const { cashIn, cashOut, cashExpenseOut, expectedCash } = await session.getCashSummary(dbTransaction);
-
-    // Pengeluaran yang benar-benar dari laci (bukan dari akun/brankas lain)
-    const drawerExpenseRows = await Expense.findAll({
-      where: getCashDrawerExpenseWhere({
-        tenantId,
-        status: { [Op.in]: ['paid'] },
-        createdAt: {
-          [Op.gte]: session.openedAt,
-          ...(session.closedAt ? { [Op.lte]: session.closedAt } : {}),
-        },
-        ...getExpenseLocationWhere(session.locationId),
-      }),
-      attributes: ['totalAmount'],
-      transaction: dbTransaction,
-    });
-    const drawerExpenseTotal = drawerExpenseRows.reduce(
-      (sum, e) => sum + parseFloat(e.totalAmount || 0),
-      0
-    );
+    const drawerExpenseTotal = parseFloat(cashExpenseOut || 0);
 
     const actual = parseFloat(actualCash);
     // Tipping is physically stored in the drawer, so it increases the expected closing balance
@@ -488,22 +470,8 @@ exports.getCurrentSession = async (req, res, next) => {
       return res.json({ success: true, data: null, message: 'Tidak ada shift yang aktif' });
     }
 
-    // Hitung summary realtime
-    const { cashIn, cashOut, expectedCash } = await session.getCashSummary();
-
-    const drawerExpenseRows = await Expense.findAll({
-      where: getCashDrawerExpenseWhere({
-        tenantId,
-        status: { [Op.in]: ['paid'] },
-        createdAt: { [Op.gte]: session.openedAt },
-        ...getExpenseLocationWhere(session.locationId),
-      }),
-      attributes: ['totalAmount'],
-    });
-    const cashExpenseOut = drawerExpenseRows.reduce(
-      (sum, e) => sum + parseFloat(e.totalAmount || 0),
-      0
-    );
+    // Hitung summary realtime (pengeluaran laci via cashRegisterSessionId / legacy window)
+    const { cashIn, cashOut, cashExpenseOut, expectedCash } = await session.getCashSummary();
 
     return res.json({
       success: true,

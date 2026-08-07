@@ -199,8 +199,11 @@
               <span class="label-text-alt" :class="currentSession ? 'text-base-content/60' : 'text-warning'">
                 {{ currentSession
                   ? `Kas tersedia di laci: ${formatCurrency(drawerExpectedCash ?? 0)}`
-                  : 'Tidak ada shift kasir yang aktif' }}
+                  : 'Tidak ada shift kasir yang aktif — buka shift dulu agar expense terikat ke shift' }}
               </span>
+            </label>
+            <label v-if="errors.paymentOption" class="label">
+              <span class="label-text-alt text-error">{{ errors.paymentOption }}</span>
             </label>
           </div>
 
@@ -558,6 +561,10 @@ const validate = () => {
 
   if (formData.value.paymentOption === 'petty_cash' && !formData.value.accountId) {
     errors.value.accountId = 'Pilih akun Petty Cash'
+  }
+
+  if (formData.value.paymentOption === 'cash_drawer_cash' && !currentSession.value) {
+    errors.value.paymentOption = 'Buka shift kasir dulu agar pengeluaran laci terikat ke shift tersebut'
   }
 
   return Object.keys(errors.value).length === 0

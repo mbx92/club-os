@@ -9,13 +9,13 @@
  */
 
 const { Expense, ExpenseCategory, User, Location, PettyCash, PettyCashTransaction, VaultAccount, CashMutation, Account, CashRegisterSession, sequelize } = require('../../models');
-const { Op, Transaction: SequelizeTransaction } = require('sequelize');
+const { Op, Transaction: SequelizeTransaction, fn, col } = require('sequelize');
 const logger = require('../../utils/logger');
 const { getClientIp, getUserAgent } = require('../../utils/requestHelper');
 const { generateUniqueSequence, withRetry } = require('../../utils/concurrency');
 const { buildOptionalDateRangeFilter } = require('../../utils/dateRange');
 const accountService = require('../../services/accountService');
-const { getTenantTimezone } = require('../../utils/tenantTimezone');
+const { getTenantTimezone, todayInTz } = require('../../utils/tenantTimezone');
 const { getRoleName } = require('../../utils/rbacUtils');
 
 /** Apakah kombinasi fundSource/paymentMethod ini berarti dibayar dari laci kasir? */
@@ -27,17 +27,311 @@ function isCashDrawerFundSource({ fundSource, paymentMethod, accountId, vaultAcc
   return String(paymentMethod || '').toLowerCase() === 'cash';
 }
 
+async function generateCashMutationNumber(tenantId, transaction) {
+  const year = new Date().getFullYear();
+  const prefix = `CM-${year}-`;
+  const lastMutation = await CashMutation.findOne({
+    where: {
+      tenantId,
+      mutationNumber: { [Op.like]: `${prefix}%` },
+    },
+    order: [['mutationNumber', 'DESC']],
+    paranoid: false,
+    transaction,
+  });
+  let sequence = 1;
+  if (lastMutation) {
+    const lastSeq = parseInt(lastMutation.mutationNumber.split('-')[2], 10);
+    if (!isNaN(lastSeq)) sequence = lastSeq + 1;
+  }
+  return `${prefix}${String(sequence).padStart(6, '0')}`;
+}
+
+function computeCollectibleBase(session, modalReturned = 0) {
+  const physicalCash = parseFloat(session.actualCash ?? session.closingBalance ?? 0) || 0;
+  const opening = parseFloat(session.openingBalance || 0) || 0;
+  const nonSettle = Math.max(opening, parseFloat(modalReturned || 0) || 0);
+  return Math.max(0, parseFloat((physicalCash - nonSettle).toFixed(2)));
+}
+
 /**
- * Saldo kas laci yang tersedia saat ini (dari sesi shift yang sedang open).
- * Return null jika tidak ada sesi shift open — artinya tidak bisa divalidasi (dibiarkan lolos).
+ * Ambil sesi cash register yang sedang open (+ expectedCash).
+ * Dipakai saat CREATE expense laci agar terikat ke shift sejak dibuat.
  */
-async function getOpenSessionExpectedCash(tenantId, locationId, transaction) {
+async function resolveOpenDrawerSession(tenantId, locationId, transaction) {
   const where = { tenantId, status: 'open', deletedAt: null };
   if (locationId) where.locationId = locationId;
-  const session = await CashRegisterSession.findOne({ where, transaction });
+  const session = await CashRegisterSession.findOne({
+    where,
+    lock: transaction ? transaction.LOCK.UPDATE : undefined,
+    transaction: transaction || undefined,
+  });
   if (!session) return null;
   const { expectedCash } = await session.getCashSummary(transaction);
-  return parseFloat(expectedCash) || 0;
+  return {
+    session,
+    expectedCash: parseFloat(expectedCash) || 0,
+  };
+}
+
+/**
+ * Setelah expense laci di-paid/reopen pada shift yang sudah closed:
+ * sync ulang closingBalance + actualCash agar collectible ikut berkurang/bertambah.
+ * Selisih (difference) dijaga dengan menggeser actualCash sebesar perubahan closing.
+ */
+async function syncClosedSessionCash(session, transaction) {
+  if (!session || session.status !== 'closed') return null;
+
+  const { expectedCash } = await session.getCashSummary(transaction);
+  const tipping = parseFloat(session.tipping || 0);
+  const closingBalance = parseFloat((expectedCash + tipping).toFixed(2));
+  const oldClosing = parseFloat(session.closingBalance || 0);
+  const oldActual = parseFloat(session.actualCash || 0);
+  const closingDelta = parseFloat((oldClosing - closingBalance).toFixed(2));
+  const actualCash = Math.max(0, parseFloat((oldActual - closingDelta).toFixed(2)));
+  const difference = parseFloat((actualCash - closingBalance).toFixed(2));
+
+  await session.update(
+    { closingBalance, actualCash, difference },
+    { transaction }
+  );
+
+  // Reload so callers see fresh values
+  await session.reload({ transaction });
+
+  return { closingBalance, actualCash, difference, cashExpenseDelta: closingDelta };
+}
+
+/**
+ * Jika shift sudah di-collect melebihi collectible baru (karena expense baru di-paid),
+ * kurangi "sudah diambil" lewat mutasi reverse + potong saldo vault & akun Tunai.
+ */
+async function clawbackOverCollected(session, {
+  tenantId,
+  userId,
+  expense,
+  timezone,
+}, transaction) {
+  if (!session || session.status !== 'closed') return null;
+
+  const collectedResult = await CashMutation.findOne({
+    where: {
+      tenantId,
+      shiftSessionId: session.id,
+      mutationType: 'drawer_to_vault_transfer',
+      status: 'posted',
+    },
+    attributes: [[fn('COALESCE', fn('SUM', col('amount')), 0), 'total']],
+    raw: true,
+    transaction,
+  });
+  const collected = parseFloat(collectedResult?.total || 0);
+  const collectibleBase = computeCollectibleBase(session, 0);
+  const overage = parseFloat((collected - collectibleBase).toFixed(2));
+  if (overage <= 0) {
+    return {
+      collectedBefore: collected,
+      collectibleBase,
+      clawbackAmount: 0,
+    };
+  }
+
+  // Ambil collect positif terbaru untuk tahu vault tujuan
+  const sourceCollects = await CashMutation.findAll({
+    where: {
+      tenantId,
+      shiftSessionId: session.id,
+      mutationType: 'drawer_to_vault_transfer',
+      status: 'posted',
+      amount: { [Op.gt]: 0 },
+    },
+    order: [['mutationDate', 'DESC'], ['createdAt', 'DESC']],
+    transaction,
+  });
+
+  let remainingOverage = overage;
+  const clawbackMutations = [];
+  const mutationDate = todayInTz(timezone);
+
+  for (const src of sourceCollects) {
+    if (remainingOverage <= 0) break;
+    const available = parseFloat(src.amount || 0);
+    if (available <= 0) continue;
+    const take = Math.min(available, remainingOverage);
+    const vaultAccountId = src.destinationVaultAccountId;
+
+    if (vaultAccountId) {
+      const vaultAccount = await VaultAccount.findOne({
+        where: { id: vaultAccountId, tenantId },
+        lock: transaction.LOCK.UPDATE,
+        transaction,
+      });
+      if (vaultAccount) {
+        const newBal = Math.max(0, parseFloat((parseFloat(vaultAccount.balance || 0) - take).toFixed(2)));
+        await vaultAccount.update({ balance: newBal }, { transaction });
+      }
+    }
+
+    const mutationNumber = await generateCashMutationNumber(tenantId, transaction);
+    const clawback = await CashMutation.create({
+      tenantId,
+      locationId: session.locationId || src.locationId || null,
+      mutationNumber,
+      sourceAccount: 'vault',
+      destinationAccount: 'cash_drawer',
+      sourceVaultAccountId: vaultAccountId || null,
+      destinationVaultAccountId: null,
+      amount: -take,
+      mutationType: 'drawer_to_vault_transfer',
+      referenceType: 'Expense',
+      referenceId: expense.id,
+      referenceNumber: expense.expenseNumber || null,
+      shiftSessionId: session.id,
+      status: 'posted',
+      mutationDate,
+      notes: `Penyesuaian collect — expense ${expense.expenseNumber || expense.title} dibayar setelah setoran`,
+      metadata: {
+        reason: 'expense_paid_after_collect',
+        collectClawback: true,
+        expenseId: expense.id,
+        expenseAmount: parseFloat(expense.totalAmount || 0),
+        collectibleBase,
+        collectedBefore: collected,
+        sourceCollectMutationId: src.id,
+      },
+      createdBy: userId,
+    }, { transaction });
+
+    clawbackMutations.push(clawback);
+    remainingOverage = parseFloat((remainingOverage - take).toFixed(2));
+  }
+
+  // Sisa overage tanpa sumber vault spesifik — tetap catat agar "sudah diambil" turun
+  if (remainingOverage > 0) {
+    const mutationNumber = await generateCashMutationNumber(tenantId, transaction);
+    const clawback = await CashMutation.create({
+      tenantId,
+      locationId: session.locationId || null,
+      mutationNumber,
+      sourceAccount: 'vault',
+      destinationAccount: 'cash_drawer',
+      sourceVaultAccountId: null,
+      destinationVaultAccountId: null,
+      amount: -remainingOverage,
+      mutationType: 'drawer_to_vault_transfer',
+      referenceType: 'Expense',
+      referenceId: expense.id,
+      referenceNumber: expense.expenseNumber || null,
+      shiftSessionId: session.id,
+      status: 'posted',
+      mutationDate,
+      notes: `Penyesuaian collect — expense ${expense.expenseNumber || expense.title} dibayar setelah setoran`,
+      metadata: {
+        reason: 'expense_paid_after_collect',
+        collectClawback: true,
+        expenseId: expense.id,
+        expenseAmount: parseFloat(expense.totalAmount || 0),
+        collectibleBase,
+        collectedBefore: collected,
+      },
+      createdBy: userId,
+    }, { transaction });
+    clawbackMutations.push(clawback);
+    remainingOverage = 0;
+  }
+
+  const clawbackAmount = parseFloat((overage - Math.max(0, remainingOverage)).toFixed(2));
+  if (clawbackAmount > 0) {
+    await accountService.debitFromCashCollectReversal({
+      tenantId,
+      amount: clawbackAmount,
+      entryDate: mutationDate,
+      description: `Penyesuaian setoran — expense ${expense.expenseNumber || expense.title} setelah collect`,
+      referenceType: 'Expense',
+      referenceId: expense.id,
+      performedBy: userId,
+      timezone,
+    }, transaction);
+  }
+
+  return {
+    collectedBefore: collected,
+    collectibleBase,
+    clawbackAmount,
+    collectedAfter: parseFloat((collected - clawbackAmount).toFixed(2)),
+    mutationIds: clawbackMutations.map((m) => m.id),
+  };
+}
+
+/**
+ * Batalkan clawback collect yang dibuat saat expense ini di-paid (untuk reopen).
+ */
+async function reverseCollectClawbacksForExpense(expense, {
+  tenantId,
+  userId,
+  timezone,
+}, transaction) {
+  const clawbacks = await CashMutation.findAll({
+    where: {
+      tenantId,
+      referenceType: 'Expense',
+      referenceId: expense.id,
+      mutationType: 'drawer_to_vault_transfer',
+      status: 'posted',
+      amount: { [Op.lt]: 0 },
+    },
+    lock: transaction.LOCK.UPDATE,
+    transaction,
+  });
+
+  if (!clawbacks.length) return null;
+
+  let restored = 0;
+  const mutationDate = todayInTz(timezone);
+
+  for (const m of clawbacks) {
+    const amount = Math.abs(parseFloat(m.amount || 0));
+    if (amount <= 0) continue;
+
+    if (m.sourceVaultAccountId) {
+      const vaultAccount = await VaultAccount.findOne({
+        where: { id: m.sourceVaultAccountId, tenantId },
+        lock: transaction.LOCK.UPDATE,
+        transaction,
+      });
+      if (vaultAccount) {
+        const newBal = parseFloat((parseFloat(vaultAccount.balance || 0) + amount).toFixed(2));
+        await vaultAccount.update({ balance: newBal }, { transaction });
+      }
+    }
+
+    await m.update({
+      status: 'cancelled',
+      notes: `${m.notes || ''}\n[reopen] Clawback dibatalkan`.trim(),
+      metadata: {
+        ...(m.metadata || {}),
+        clawbackReversedAt: new Date().toISOString(),
+        clawbackReversedBy: userId,
+      },
+    }, { transaction });
+
+    restored = parseFloat((restored + amount).toFixed(2));
+  }
+
+  if (restored > 0) {
+    await accountService.creditFromCashCollect({
+      tenantId,
+      amount: restored,
+      entryDate: mutationDate,
+      description: `Pulihkan setoran — reopen expense ${expense.expenseNumber || expense.title}`,
+      referenceType: 'Expense',
+      referenceId: expense.id,
+      performedBy: userId,
+      timezone,
+    }, transaction);
+  }
+
+  return { restoredAmount: restored, cancelledMutationIds: clawbacks.map((m) => m.id) };
 }
 
 /**
@@ -167,13 +461,30 @@ async function createExpense(req, res, next) {
           return { categoryNotFound: true };
         }
 
-        // Jika langsung paid dari laci, kas laci yang tersedia harus cukup
-        if (status === 'paid' && isCashDrawerFundSource({ fundSource, paymentMethod, accountId, vaultAccountId })) {
-          const expenseAmount = parseFloat(amount) + parseFloat(taxAmount);
-          const expectedCash = await getOpenSessionExpectedCash(tenantId, locationId, transaction);
-          if (expectedCash !== null && expectedCash < expenseAmount) {
+        // Expense laci terikat ke shift SEJAK dibuat (pending/draft/paid).
+        // Paid boleh belakangan tanpa shift harus masih open.
+        let drawerSessionId = null;
+        let drawerLocationId = locationId || null;
+        if (isCashDrawerFundSource({ fundSource, paymentMethod, accountId, vaultAccountId })) {
+          const drawer = await resolveOpenDrawerSession(tenantId, locationId || null, transaction);
+          if (!drawer) {
             await transaction.rollback();
-            return { drawerInsufficientBalance: true, currentBalance: expectedCash, needed: expenseAmount };
+            return { drawerSessionRequired: true };
+          }
+          if (status === 'paid') {
+            const expenseAmount = parseFloat(amount) + parseFloat(taxAmount);
+            if (drawer.expectedCash < expenseAmount) {
+              await transaction.rollback();
+              return {
+                drawerInsufficientBalance: true,
+                currentBalance: drawer.expectedCash,
+                needed: expenseAmount,
+              };
+            }
+          }
+          drawerSessionId = drawer.session.id;
+          if (!drawerLocationId && drawer.session.locationId) {
+            drawerLocationId = drawer.session.locationId;
           }
         }
 
@@ -189,7 +500,7 @@ async function createExpense(req, res, next) {
         // Create expense
         const expense = await Expense.create({
           tenantId,
-          locationId: locationId || null,
+          locationId: drawerLocationId,
           categoryId,
           expenseNumber,
           title,
@@ -214,6 +525,8 @@ async function createExpense(req, res, next) {
           fundSource: fundSource || null,
           vaultAccountId: fundSource === 'vault' ? (vaultAccountId || null) : null,
           accountId: ['account', 'petty_cash'].includes(fundSource) ? (accountId || null) : null,
+          cashRegisterSessionId: drawerSessionId,
+          paidDate: status === 'paid' ? new Date() : null,
           createdBy: userId
         }, { transaction });
 
@@ -409,6 +722,14 @@ async function createExpense(req, res, next) {
         success: false,
         code: 'DRAWER_INSUFFICIENT_BALANCE',
         message: `Kas di laci tidak cukup. Kas tersedia: ${result.currentBalance}, dibutuhkan: ${result.needed}`
+      });
+    }
+
+    if (result.drawerSessionRequired) {
+      return res.status(400).json({
+        success: false,
+        code: 'DRAWER_SESSION_REQUIRED',
+        message: 'Tidak ada shift kasir yang terbuka. Buka shift dulu sebelum membuat pengeluaran dari laci agar terikat ke shift tersebut.',
       });
     }
 
@@ -616,8 +937,14 @@ async function getExpenseById(req, res, next) {
         { model: Location, as: 'location' },
         { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: User, as: 'approver', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: Account, as: 'account', attributes: ['id', 'name', 'type', 'bankName', 'paymentMethod', 'balance'] },
-        { model: VaultAccount, as: 'vaultAccount', attributes: ['id', 'name', 'balance'] },
+        { model: Account, as: 'account', attributes: ['id', 'name', 'type', 'bankName', 'paymentMethod', 'balance'], required: false },
+        { model: VaultAccount, as: 'vaultAccount', attributes: ['id', 'name', 'balance'], required: false },
+        {
+          model: CashRegisterSession,
+          as: 'cashRegisterSession',
+          attributes: ['id', 'shiftDate', 'shiftName', 'shiftNumber', 'status', 'openingBalance', 'closingBalance', 'actualCash'],
+          required: false,
+        },
       ]
     });
 
@@ -994,17 +1321,50 @@ async function markExpenseAsPaid(req, res, next) {
       });
     }
 
-    // Validasi: kas laci yang tersedia harus cukup sebelum menandai paid dari laci
+    // Bayar dari laci: pakai session yang sudah di-stamp saat create.
+    // Tidak wajib shift masih open — jika session closed, sync ulang closing/actual setelah paid.
+    let drawerSession = null;
     if (isCashDrawerFundSource({ fundSource: resolvedFundSource, paymentMethod, accountId: resolvedAccountId, vaultAccountId: resolvedVaultAccountId })) {
       const expenseAmount = parseFloat(expense.totalAmount);
-      const expectedCash = await getOpenSessionExpectedCash(tenantId, expense.locationId, transaction);
-      if (expectedCash !== null && expectedCash < expenseAmount) {
-        await transaction.rollback();
-        return res.status(400).json({
-          success: false,
-          code: 'DRAWER_INSUFFICIENT_BALANCE',
-          message: `Kas di laci tidak cukup. Kas tersedia: ${expectedCash}, dibutuhkan: ${expenseAmount}`
+
+      if (expense.cashRegisterSessionId) {
+        drawerSession = await CashRegisterSession.findOne({
+          where: { id: expense.cashRegisterSessionId, tenantId, deletedAt: null },
+          lock: transaction.LOCK.UPDATE,
+          transaction,
         });
+        if (!drawerSession) {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            code: 'DRAWER_SESSION_NOT_FOUND',
+            message: 'Shift kasir yang terikat ke pengeluaran ini tidak ditemukan.',
+          });
+        }
+      } else {
+        // Legacy expense tanpa stamp: ikat ke shift open sekarang
+        const drawer = await resolveOpenDrawerSession(tenantId, expense.locationId, transaction);
+        if (!drawer) {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            code: 'DRAWER_SESSION_REQUIRED',
+            message: 'Pengeluaran laci belum terikat shift dan tidak ada shift terbuka. Buka shift atau buat ulang expense saat shift aktif.',
+          });
+        }
+        drawerSession = drawer.session;
+      }
+
+      if (drawerSession.status === 'open') {
+        const { expectedCash } = await drawerSession.getCashSummary(transaction);
+        if (parseFloat(expectedCash || 0) < expenseAmount) {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            code: 'DRAWER_INSUFFICIENT_BALANCE',
+            message: `Kas di laci tidak cukup. Kas tersedia: ${expectedCash}, dibutuhkan: ${expenseAmount}`,
+          });
+        }
       }
     }
 
@@ -1165,6 +1525,7 @@ async function markExpenseAsPaid(req, res, next) {
 
     const paidFromAccount = ['account', 'petty_cash'].includes(resolvedFundSource) && !!resolvedAccountId;
     const paidFromVault = resolvedFundSource === 'vault' && !!resolvedVaultAccountId;
+    const paidFromDrawer = !!drawerSession;
 
     await expense.update({
       status: 'paid',
@@ -1176,6 +1537,13 @@ async function markExpenseAsPaid(req, res, next) {
       // Clear stale cross-source IDs so reopen/pay never double-deduct
       accountId: paidFromAccount ? resolvedAccountId : null,
       vaultAccountId: paidFromVault ? resolvedVaultAccountId : null,
+      // Keep / set shift binding — jangan hapus saat paid
+      cashRegisterSessionId: paidFromDrawer
+        ? drawerSession.id
+        : (expense.cashRegisterSessionId || null),
+      ...(paidFromDrawer && !expense.locationId && drawerSession.locationId
+        ? { locationId: drawerSession.locationId }
+        : {}),
     }, { transaction });
 
     // Debit Account when paying from finance account or Petty Cash (not vault / drawer)
@@ -1196,6 +1564,25 @@ async function markExpenseAsPaid(req, res, next) {
       );
     }
 
+    // Shift sudah closed: sync closing/actual supaya collectible ikut berkurang.
+    // Jika sudah di-collect melebihi collectible baru, kurangi "sudah diambil" juga.
+    let sessionCashSync = null;
+    let collectClawback = null;
+    if (paidFromDrawer && drawerSession.status === 'closed') {
+      sessionCashSync = await syncClosedSessionCash(drawerSession, transaction);
+      collectClawback = await clawbackOverCollected(drawerSession, {
+        tenantId,
+        userId,
+        expense: {
+          id: expense.id,
+          expenseNumber: expense.expenseNumber,
+          title: expense.title,
+          totalAmount: expense.totalAmount,
+        },
+        timezone: getTenantTimezone(req),
+      }, transaction);
+    }
+
     await transaction.commit();
 
     const paidExpense = await Expense.findByPk(id, {
@@ -1203,12 +1590,20 @@ async function markExpenseAsPaid(req, res, next) {
         { model: ExpenseCategory, as: 'category' },
         { model: Account, as: 'account', attributes: ['id', 'name', 'type', 'bankName', 'paymentMethod', 'balance'] },
         { model: VaultAccount, as: 'vaultAccount', attributes: ['id', 'name', 'balance'] },
+        {
+          model: CashRegisterSession,
+          as: 'cashRegisterSession',
+          attributes: ['id', 'shiftDate', 'shiftName', 'shiftNumber', 'status', 'closingBalance', 'actualCash'],
+          required: false,
+        },
       ]
     });
 
     res.json({
       success: true,
       data: paidExpense,
+      ...(sessionCashSync ? { sessionCashSync } : {}),
+      ...(collectClawback?.clawbackAmount > 0 ? { collectClawback } : {}),
       ...(pctTransaction ? {
         pettyCash: {
           transactionNumber: pctTransaction.transactionNumber,
@@ -1422,28 +1817,56 @@ async function reopenExpense(req, res, next) {
           }
         }
       }
-      // cash_drawer: no ledger debit at pay-time — clearing status is enough
+      // cash_drawer: no ledger debit at pay-time — sync session cash after status flip below
     }
 
     const wasPaid = previousStatus === 'paid';
+    const wasDrawerPaid = wasPaid && isCashDrawerFundSource({
+      fundSource: expense.fundSource,
+      paymentMethod: expense.paymentMethod,
+      accountId: expense.accountId,
+      vaultAccountId: expense.vaultAccountId,
+    });
+    const boundSessionId = expense.cashRegisterSessionId || null;
 
     await expense.update({
       status: 'pending',
       approvedBy: null,
       approvedAt: null,
-      paymentMethod: wasPaid ? null : expense.paymentMethod,
-      bankName: wasPaid ? null : expense.bankName,
+      paymentMethod: wasDrawerPaid ? 'cash' : (wasPaid ? null : expense.paymentMethod),
+      bankName: wasPaid && !wasDrawerPaid ? null : expense.bankName,
       paymentNotes: wasPaid ? null : expense.paymentNotes,
       paidDate: wasPaid ? null : expense.paidDate,
-      fundSource: wasPaid ? null : expense.fundSource,
+      // Expense laci tetap milik shift; jangan lepas binding saat reopen
+      fundSource: wasDrawerPaid ? 'cash_drawer' : (wasPaid ? null : expense.fundSource),
       accountId: wasPaid ? null : expense.accountId,
       vaultAccountId: wasPaid ? null : expense.vaultAccountId,
+      cashRegisterSessionId: boundSessionId,
       notes: reason
         ? (expense.notes
             ? `${expense.notes}\n[${today}] Reopened: ${reason}${reversalNotes.length ? ` — rollback: ${reversalNotes.join(', ')}` : ''}`
             : `[${today}] Reopened: ${reason}${reversalNotes.length ? ` — rollback: ${reversalNotes.join(', ')}` : ''}`)
         : expense.notes
     }, { transaction });
+
+    let sessionCashSync = null;
+    let collectClawbackReversal = null;
+    if (wasDrawerPaid && boundSessionId) {
+      const boundSession = await CashRegisterSession.findOne({
+        where: { id: boundSessionId, tenantId, deletedAt: null },
+        lock: transaction.LOCK.UPDATE,
+        transaction,
+      });
+      if (boundSession?.status === 'closed') {
+        // Pulihkan "sudah diambil" yang sempat dikurangi saat paid-after-collect
+        collectClawbackReversal = await reverseCollectClawbacksForExpense(expense, {
+          tenantId,
+          userId,
+          timezone: getTenantTimezone(req),
+        }, transaction);
+        sessionCashSync = await syncClosedSessionCash(boundSession, transaction);
+      }
+    }
 
     await transaction.commit();
 
@@ -1452,6 +1875,12 @@ async function reopenExpense(req, res, next) {
         { model: ExpenseCategory, as: 'category' },
         { model: User, as: 'approver', attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: Account, as: 'account', attributes: ['id', 'name', 'type', 'bankName', 'paymentMethod', 'balance'], required: false },
+        {
+          model: CashRegisterSession,
+          as: 'cashRegisterSession',
+          attributes: ['id', 'shiftDate', 'shiftName', 'shiftNumber', 'status'],
+          required: false,
+        },
       ]
     });
 
@@ -1463,17 +1892,19 @@ async function reopenExpense(req, res, next) {
       previousStatus,
       reason: reason || null,
       moneyReversal: reversalNotes,
-      ip: getClientIp(req),
-      userAgent: getUserAgent(req)
+      sessionCashSync,
+      collectClawbackReversal,
     });
 
     return res.json({
       success: true,
-      message: wasPaid && reversalNotes.length
-        ? `Expense reopened. Nominal dikembalikan ke: ${reversalNotes.join(', ')}`
-        : `Expense reopened from '${previousStatus}' back to 'pending'`,
       data: reopenedExpense,
+      ...(sessionCashSync ? { sessionCashSync } : {}),
+      ...(collectClawbackReversal ? { collectClawbackReversal } : {}),
       reversal: reversalNotes,
+      message: wasPaid && reversalNotes.length
+        ? `Expense reopened; dana dikembalikan ke: ${reversalNotes.join(', ')}`
+        : `Expense reopened from '${previousStatus}' back to 'pending'`,
     });
 
   } catch (error) {

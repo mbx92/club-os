@@ -39,6 +39,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'accountId',
         as: 'account'
       });
+      Expense.belongsTo(models.CashRegisterSession, {
+        foreignKey: 'cashRegisterSessionId',
+        as: 'cashRegisterSession'
+      });
     }
   }
 
@@ -129,6 +133,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'Linked Account — used for auto-debit when expense is paid',
     },
+    cashRegisterSessionId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: { model: 'CashRegisterSessions', key: 'id' },
+      comment: 'Shift laci yang dipakai saat dibayar dari cash_drawer',
+    },
     bankName: {
       type: DataTypes.STRING,
       allowNull: true
@@ -213,7 +223,8 @@ module.exports = (sequelize, DataTypes) => {
       { fields: ['tenantId', 'expenseDate'] },
       { fields: ['tenantId', 'status', 'expenseDate'] },
       { fields: ['fundSource'] },
-      { fields: ['vaultAccountId'] }
+      { fields: ['vaultAccountId'] },
+      { fields: ['cashRegisterSessionId'] }
     ],
     hooks: {
       beforeValidate: (expense) => {

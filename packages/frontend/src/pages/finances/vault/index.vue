@@ -306,6 +306,20 @@ const isSessionCollectDisabled = (session) => {
   return status === 'collected' || status === 'no_cash_transaction' || Number(session.remainingAmount || 0) <= 0
 }
 
+const expenseStatusClass = (status) => {
+  if (status === 'paid') return 'badge-success'
+  if (status === 'approved') return 'badge-info'
+  if (status === 'pending') return 'badge-warning'
+  return 'badge-ghost'
+}
+
+const expenseStatusLabel = (status) => {
+  if (status === 'paid') return 'Paid'
+  if (status === 'approved') return 'Approved'
+  if (status === 'pending') return 'Pending'
+  return status || '-'
+}
+
 const toggleSession = (session, checked) => {
   if (isSessionCollectDisabled(session)) return
   selectedCollections.value[session.id] = {
@@ -650,6 +664,17 @@ onMounted(async () => {
                 </div>
               </div>
 
+              <div
+                v-if="(item.drawerExpenseTotal || 0) > 0 || (item.pendingDrawerExpenseTotal || 0) > 0"
+                class="mt-2 pl-8 text-xs text-base-content/60"
+              >
+                Pengeluaran laci:
+                <span class="font-medium text-base-content">{{ formatCurrency(item.drawerExpenseTotal || 0) }} paid</span>
+                <span v-if="(item.pendingDrawerExpenseTotal || 0) > 0">
+                  · <span class="font-medium text-warning">{{ formatCurrency(item.pendingDrawerExpenseTotal) }} pending</span>
+                </span>
+              </div>
+
               <div class="mt-3 pl-8">
                 <div class="flex items-center justify-between text-xs text-base-content/60 mb-1">
                   <span>Progress collect</span>
@@ -679,57 +704,93 @@ onMounted(async () => {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="session in item.sessions" :key="session.id" class="hover">
-                    <td>
-                      <input
-                        type="checkbox"
-                        class="checkbox checkbox-sm"
-                        :checked="selectedCollections[session.id]?.selected || false"
-                        :disabled="isSessionCollectDisabled(session)"
-                        @change="toggleSession(session, $event.target.checked)"
-                      />
-                    </td>
-                    <td>
-                      <div class="font-medium">Shift {{ session.shiftNumber || '-' }} · {{ session.shiftName || '-' }}</div>
-                    </td>
-                    <td>{{ formatCurrency(session.actualCash || session.closingBalance || session.collectibleBase) }}</td>
-                    <td>{{ formatCurrency(session.collectedAmount) }}</td>
-                    <td>
-                      <div class="font-semibold text-warning">{{ formatCurrency(session.remainingAmount) }}</div>
-                    </td>
-                    <td class="min-w-28">
-                      <progress
-                        class="progress progress-success w-full h-2"
-                        :value="getCollectionProgress(session)"
-                        max="100"
-                      />
-                      <div class="text-xs text-base-content/50 mt-1">{{ getCollectionProgress(session) }}%</div>
-                    </td>
-                    <td>
-                      <span class="badge badge-sm" :class="collectionStatusClass(getCollectionStatus(session))">
-                        {{ collectionStatusLabel(getCollectionStatus(session)) }}
-                      </span>
-                    </td>
-                    <td class="min-w-40">
-                      <CurrencyInput
-                        :model-value="selectedCollections[session.id]?.amount || ''"
-                        :disabled="!selectedCollections[session.id]?.selected || isSessionCollectDisabled(session)"
-                        input-class="input input-bordered input-sm w-full"
-                        placeholder="Kosong = ambil penuh"
-                        @update:model-value="updateSelectedAmount(session.id, $event)"
-                      />
-                    </td>
-                    <td class="min-w-48">
-                      <input
-                        :value="selectedCollections[session.id]?.notes || ''"
-                        type="text"
-                        class="input input-bordered input-sm w-full"
-                        :disabled="!selectedCollections[session.id]?.selected || isSessionCollectDisabled(session)"
-                        placeholder="Catatan per shift"
-                        @input="updateSelectedNotes(session.id, $event.target.value)"
-                      />
-                    </td>
-                  </tr>
+                  <template v-for="session in item.sessions" :key="session.id">
+                    <tr class="hover">
+                      <td>
+                        <input
+                          type="checkbox"
+                          class="checkbox checkbox-sm"
+                          :checked="selectedCollections[session.id]?.selected || false"
+                          :disabled="isSessionCollectDisabled(session)"
+                          @change="toggleSession(session, $event.target.checked)"
+                        />
+                      </td>
+                      <td>
+                        <div class="font-medium">Shift {{ session.shiftNumber || '-' }} · {{ session.shiftName || '-' }}</div>
+                        <div
+                          v-if="(session.drawerExpenseTotal || 0) > 0 || (session.pendingDrawerExpenseTotal || 0) > 0"
+                          class="text-xs text-base-content/60 mt-0.5"
+                        >
+                          Expense laci {{ formatCurrency(session.drawerExpenseTotal || 0) }}
+                          <span v-if="(session.pendingDrawerExpenseTotal || 0) > 0" class="text-warning">
+                            (+{{ formatCurrency(session.pendingDrawerExpenseTotal) }} pending)
+                          </span>
+                        </div>
+                      </td>
+                      <td>{{ formatCurrency(session.actualCash || session.closingBalance || session.collectibleBase) }}</td>
+                      <td>{{ formatCurrency(session.collectedAmount) }}</td>
+                      <td>
+                        <div class="font-semibold text-warning">{{ formatCurrency(session.remainingAmount) }}</div>
+                      </td>
+                      <td class="min-w-28">
+                        <progress
+                          class="progress progress-success w-full h-2"
+                          :value="getCollectionProgress(session)"
+                          max="100"
+                        />
+                        <div class="text-xs text-base-content/50 mt-1">{{ getCollectionProgress(session) }}%</div>
+                      </td>
+                      <td>
+                        <span class="badge badge-sm" :class="collectionStatusClass(getCollectionStatus(session))">
+                          {{ collectionStatusLabel(getCollectionStatus(session)) }}
+                        </span>
+                      </td>
+                      <td class="min-w-40">
+                        <CurrencyInput
+                          :model-value="selectedCollections[session.id]?.amount || ''"
+                          :disabled="!selectedCollections[session.id]?.selected || isSessionCollectDisabled(session)"
+                          input-class="input input-bordered input-sm w-full"
+                          placeholder="Kosong = ambil penuh"
+                          @update:model-value="updateSelectedAmount(session.id, $event)"
+                        />
+                      </td>
+                      <td class="min-w-48">
+                        <input
+                          :value="selectedCollections[session.id]?.notes || ''"
+                          type="text"
+                          class="input input-bordered input-sm w-full"
+                          :disabled="!selectedCollections[session.id]?.selected || isSessionCollectDisabled(session)"
+                          placeholder="Catatan per shift"
+                          @input="updateSelectedNotes(session.id, $event.target.value)"
+                        />
+                      </td>
+                    </tr>
+                    <tr v-if="session.expenses?.length" class="bg-base-200/40">
+                      <td colspan="9" class="py-2">
+                        <div class="pl-6 space-y-1">
+                          <div class="text-xs font-semibold text-base-content/60 uppercase tracking-wide">
+                            Pengeluaran laci shift ini
+                          </div>
+                          <div
+                            v-for="exp in session.expenses"
+                            :key="exp.id"
+                            class="flex flex-wrap items-center justify-between gap-2 text-sm py-1 border-b border-base-300/60 last:border-0"
+                          >
+                            <div class="min-w-0">
+                              <span class="font-medium">{{ exp.title || exp.expenseNumber }}</span>
+                              <span class="text-base-content/50 ml-2">{{ exp.expenseNumber }}</span>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                              <span class="badge badge-sm" :class="expenseStatusClass(exp.status)">
+                                {{ expenseStatusLabel(exp.status) }}
+                              </span>
+                              <span class="font-semibold tabular-nums">{{ formatCurrency(exp.totalAmount) }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
                 </tbody>
               </table>
             </div>
@@ -772,6 +833,16 @@ onMounted(async () => {
                 <td>
                   <div class="font-medium">Shift {{ session.shiftNumber || '-' }}</div>
                   <div class="text-xs text-base-content/60">{{ session.shiftName || '-' }}</div>
+                  <div
+                    v-if="session.expenses?.length"
+                    class="text-xs text-base-content/60 mt-1"
+                  >
+                    {{ session.expenses.length }} expense ·
+                    {{ formatCurrency(session.drawerExpenseTotal || 0) }} paid
+                    <span v-if="(session.pendingDrawerExpenseTotal || 0) > 0" class="text-warning">
+                      · {{ formatCurrency(session.pendingDrawerExpenseTotal) }} pending
+                    </span>
+                  </div>
                 </td>
                 <td>{{ formatCurrency(session.actualCash || session.closingBalance || session.collectibleBase) }}</td>
                 <td>{{ formatCurrency(session.collectedAmount) }}</td>
