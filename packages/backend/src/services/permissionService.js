@@ -67,13 +67,16 @@ async function getSubscriptionInfo(tenantId) {
     return { modules: {}, limits: {}, features: {}, status: 'none', planName: null, isInTrial: false };
   }
 
-  const f = subscription.plan.features || {};
+  // plan.features shape: { modules, limits, transactions, payments, ... }
+  // There is no nested `features` key — categories live at the top level.
+  const f = subscription.plan?.features || {};
+  const { modules = {}, limits = {}, ...featureCategories } = f;
   return {
-    modules:   f.modules  || {},
-    limits:    f.limits   || {},
-    features:  f.features || {},
-    status:    subscription.status,
-    planName:  subscription.plan.name,
+    modules,
+    limits,
+    features: featureCategories,
+    status: subscription.status,
+    planName: subscription.plan.name,
     isInTrial: false,
   };
 }

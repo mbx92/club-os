@@ -49,10 +49,12 @@ export function useNavigation() {
     }
 
     if (item.requireFeature) {
-      // Support both { category, name } (old) and flat string (new)
+      // Support flat string ("vouchers") and { category, name } ("transactions.vouchers")
       const feat = item.requireFeature
-      const name = typeof feat === 'string' ? feat : feat.name
-      if (!subscriptionStore.hasFeature(name)) return false
+      const featureKey = typeof feat === 'string'
+        ? feat
+        : (feat.category && feat.name ? `${feat.category}.${feat.name}` : feat.name)
+      if (!subscriptionStore.hasFeature(featureKey)) return false
     }
 
     return true
