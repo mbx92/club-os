@@ -568,21 +568,12 @@ exports.deleteVoucher = async (req, res, next) => {
       }
       return next(createError('NOT_FOUND', 'Voucher not found'));
     }
-    
-    // Check if voucher has usage records
-    const hasUsage = await VoucherUsage.count({
-      where: { voucherId: id },
-      transaction
-    });
-    
-    if (hasUsage > 0) {
-      if (transaction && !transaction.finished) {
-        await transaction.rollback();
-      }
-      return next(createError('VALIDATION_ERROR', 'Cannot delete voucher with existing usage records'));
-    }
-    
-    // Soft delete the voucher
+
+    // Soft delete even if usage records exist — history stays in VoucherUsages
+    // for reports/audit; paranoid exclude keeps this voucher out of active lists
+    // and validation. Free the unique code so a new voucher can reuse it.
+    const deletedCode = `${voucher.code}__del_${Date.now()}`.slice(0, 255);
+    await voucher.update({ code: deletedCode, isActive: false }, { transaction });
     await voucher.destroy({ transaction });
     
     await transaction.commit();
