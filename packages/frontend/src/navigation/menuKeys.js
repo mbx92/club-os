@@ -11,7 +11,7 @@ export const ROLE_MENU_MAP = {
   admin: [
     'dashboard',
     'cash-register', 'cash-register.shift', 'cash-register.dashboard', 'cash-register.history', 'cash-register.daily-report', 'cash-register.daily-summary',
-    'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos', 'gym.void-transactions', 'gym.reports',
+    'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.catalog', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos', 'gym.void-transactions', 'gym.reports',
     'restaurant', 'restaurant.dashboard', 'restaurant.categories', 'restaurant.products', 'restaurant.locations', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.stock', 'restaurant.reports',
     'vouchers',
     'back-office', 'back-office.attendance', 'back-office.attendance-report', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
@@ -23,7 +23,7 @@ export const ROLE_MENU_MAP = {
   manager: [
     'dashboard',
     'cash-register', 'cash-register.shift', 'cash-register.dashboard', 'cash-register.history', 'cash-register.daily-report', 'cash-register.daily-summary',
-    'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos', 'gym.void-transactions', 'gym.reports',
+    'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.catalog', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos', 'gym.void-transactions', 'gym.reports',
     'restaurant', 'restaurant.dashboard', 'restaurant.categories', 'restaurant.products', 'restaurant.locations', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.stock', 'restaurant.reports',
     'vouchers',
     'back-office', 'back-office.attendance', 'back-office.attendance-report', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
@@ -50,7 +50,7 @@ export const ROLE_MENU_MAP = {
   owner: [
     'dashboard',
     'cash-register', 'cash-register.shift', 'cash-register.dashboard', 'cash-register.history', 'cash-register.daily-report', 'cash-register.daily-summary',
-    'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos', 'gym.void-transactions', 'gym.reports',
+    'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.catalog', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos', 'gym.void-transactions', 'gym.reports',
     'restaurant', 'restaurant.dashboard', 'restaurant.categories', 'restaurant.products', 'restaurant.locations', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.stock', 'restaurant.reports',
     'vouchers',
     'back-office', 'back-office.attendance', 'back-office.attendance-report', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
@@ -85,6 +85,7 @@ export const ALL_MENU_KEYS = [
       { key: 'gym.dashboard', label: 'Dashboard' },
       { key: 'gym.members', label: 'Members' },
       { key: 'gym.instructors', label: 'Instructors' },
+      { key: 'gym.catalog', label: 'Katalog' },
       { key: 'gym.classes', label: 'Classes' },
       { key: 'gym.memberships', label: 'Memberships' },
       { key: 'gym.pt', label: 'Personal Training' },

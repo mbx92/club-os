@@ -111,6 +111,14 @@ export const navigation = [
         subject: "Instructor",
       },
       {
+        label: "Katalog",
+        to: "/gym/catalog",
+        icon: "box",
+        menuKey: "gym.catalog",
+        action: "read",
+        subject: "ServicePlan",
+      },
+      {
         label: "Classes",
         icon: "calendar-clock",
         menuKey: "gym.classes",

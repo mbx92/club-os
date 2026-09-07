@@ -13,7 +13,7 @@
 const ADMIN_MENU_ACCESS = [
   'dashboard',
   'cash-register', 'cash-register.shift', 'cash-register.dashboard', 'cash-register.history', 'cash-register.daily-report', 'cash-register.daily-summary',
-  'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos', 'gym.void-transactions', 'gym.reports',
+  'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.catalog', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos', 'gym.void-transactions', 'gym.reports',
   'restaurant', 'restaurant.dashboard', 'restaurant.categories', 'restaurant.products', 'restaurant.locations', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.stock', 'restaurant.reports',
   'vouchers',
   'back-office', 'back-office.attendance', 'back-office.attendance-report', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
@@ -26,7 +26,7 @@ const ADMIN_MENU_ACCESS = [
 const MANAGER_MENU_ACCESS = [
   'dashboard',
   'cash-register', 'cash-register.shift', 'cash-register.dashboard', 'cash-register.history', 'cash-register.daily-report', 'cash-register.daily-summary',
-  'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos', 'gym.void-transactions', 'gym.reports',
+  'gym', 'gym.dashboard', 'gym.members', 'gym.instructors', 'gym.catalog', 'gym.classes', 'gym.memberships', 'gym.pt', 'gym.active-services', 'gym.check-ins', 'gym.pos', 'gym.void-transactions', 'gym.reports',
   'restaurant', 'restaurant.dashboard', 'restaurant.categories', 'restaurant.products', 'restaurant.locations', 'restaurant.tables', 'restaurant.floor-plan', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.stock', 'restaurant.reports',
   'vouchers',
   'back-office', 'back-office.attendance', 'back-office.attendance-report', 'back-office.devices', 'back-office.employee', 'back-office.schedule',
@@ -77,7 +77,7 @@ const SUBJECT_MENU_MAP = {
   Membership: ['gym.memberships'],
   MembershipPlan: ['gym.memberships'],
   PTSession: ['gym.pt'],
-  ServicePlan: ['gym.active-services'],
+  ServicePlan: ['gym.catalog', 'gym.active-services'],
   ActiveService: ['gym.active-services'],
   Transaction: ['gym.pos', 'gym.void-transactions', 'finances.transactions', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.dashboard', 'restaurant.reports'],
   GymReport: ['gym.reports', 'reports.service-reports', 'reports.product-reports', 'reports.staff-reports', 'reports.forecasting'],

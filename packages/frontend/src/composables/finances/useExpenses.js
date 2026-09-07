@@ -35,6 +35,8 @@ export function useExpenses() {
       if (filters.status) params.append('status', filters.status)
       if (filters.categoryId) params.append('categoryId', filters.categoryId)
       if (filters.locationId) params.append('locationId', filters.locationId)
+      if (filters.fundSource) params.append('fundSource', filters.fundSource)
+      if (filters.accountId) params.append('accountId', filters.accountId)
       if (filters.startDate) params.append('startDate', filters.startDate)
       if (filters.endDate) params.append('endDate', filters.endDate)
       if (filters.search) params.append('search', filters.search)

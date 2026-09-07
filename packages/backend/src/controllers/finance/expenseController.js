@@ -353,6 +353,60 @@ function getCashierVisibleExpenseWhere() {
   };
 }
 
+/**
+ * Filter daftar pengeluaran berdasarkan sumber dana.
+ * Nilai UI: account | cash_drawer | petty_cash (plus exact fundSource untuk nilai lain).
+ */
+function getFundSourceFilterWhere(fundSource) {
+  const fs = String(fundSource || '').toLowerCase();
+  if (!fs) return null;
+
+  if (fs === 'cash_drawer') {
+    return {
+      [Op.or]: [
+        { fundSource: 'cash_drawer' },
+        {
+          paymentMethod: 'cash',
+          accountId: { [Op.is]: null },
+          vaultAccountId: { [Op.is]: null },
+          fundSource: { [Op.is]: null },
+        },
+      ],
+    };
+  }
+
+  if (fs === 'petty_cash') {
+    return {
+      [Op.or]: [
+        { fundSource: 'petty_cash' },
+        { paymentMethod: 'petty_cash' },
+      ],
+    };
+  }
+
+  if (fs === 'account') {
+    return {
+      [Op.and]: [
+        {
+          [Op.or]: [
+            { fundSource: { [Op.is]: null } },
+            { fundSource: { [Op.notIn]: ['petty_cash', 'cash_drawer'] } },
+          ],
+        },
+        {
+          [Op.or]: [
+            { fundSource: { [Op.in]: ['account', 'vault', 'bank'] } },
+            { accountId: { [Op.ne]: null } },
+            { vaultAccountId: { [Op.ne]: null } },
+          ],
+        },
+      ],
+    };
+  }
+
+  return { fundSource: fs };
+}
+
 function isCashierUser(user) {
   const role = getRoleName(user);
   return role === 'cashier' || role === 'kasir';
@@ -824,6 +878,8 @@ async function getAllExpenses(req, res, next) {
       status,
       categoryId,
       locationId,
+      fundSource,
+      accountId,
       startDate,
       endDate,
       search,
@@ -853,6 +909,15 @@ async function getAllExpenses(req, res, next) {
 
     if (locationId) {
       where.locationId = locationId;
+    }
+
+    const fundSourceWhere = getFundSourceFilterWhere(fundSource);
+    if (fundSourceWhere) {
+      andConditions.push(fundSourceWhere);
+    }
+
+    if (accountId) {
+      where.accountId = accountId;
     }
 
     const expenseDateRange = buildOptionalDateRangeFilter(startDate, endDate, Op, getTenantTimezone(req));

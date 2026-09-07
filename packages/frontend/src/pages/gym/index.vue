@@ -116,10 +116,10 @@ const quickLinks = [
     stats: "Analytics",
   },
   {
-    title: "Service Plans",
-    description: "Membership and service plan management",
+    title: "Katalog",
+    description: "Kelola membership, paket, dan add-on",
     icon: IconBrandGoogleFit,
-    route: "/gym/service-plans",
+    route: "/gym/catalog",
     color: "bg-secondary/10 text-secondary",
     stats: "Services",
   },

@@ -35,8 +35,10 @@
               >
                 <option value="" disabled>Select service type</option>
                 <option value="membership">Membership</option>
-                <option value="class_package">Class Package</option>
-                <option value="pt_package">PT Package</option>
+                <option value="class_package">Paket Kelas</option>
+                <option value="pt_package">Paket PT</option>
+                <option value="spa_package">Paket Spa</option>
+                <option value="custom">Add-on</option>
               </select>
               <label v-if="errors.serviceType" class="label">
                 <span class="label-text-alt text-error">{{

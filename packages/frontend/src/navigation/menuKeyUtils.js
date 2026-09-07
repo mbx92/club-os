@@ -39,7 +39,7 @@ const SUBJECT_MENU_MAP = {
   Membership: ['gym.memberships'],
   MembershipPlan: ['gym.memberships'],
   PTSession: ['gym.pt'],
-  ServicePlan: ['gym.active-services'],
+  ServicePlan: ['gym.catalog', 'gym.active-services'],
   ActiveService: ['gym.active-services'],
   Transaction: ['gym.pos', 'gym.void-transactions', 'finances.transactions', 'restaurant.pos', 'restaurant.floor-plan-pos', 'restaurant.orders', 'restaurant.void-transactions', 'restaurant.dashboard', 'restaurant.reports'],
   GymReport: ['gym.reports', 'reports.service-reports', 'reports.product-reports', 'reports.staff-reports', 'reports.forecasting'],

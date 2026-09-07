@@ -39,6 +39,9 @@ export const EXPENSE_PAYMENT_OPTIONS = [
 /** Account types allowed as expense fund source for owner/admin. */
 export const EXPENSE_ACCOUNT_TYPES = ['cash', 'bank', 'main_vault']
 
+/** Account types that can appear on the expenses list account filter. */
+export const EXPENSE_ACCOUNT_FILTER_TYPES = [...EXPENSE_ACCOUNT_TYPES, 'petty_cash']
+
 export function getExpensePaymentOptions({ isCashier = false } = {}) {
   return isCashier ? EXPENSE_PAYMENT_OPTIONS_CASHIER : EXPENSE_PAYMENT_OPTIONS_OWNER
 }
@@ -96,13 +99,20 @@ export function getExpensePaymentOptionsWithDrawer(opts = {}) {
   })
 }
 
-const FUND_SOURCE_LABELS = {
+export const FUND_SOURCE_LABELS = {
   account: 'Dari Akun Keuangan',
   cash_drawer: 'Laci / Cash Drawer',
   vault: 'Drawer',
   petty_cash: 'Petty Cash',
   bank: 'Transfer Bank',
 }
+
+/** Filter values for the expenses list (aligned with payment options). */
+export const EXPENSE_FUND_SOURCE_FILTER_OPTIONS = [
+  { value: 'account', label: FUND_SOURCE_LABELS.account },
+  { value: 'cash_drawer', label: FUND_SOURCE_LABELS.cash_drawer },
+  { value: 'petty_cash', label: FUND_SOURCE_LABELS.petty_cash },
+]
 
 const PAYMENT_METHOD_LABELS = {
   cash: 'Tunai',
@@ -160,6 +170,11 @@ export function paymentMethodFromAccount(acc) {
 /** Filter accounts usable as expense fund source (tunai settled + bank). */
 export function filterExpenseAccounts(accounts = []) {
   return (accounts || []).filter((a) => EXPENSE_ACCOUNT_TYPES.includes(a.type) && a.isActive !== false)
+}
+
+/** Filter accounts for the expenses list (includes Petty Cash). */
+export function filterExpenseAccountOptions(accounts = []) {
+  return (accounts || []).filter((a) => EXPENSE_ACCOUNT_FILTER_TYPES.includes(a.type) && a.isActive !== false)
 }
 
 /**

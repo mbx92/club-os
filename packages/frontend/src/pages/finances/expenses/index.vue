@@ -85,6 +85,32 @@ meta:
             </select>
           </div>
 
+          <!-- Fund Source Filter -->
+          <div class="form-control lg:col-span-2">
+            <label class="label">
+              <span class="label-text font-medium">Sumber Dana</span>
+            </label>
+            <select v-model="filters.fundSource" class="select select-bordered w-full" @change="handleSearch">
+              <option value="">Semua Sumber Dana</option>
+              <option v-for="opt in fundSourceFilterOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Account Filter -->
+          <div class="form-control lg:col-span-2">
+            <label class="label">
+              <span class="label-text font-medium">Akun</span>
+            </label>
+            <select v-model="filters.accountId" class="select select-bordered w-full" @change="handleSearch">
+              <option value="">Semua Akun</option>
+              <option v-for="account in accountFilterOptions" :key="account.id" :value="account.id">
+                {{ formatAccountFilterLabel(account) }}
+              </option>
+            </select>
+          </div>
+
           <!-- Start Date -->
           <div class="form-control lg:col-span-2">
             <label class="label">
@@ -149,6 +175,20 @@ meta:
             >
               Kategori ✕
             </button>
+            <button
+              v-if="filters.fundSource"
+              class="badge badge-primary badge-outline gap-1"
+              @click="clearFilter('fundSource')"
+            >
+              Sumber Dana: {{ fundSourceFilterLabel }} ✕
+            </button>
+            <button
+              v-if="filters.accountId"
+              class="badge badge-primary badge-outline gap-1"
+              @click="clearFilter('accountId')"
+            >
+              Akun: {{ accountFilterLabel }} ✕
+            </button>
             <button class="btn btn-xs btn-ghost" @click="clearAllFilters">Hapus Semua</button>
           </div>
         </div>
@@ -162,57 +202,77 @@ meta:
 
     <!-- Expenses Table -->
     <div v-else-if="hasExpenses" class="card bg-base-100 shadow-xl">
-      <div class="card-body">
+      <div class="card-body p-3 sm:p-4">
         <div class="overflow-x-auto">
-          <table class="table table-zebra table-sm">
+          <table class="table table-xs table-zebra">
             <thead>
-              <tr>
-                <th>Tanggal</th>
+              <tr class="text-[11px] uppercase tracking-wide text-base-content/60">
+                <th class="whitespace-nowrap">Tanggal</th>
                 <th>Pengeluaran</th>
                 <th>Vendor</th>
+                <th>Sumber Dana</th>
                 <th class="text-right">Jumlah</th>
                 <th class="text-center">Status</th>
                 <th>Dibuat Oleh</th>
-                <th class="text-center">Aksi</th>
+                <th class="text-center w-10"></th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="expense in expenses" :key="expense.id">
-                <td>
-                  <div class="text-sm">{{ formatDate(expense.expenseDate) }}</div>
-                  <div v-if="expense.dueDate" class="text-xs text-base-content/60">
-                    Due: {{ formatDate(expense.dueDate) }}
+              <tr v-for="expense in expenses" :key="expense.id" class="align-top">
+                <td class="whitespace-nowrap">
+                  <div class="leading-tight">{{ formatDate(expense.expenseDate) }}</div>
+                  <div v-if="expense.dueDate" class="text-[10px] text-base-content/50 leading-tight">
+                    Jatuh tempo {{ formatDate(expense.dueDate) }}
+                  </div>
+                </td>
+                <td class="min-w-[12rem] max-w-[18rem]">
+                  <div class="font-medium leading-tight truncate" :title="expense.title">
+                    {{ expense.title }}
+                  </div>
+                  <div class="flex items-center gap-1.5 text-[11px] text-base-content/50 leading-tight mt-0.5">
+                    <span class="font-mono">{{ expense.expenseNumber }}</span>
+                    <span v-if="expense.category?.name" class="opacity-30">·</span>
+                    <span v-if="expense.category?.name" class="inline-flex items-center gap-1 min-w-0">
+                      <span
+                        v-if="expense.category?.color"
+                        class="w-1.5 h-1.5 rounded-full shrink-0"
+                        :style="{ backgroundColor: expense.category.color }"
+                      ></span>
+                      <span class="truncate">{{ expense.category.name }}</span>
+                    </span>
                   </div>
                 </td>
                 <td>
-                  <div class="font-mono text-xs text-base-content/50">{{ expense.expenseNumber }}</div>
-                  <div class="font-semibold truncate max-w-[220px]">{{ expense.title }}</div>
-                  <div class="flex items-center gap-1 text-xs text-base-content/60">
-                    <div
-                      v-if="expense.category?.color"
-                      class="w-2 h-2 rounded-full shrink-0"
-                      :style="{ backgroundColor: expense.category.color }"
-                    ></div>
-                    <span class="truncate max-w-[180px]">{{ expense.category?.name || '-' }}</span>
+                  <span class="truncate max-w-[8rem] block" :title="expense.vendor || ''">
+                    {{ expense.vendor || '-' }}
+                  </span>
+                </td>
+                <td class="min-w-[8rem] max-w-[12rem]">
+                  <div class="leading-tight truncate" :title="formatExpenseFundSource(expense)">
+                    {{ fundSourceKindLabel(expense) }}
+                  </div>
+                  <div
+                    v-if="fundSourceAccountLabel(expense)"
+                    class="text-[11px] text-base-content/50 leading-tight truncate"
+                    :title="fundSourceAccountLabel(expense)"
+                  >
+                    {{ fundSourceAccountLabel(expense) }}
                   </div>
                 </td>
-                <td>
-                  <span class="truncate max-w-[100px] block text-sm">{{ expense.vendor || '-' }}</span>
-                </td>
-                <td class="text-right">
-                  <div class="font-semibold">{{ formatCurrency(expense.totalAmount) }}</div>
-                  <div v-if="expense.taxAmount > 0" class="text-xs text-base-content/60">
-                    Tax: {{ formatCurrency(expense.taxAmount) }}
+                <td class="text-right whitespace-nowrap">
+                  <div class="font-semibold leading-tight tabular-nums">{{ formatCurrency(expense.totalAmount) }}</div>
+                  <div v-if="expense.taxAmount > 0" class="text-[10px] text-base-content/50 leading-tight">
+                    Pajak {{ formatCurrency(expense.taxAmount) }}
                   </div>
                 </td>
-                <td class="text-center">
-                  <div :class="getStatusBadgeClass(expense.status)">
+                <td class="text-center whitespace-nowrap">
+                  <span :class="getStatusBadgeClass(expense.status)">
                     {{ formatStatus(expense.status) }}
-                  </div>
+                  </span>
                 </td>
                 <td>
                   <span
-                    class="text-sm truncate max-w-[120px] block"
+                    class="truncate max-w-[7rem] block"
                     :title="formatCreator(expense.creator)"
                   >{{ formatCreator(expense.creator) }}</span>
                 </td>
@@ -220,51 +280,35 @@ meta:
                   <div class="dropdown dropdown-end">
                     <button
                       tabindex="0"
-                      class="btn btn-ghost btn-sm btn-circle"
+                      class="btn btn-ghost btn-xs btn-circle"
                       :disabled="actionLoading"
                     >
-                      <IconDotsVertical class="w-4 h-4" />
+                      <IconDotsVertical class="w-3.5 h-3.5" />
                     </button>
-                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 rounded-box w-52">
-                      <!-- Approve (only for pending, not cashier) -->
+                    <ul tabindex="0" class="dropdown-content z-[1] menu menu-sm p-1.5 shadow-lg bg-base-100 rounded-box w-44">
                       <li v-if="!isCashier && expense.status === 'pending'">
                         <a @click="handleApprove(expense)">
-                          <IconCheck class="w-4 h-4 text-success" /> Approve
+                          <IconCheck class="w-3.5 h-3.5 text-success" /> Approve
                         </a>
                       </li>
-
-                      <!-- Mark as Paid (only for approved, not cashier) -->
                       <li v-if="!isCashier && expense.status === 'approved'">
                         <a @click="handleMarkAsPaid(expense)">
-                          <IconCreditCard class="w-4 h-4 text-info" /> Mark as Paid
+                          <IconCreditCard class="w-3.5 h-3.5 text-info" /> Mark as Paid
                         </a>
                       </li>
-
-                      <!-- Edit (cashier: draft/pending only; others: not paid) -->
                       <li v-if="isCashier ? ['draft', 'pending'].includes(expense.status) : expense.status !== 'paid'">
                         <a @click="openEditModal(expense)">
-                          <IconEdit class="w-4 h-4" /> Edit
+                          <IconEdit class="w-3.5 h-3.5" /> Edit
                         </a>
                       </li>
-
-                      <!-- View -->
                       <li>
                         <a @click="viewExpense(expense)">
-                          <IconEye class="w-4 h-4" /> Lihat Detail
+                          <IconEye class="w-3.5 h-3.5" /> Lihat Detail
                         </a>
                       </li>
-
-                      <!-- Reopen (admin only, for paid/cancelled/approved) -->
-                      <!-- <li v-if="isAdmin && ['paid', 'approved', 'cancelled'].includes(expense.status)">
-                        <a @click="handleReopen(expense)">
-                          <IconRefresh class="w-4 h-4 text-warning" /> Reopen
-                        </a>
-                      </li> -->
-
-                      <!-- Delete (cashier: draft/pending only; others: not paid) -->
                       <li v-if="isCashier ? ['draft', 'pending'].includes(expense.status) : expense.status !== 'paid'">
                         <a class="text-error" @click="handleDelete(expense)">
-                          <IconTrash class="w-4 h-4" /> Hapus
+                          <IconTrash class="w-3.5 h-3.5" /> Hapus
                         </a>
                       </li>
                     </ul>
@@ -276,20 +320,20 @@ meta:
         </div>
 
         <!-- Pagination -->
-        <div v-if="pagination.totalPages > 1" class="flex justify-center mt-6">
+        <div v-if="pagination.totalPages > 1" class="flex justify-center mt-4">
           <div class="join">
             <button
-              class="join-item btn"
+              class="join-item btn btn-xs"
               :disabled="pagination.page === 1"
               @click="changePage(pagination.page - 1)"
             >
               «
             </button>
-            <button class="join-item btn">
-              Page {{ pagination.page }} of {{ pagination.totalPages }}
+            <button class="join-item btn btn-xs">
+              {{ pagination.page }} / {{ pagination.totalPages }}
             </button>
             <button
-              class="join-item btn"
+              class="join-item btn btn-xs"
               :disabled="pagination.page === pagination.totalPages"
               @click="changePage(pagination.page + 1)"
             >
@@ -450,6 +494,9 @@ import {
   resolveExpensePaymentOption,
   paymentMethodFromAccount,
   filterExpenseAccounts,
+  filterExpenseAccountOptions,
+  formatExpenseFundSource,
+  EXPENSE_FUND_SOURCE_FILTER_OPTIONS,
 } from '@/utils/expensePayment'
 import {
   IconPlus,
@@ -521,6 +568,20 @@ const paymentOptions = computed(() => getExpensePaymentOptionsWithDrawer({
 
 const expenseAccounts = computed(() => filterExpenseAccounts(financeAccounts.value))
 
+const accountFilterOptions = computed(() => {
+  const accounts = filterExpenseAccountOptions(financeAccounts.value)
+  if (isCashier.value) {
+    return accounts.filter((account) => account.type === 'petty_cash')
+  }
+  return accounts
+})
+
+const formatAccountFilterLabel = (account) => {
+  if (!account) return '-'
+  const bank = account.bankName ? ` (${account.bankName})` : ''
+  return `${account.name}${bank}`
+}
+
 const resolvePaymentOption = (expense = null) =>
   resolveExpensePaymentOption(expense, { isCashier: isCashier.value }) || (isCashier.value ? 'cash_drawer_cash' : 'from_account')
 
@@ -549,6 +610,8 @@ const filters = ref({
   search: '',
   status: '',
   categoryId: '',
+  fundSource: '',
+  accountId: '',
   startDate: '',
   endDate: '',
   page: 1,
@@ -557,12 +620,31 @@ const filters = ref({
   sortOrder: 'DESC'
 })
 
+const fundSourceFilterOptions = computed(() => {
+  if (isCashier.value) {
+    return EXPENSE_FUND_SOURCE_FILTER_OPTIONS.filter((opt) => opt.value !== 'account')
+  }
+  return EXPENSE_FUND_SOURCE_FILTER_OPTIONS
+})
+
+const fundSourceFilterLabel = computed(() => {
+  return fundSourceFilterOptions.value.find((opt) => opt.value === filters.value.fundSource)?.label
+    || filters.value.fundSource
+})
+
+const accountFilterLabel = computed(() => {
+  const account = accountFilterOptions.value.find((item) => String(item.id) === String(filters.value.accountId))
+  return account ? formatAccountFilterLabel(account) : 'Akun'
+})
+
 const hasExpenses = computed(() => expenses.value.length > 0)
 
 const hasActiveFilters = computed(() => {
   return filters.value.search || 
          filters.value.status || 
          filters.value.categoryId ||
+         filters.value.fundSource ||
+         filters.value.accountId ||
          filters.value.startDate ||
          filters.value.endDate
 })
@@ -586,13 +668,30 @@ const formatDate = (date) => {
 
 const formatStatus = (status) => {
   const statusMap = {
-    draft: 'Draft',
-    pending: 'Pending',
-    approved: 'Approved',
-    paid: 'Paid',
-    cancelled: 'Cancelled'
+    draft: 'Draf',
+    pending: 'Tertunda',
+    approved: 'Disetujui',
+    paid: 'Dibayar',
+    cancelled: 'Dibatalkan'
   }
   return statusMap[status] || status
+}
+
+const fundSourceKindLabel = (expense) => {
+  const option = resolveExpensePaymentOption(expense, { isCashier: isCashier.value })
+  if (option === 'petty_cash') return 'Petty Cash'
+  if (option === 'cash_drawer_cash') return 'Laci'
+  return 'Akun'
+}
+
+const fundSourceAccountLabel = (expense) => {
+  if (expense?.account?.name) {
+    return expense.account.bankName
+      ? `${expense.account.name} (${expense.account.bankName})`
+      : expense.account.name
+  }
+  if (expense?.vaultAccount?.name) return expense.vaultAccount.name
+  return ''
 }
 
 const formatCreator = (creator) => {
@@ -603,13 +702,13 @@ const formatCreator = (creator) => {
 
 const getStatusBadgeClass = (status) => {
   const classes = {
-    draft: 'badge badge-ghost',
-    pending: 'badge badge-warning',
-    approved: 'badge badge-info',
-    paid: 'badge badge-success',
-    cancelled: 'badge badge-error'
+    draft: 'badge badge-ghost badge-xs',
+    pending: 'badge badge-warning badge-xs',
+    approved: 'badge badge-info badge-xs',
+    paid: 'badge badge-success badge-xs',
+    cancelled: 'badge badge-error badge-xs'
   }
-  return classes[status] || 'badge'
+  return classes[status] || 'badge badge-xs'
 }
 
 const handleSearch = () => {
@@ -630,6 +729,8 @@ const clearAllFilters = () => {
   filters.value.search = ''
   filters.value.status = ''
   filters.value.categoryId = ''
+  filters.value.fundSource = ''
+  filters.value.accountId = ''
   filters.value.startDate = ''
   filters.value.endDate = ''
   handleSearch()
