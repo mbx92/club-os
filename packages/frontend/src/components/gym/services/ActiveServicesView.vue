@@ -111,7 +111,7 @@
             <input
               v-model="filters.search"
               type="text"
-              placeholder="Search by member name..."
+              placeholder="Cari nama member, telepon, atau paket..."
               class="input input-bordered input-sm w-full"
               @input="debouncedSearch"
               @keyup.enter="handleSearch"

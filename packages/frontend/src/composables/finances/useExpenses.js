@@ -16,6 +16,10 @@ export function useExpenses() {
     total: 0,
     totalPages: 0
   })
+  const summary = ref({
+    totalAmount: 0,
+    count: 0
+  })
 
   const isDev = import.meta.env.DEV
 
@@ -53,6 +57,10 @@ export function useExpenses() {
 
       expenses.value = response.data.expenses || []
       pagination.value = response.data.pagination || pagination.value
+      summary.value = {
+        totalAmount: parseFloat(response.data.summary?.totalAmount) || 0,
+        count: response.data.summary?.count ?? pagination.value.total ?? 0
+      }
       
       return response
     } catch (error) {
@@ -223,6 +231,7 @@ export function useExpenses() {
     loading,
     actionLoading,
     pagination,
+    summary,
     fetchExpenses,
     fetchExpense,
     createExpense,

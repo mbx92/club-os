@@ -143,6 +143,16 @@ router.post('/:id/pre-print',
 );
 
 /**
+ * @route   POST /api/transactions/:id/reprint-receipt
+ * @desc    Reprint thermal receipt for a gym POS / membership transaction
+ * @access  Private
+ */
+router.post('/:id/reprint-receipt',
+  authorize('read', 'Transaction'),
+  transactionController.reprintReceipt
+);
+
+/**
  * @route   POST /api/transactions/:id/split-bill
  * @name    transactions.splitBillByItem
  * @desc    Split bill per item — divide one transaction into multiple bills by selected items.

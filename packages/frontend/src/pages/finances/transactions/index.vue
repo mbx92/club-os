@@ -18,9 +18,10 @@ import {
   IconChevronRight,
   IconArrowUp,
   IconArrowDown,
+  IconPrinter,
 } from '@tabler/icons-vue'
 
-const { transactions, pagination, loading, fetchTransactions } = useTransactions()
+const { transactions, pagination, loading, fetchTransactions, reprintReceipt } = useTransactions()
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function formatLocalDate(date) {
@@ -111,6 +112,19 @@ const onSearch = () => {
 }
 
 const goPage = (p) => { filters.value.page = p; load() }
+
+const reprintingId = ref(null)
+const handleReprint = async (tx) => {
+  if (!tx?.id || reprintingId.value) return
+  reprintingId.value = tx.id
+  try {
+    await reprintReceipt(tx.id)
+  } catch {
+    // notification handled in composable
+  } finally {
+    reprintingId.value = null
+  }
+}
 
 onMounted(load)
 
@@ -247,7 +261,7 @@ const orderTypeLabel = (t) => {
     </div>
 
     <!-- Table -->
-    <div class="card bg-base-100 shadow-xl overflow-hidden">
+    <div class="card bg-base-100 shadow-xl">
       <!-- Skeleton -->
       <div v-if="loading" class="p-4 space-y-2">
         <div v-for="i in filters.limit" :key="i" class="skeleton h-10 w-full"></div>
@@ -290,6 +304,7 @@ const orderTypeLabel = (t) => {
                   </span>
                 </button>
               </th>
+              <th class="text-center"></th>
             </tr>
           </thead>
           <tbody>
@@ -336,6 +351,19 @@ const orderTypeLabel = (t) => {
               </td>
               <td class="font-semibold text-sm text-right">
                 {{ formatCurrency(tx.totalAmount || tx.amount) }}
+              </td>
+              <td class="text-center overflow-visible">
+                <div class="tooltip tooltip-left z-20" data-tip="Cetak ulang receipt">
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-xs btn-circle"
+                    :disabled="reprintingId === tx.id"
+                    @click="handleReprint(tx)"
+                  >
+                    <span v-if="reprintingId === tx.id" class="loading loading-spinner loading-xs"></span>
+                    <IconPrinter v-else class="w-4 h-4" />
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>

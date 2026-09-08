@@ -11,6 +11,7 @@ export function useDatabaseBackup() {
 
   // State
   const backups = ref([])
+  const backupRetention = ref(null)
   const databaseInfo = ref(null)
   const isLoading = ref(false)
   const isCreatingBackup = ref(false)
@@ -26,6 +27,7 @@ export function useDatabaseBackup() {
 
       if (response.success) {
         backups.value = response.data.backups || []
+        backupRetention.value = response.data.retention || null
         console.log('[useDatabaseBackup] Backups fetched:', backups.value.length)
         return backups.value
       }
@@ -34,6 +36,7 @@ export function useDatabaseBackup() {
       showError(errorMessage)
       console.error('[useDatabaseBackup] Fetch Error:', err)
       backups.value = []
+      backupRetention.value = null
     } finally {
       isLoading.value = false
     }
@@ -72,6 +75,17 @@ export function useDatabaseBackup() {
         const uploadSummary = uploadTargets.length > 0
           ? ` • Uploaded to ${uploadTargets.join(' & ')}`
           : ''
+        const localExpiredCount = response.data.retention?.deletedCount || 0
+        const cloudExpiredCount = [response.data.googleDrive, response.data.minio]
+          .reduce((total, provider) => total + (provider?.retention?.deletedCount || 0), 0)
+        const retentionErrorCount = [response.data.googleDrive, response.data.minio]
+          .reduce((total, provider) => total + (provider?.retention?.errorCount || 0), 0)
+        const retentionDeletedCount = localExpiredCount + cloudExpiredCount
+        const retentionSummary = retentionDeletedCount > 0
+          ? ` • ${retentionDeletedCount} expired backup${retentionDeletedCount === 1 ? '' : 's'} deleted`
+          : retentionErrorCount > 0
+            ? ' • Cloud retention cleanup needs attention'
+            : ''
 
         const processLabel = options.cloudProvider === 'google_drive'
           ? 'Backup Google Drive selesai'
@@ -79,7 +93,7 @@ export function useDatabaseBackup() {
             ? 'Backup MinIO selesai'
             : 'Backup created successfully'
 
-        showSuccess(`${processLabel}: ${response.data.filename}${uploadSummary}`)
+        showSuccess(`${processLabel}: ${response.data.filename}${uploadSummary}${retentionSummary}`)
         
         // Refresh backups list
         await fetchBackups()
@@ -201,6 +215,7 @@ export function useDatabaseBackup() {
   return {
     // State
     backups,
+    backupRetention,
     databaseInfo,
     isLoading,
     isCreatingBackup,

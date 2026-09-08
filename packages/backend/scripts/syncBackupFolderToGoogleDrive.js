@@ -6,10 +6,14 @@ const {
   validateGoogleDriveConfig,
   getGoogleAccessToken,
   listDriveFilesInFolder,
+  cleanupExpiredGoogleDriveBackups,
   uploadMultipartToDrive,
   updateMultipartInDrive,
 } = require('./googleDriveBackup');
-const { ensureBackupStorageDir } = require('../src/utils/backupStorage');
+const {
+  ensureBackupStorageDir,
+  getDefaultBackupRetentionDays,
+} = require('../src/utils/backupStorage');
 
 const env = process.argv[2] || process.env.NODE_ENV || 'development';
 const envFile = `.env.${env}`;
@@ -70,17 +74,6 @@ async function syncBackupFolderToGoogleDrive() {
 
   if (localFiles.length === 0) {
     console.log('No local backup files found in backups/.');
-    return {
-      authType: config.authType,
-      dryRun,
-      folderId: config.folderId,
-      localCount: 0,
-      remoteCount: 0,
-      uploaded: 0,
-      updated: 0,
-      skipped: 0,
-      operations: [],
-    };
   }
 
   const accessToken = await getGoogleAccessToken(config);
@@ -150,6 +143,15 @@ async function syncBackupFolderToGoogleDrive() {
     updated += 1;
   }
 
+  const retention = dryRun
+    ? null
+    : await cleanupExpiredGoogleDriveBackups({
+      accessToken,
+      folderId: config.folderId,
+      environment: env,
+      retentionDays: getDefaultBackupRetentionDays(),
+    });
+
   return {
     authType: config.authType,
     dryRun,
@@ -160,6 +162,7 @@ async function syncBackupFolderToGoogleDrive() {
     updated,
     skipped,
     operations,
+    retention,
   };
 }
 

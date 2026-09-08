@@ -1,5 +1,9 @@
 const { Tenant } = require('../models');
 const { createError } = require('./errorCodes');
+const {
+  getDefaultBackupRetentionDays,
+  normalizeBackupRetentionDays,
+} = require('./backupStorage');
 
 function extractGoogleDriveSettingsFromTenant(tenant) {
   const googleDrive = tenant?.settings?.backup?.googleDrive;
@@ -68,11 +72,34 @@ function extractMinioSettingsFromTenant(tenant) {
   return config;
 }
 
+function extractBackupRetentionDaysFromTenant(tenant) {
+  const backup = tenant?.settings?.backup;
+  if (!backup || typeof backup !== 'object') {
+    return getDefaultBackupRetentionDays();
+  }
+
+  return normalizeBackupRetentionDays(backup.retentionDays, getDefaultBackupRetentionDays());
+}
+
+function hasBackupSettings(tenant) {
+  const backup = tenant?.settings?.backup;
+  if (!backup || typeof backup !== 'object') {
+    return false;
+  }
+
+  return Boolean(
+    extractGoogleDriveSettingsFromTenant(tenant)
+    || extractMinioSettingsFromTenant(tenant)
+    || Object.prototype.hasOwnProperty.call(backup, 'retentionDays')
+  );
+}
+
 async function resolveBackupOptionsForTenantId(targetTenantId) {
   if (!targetTenantId) {
     return {
       googleDriveConfig: null,
       minioConfig: null,
+      retentionDays: getDefaultBackupRetentionDays(),
       targetTenantId: null,
       targetTenantName: null,
       resolutionSource: 'env_only',
@@ -90,6 +117,7 @@ async function resolveBackupOptionsForTenantId(targetTenantId) {
   return {
     googleDriveConfig: extractGoogleDriveSettingsFromTenant(tenant),
     minioConfig: extractMinioSettingsFromTenant(tenant),
+    retentionDays: extractBackupRetentionDaysFromTenant(tenant),
     targetTenantId: tenant.id,
     targetTenantName: tenant.name,
     resolutionSource: 'tenant_settings',
@@ -103,6 +131,7 @@ async function resolveAutoBackupOptions() {
     const result = await resolveBackupOptionsForTenantId(configuredTenantId);
     return {
       ...result,
+      retentionDays: result.retentionDays,
       resolutionSource: 'configured_tenant_settings',
     };
   }
@@ -112,14 +141,13 @@ async function resolveAutoBackupOptions() {
     order: [['createdAt', 'ASC']],
   });
 
-  const tenantWithBackupSettings = tenants.find(tenant => {
-    return extractGoogleDriveSettingsFromTenant(tenant) || extractMinioSettingsFromTenant(tenant);
-  });
+  const tenantWithBackupSettings = tenants.find(hasBackupSettings);
 
   if (!tenantWithBackupSettings) {
     return {
       googleDriveConfig: null,
       minioConfig: null,
+      retentionDays: getDefaultBackupRetentionDays(),
       targetTenantId: null,
       targetTenantName: null,
       resolutionSource: 'env_only',
@@ -129,6 +157,7 @@ async function resolveAutoBackupOptions() {
   return {
     googleDriveConfig: extractGoogleDriveSettingsFromTenant(tenantWithBackupSettings),
     minioConfig: extractMinioSettingsFromTenant(tenantWithBackupSettings),
+    retentionDays: extractBackupRetentionDaysFromTenant(tenantWithBackupSettings),
     targetTenantId: tenantWithBackupSettings.id,
     targetTenantName: tenantWithBackupSettings.name,
     resolutionSource: 'discovered_tenant_settings',
@@ -138,6 +167,7 @@ async function resolveAutoBackupOptions() {
 module.exports = {
   extractGoogleDriveSettingsFromTenant,
   extractMinioSettingsFromTenant,
+  extractBackupRetentionDaysFromTenant,
   resolveBackupOptionsForTenantId,
   resolveAutoBackupOptions,
 };

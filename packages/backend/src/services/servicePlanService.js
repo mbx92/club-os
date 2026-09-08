@@ -155,13 +155,18 @@ async function getServicePlans(filters, pagination) {
   const where = buildWhereClause(filters);
 
   // Validate sort field
-  const allowedSortFields = ['name', 'price', 'displayOrder', 'createdAt', 'serviceType'];
+  const allowedSortFields = ['name', 'price', 'displayOrder', 'createdAt', 'serviceType', 'isActive'];
   const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'displayOrder';
   const order = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+  // Active items first; inactive (isActive = false) last
+  const orderClause =
+    sortField === 'isActive'
+      ? [['isActive', order], ['displayOrder', 'ASC'], ['createdAt', 'DESC']]
+      : [['isActive', 'DESC'], [sortField, order], ['createdAt', 'DESC']];
 
   const { count, rows: servicePlans } = await ServicePlan.findAndCountAll({
     where,
-    order: [[sortField, order], ['createdAt', 'DESC']],
+    order: orderClause,
     limit: limitNum,
     offset,
     include: [

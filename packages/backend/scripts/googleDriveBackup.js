@@ -3,6 +3,10 @@ const https = require('https');
 const path = require('path');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
+const {
+  getDefaultBackupRetentionDays,
+  normalizeBackupRetentionDays,
+} = require('../src/utils/backupStorage');
 
 const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const GOOGLE_TOKEN_URI = 'https://oauth2.googleapis.com/token';
@@ -452,7 +456,7 @@ async function listDriveFilesInFolder({ accessToken, folderId }) {
         q: `'${folderId}' in parents and trashed = false`,
         supportsAllDrives: true,
         includeItemsFromAllDrives: true,
-        fields: 'nextPageToken, files(id, name, size, mimeType, modifiedTime, parents)',
+        fields: 'nextPageToken, files(id, name, size, mimeType, createdTime, modifiedTime, parents)',
         pageSize: 1000,
         pageToken,
       },
@@ -465,7 +469,80 @@ async function listDriveFilesInFolder({ accessToken, folderId }) {
   return files;
 }
 
-async function maybeUploadBackupToGoogleDrive(backupResult, overrides = null) {
+async function deleteFileFromDrive({ accessToken, fileId }) {
+  await axios.delete(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    params: {
+      supportsAllDrives: true,
+    },
+  });
+}
+
+function isBackupFileForEnvironment(fileName, environment) {
+  return fileName.startsWith(`backup_${environment}_`)
+    && (fileName.endsWith('.sql') || fileName.endsWith('.json'));
+}
+
+async function cleanupExpiredGoogleDriveBackups({
+  accessToken,
+  folderId,
+  environment = process.env.NODE_ENV || 'development',
+  retentionDays = getDefaultBackupRetentionDays(),
+  now = new Date(),
+} = {}) {
+  const normalizedRetentionDays = normalizeBackupRetentionDays(retentionDays);
+  const nowDate = now instanceof Date ? now : new Date(now);
+  const cutoffTime = nowDate.getTime() - (normalizedRetentionDays * 24 * 60 * 60 * 1000);
+  const remoteFiles = await listDriveFilesInFolder({ accessToken, folderId });
+  const candidates = remoteFiles.filter(file => {
+    if (!isBackupFileForEnvironment(file.name || '', environment)) {
+      return false;
+    }
+
+    const fileDate = new Date(file.createdTime || file.modifiedTime || '');
+    return !Number.isNaN(fileDate.getTime()) && fileDate.getTime() < cutoffTime;
+  });
+  const deleted = [];
+  const errors = [];
+
+  for (const file of candidates) {
+    try {
+      await deleteFileFromDrive({ accessToken, fileId: file.id });
+      deleted.push({
+        fileId: file.id,
+        fileName: file.name,
+        createdAt: file.createdTime || file.modifiedTime || null,
+        deletedAt: nowDate.toISOString(),
+      });
+    } catch (error) {
+      errors.push({
+        fileId: file.id,
+        fileName: file.name,
+        error: error.message,
+      });
+    }
+  }
+
+  return {
+    attempted: true,
+    retentionDays: normalizedRetentionDays,
+    cutoffAt: new Date(cutoffTime).toISOString(),
+    scannedCount: remoteFiles.length,
+    candidateCount: candidates.length,
+    deleted,
+    deletedCount: deleted.length,
+    errors,
+    errorCount: errors.length,
+  };
+}
+
+async function maybeUploadBackupToGoogleDrive(
+  backupResult,
+  overrides = null,
+  retentionDays = getDefaultBackupRetentionDays()
+) {
   if (overrides && hasOwnProperty(overrides, 'enabled') && overrides.enabled === false) {
     return {
       enabled: false,
@@ -473,6 +550,7 @@ async function maybeUploadBackupToGoogleDrive(backupResult, overrides = null) {
       skipped: true,
       reason: 'disabled',
       source: overrides.source || 'tenant_settings',
+      retention: null,
     };
   }
 
@@ -490,6 +568,7 @@ async function maybeUploadBackupToGoogleDrive(backupResult, overrides = null) {
       skipped: true,
       reason: configIssue,
       source: config.source,
+      retention: null,
     };
   }
 
@@ -521,6 +600,26 @@ async function maybeUploadBackupToGoogleDrive(backupResult, overrides = null) {
       throw createGoogleDriveBackupError(error, config, 'upload');
     }
 
+    let retention;
+    try {
+      retention = await cleanupExpiredGoogleDriveBackups({
+        accessToken,
+        folderId: config.folderId,
+        environment: backupResult.environment,
+        retentionDays,
+      });
+    } catch (error) {
+      retention = {
+        attempted: true,
+        retentionDays: normalizeBackupRetentionDays(retentionDays),
+        deleted: [],
+        deletedCount: 0,
+        errors: [],
+        errorCount: 1,
+        error: error.message,
+      };
+    }
+
     return {
       enabled: true,
       uploaded: true,
@@ -534,6 +633,7 @@ async function maybeUploadBackupToGoogleDrive(backupResult, overrides = null) {
       webContentLink: uploadedFile.webContentLink || null,
       createdTime: uploadedFile.createdTime || null,
       size: uploadedFile.size || String(backupResult.size || ''),
+      retention,
     };
   } catch (error) {
     if (config.required) {
@@ -547,6 +647,7 @@ async function maybeUploadBackupToGoogleDrive(backupResult, overrides = null) {
       folderId: config.folderId,
       authType: config.authType,
       source: config.source,
+      retention: null,
       error: error.message,
     };
   }
@@ -562,5 +663,7 @@ module.exports = {
   uploadMultipartToDrive,
   updateMultipartInDrive,
   listDriveFilesInFolder,
+  deleteFileFromDrive,
+  cleanupExpiredGoogleDriveBackups,
   getMimeType,
 };

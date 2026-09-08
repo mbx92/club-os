@@ -40,7 +40,9 @@ export function useActiveServices() {
       const queryParams = new URLSearchParams()
       if (params.page) queryParams.append('page', params.page)
       if (params.limit) queryParams.append('limit', params.limit)
-      if (params.search) queryParams.append('search', params.search)
+      if (params.search && String(params.search).trim()) {
+        queryParams.append('search', String(params.search).trim())
+      }
       if (params.status && params.status !== 'all') queryParams.append('status', params.status)
       if (params.serviceType && params.serviceType !== 'all') queryParams.append('serviceType', params.serviceType)
       if (params.trainerId) queryParams.append('trainerId', params.trainerId)

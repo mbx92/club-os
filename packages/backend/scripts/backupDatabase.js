@@ -14,7 +14,11 @@ const path = require('path');
 const dotenv = require('dotenv');
 const { maybeUploadBackupToGoogleDrive } = require('./googleDriveBackup');
 const { maybeUploadBackupToS3 } = require('./s3Backup');
-const { ensureBackupStorageDir } = require('../src/utils/backupStorage');
+const {
+  cleanExpiredBackups,
+  ensureBackupStorageDir,
+  getDefaultBackupRetentionDays,
+} = require('../src/utils/backupStorage');
 
 // Load environment variables
 const env = process.argv[2] || process.env.NODE_ENV || 'development';
@@ -215,8 +219,16 @@ async function createBackup(options = {}) {
     }
     
     result.format = 'sql';
-    result.googleDrive = await maybeUploadBackupToGoogleDrive(result, options.googleDriveConfig);
-    result.minio = await maybeUploadBackupToS3(result, options.minioConfig);
+    result.googleDrive = await maybeUploadBackupToGoogleDrive(
+      result,
+      options.googleDriveConfig,
+      options.retentionDays
+    );
+    result.minio = await maybeUploadBackupToS3(
+      result,
+      options.minioConfig,
+      options.retentionDays
+    );
     result.storedLocally = options.retainLocalBackup !== false;
 
     if (!result.storedLocally) {
@@ -225,9 +237,8 @@ async function createBackup(options = {}) {
       result.filePath = null;
     }
 
-    // Clean up old backups (keep last 10)
     if (result.storedLocally) {
-      cleanOldBackups();
+      result.retention = cleanOldBackups(options.retentionDays);
     }
     
     return result;
@@ -247,31 +258,33 @@ async function createBackup(options = {}) {
 }
 
 /**
- * Clean up old backups (keep last 10 per environment)
+ * Clean up expired backups for the current environment.
  */
-function cleanOldBackups() {
+function cleanOldBackups(retentionDays = getDefaultBackupRetentionDays()) {
   try {
-    const files = fs.readdirSync(backupsDir)
-      .filter(file => file.startsWith(`backup_${env}_`) && file.endsWith('.sql'))
-      .map(file => ({
-        name: file,
-        path: path.join(backupsDir, file),
-        time: fs.statSync(path.join(backupsDir, file)).mtime.getTime()
-      }))
-      .sort((a, b) => b.time - a.time); // Sort by newest first
-    
-    // Keep only last 10 backups
-    const toDelete = files.slice(10);
-    
-    if (toDelete.length > 0) {
-      console.log(`🗑️  Cleaning up ${toDelete.length} old backup(s)...`);
-      toDelete.forEach(file => {
-        fs.unlinkSync(file.path);
-        console.log(`   Deleted: ${file.name}`);
+    const result = cleanExpiredBackups({
+      backupDir: backupsDir,
+      environment: env,
+      extensions: ['.sql', '.json'],
+      retentionDays,
+    });
+
+    if (result.deletedCount > 0) {
+      console.log(`🗑️  Cleaning up ${result.deletedCount} expired backup(s) older than ${result.retentionDays} day(s)...`);
+      result.deleted.forEach(file => {
+        console.log(`   Deleted: ${file.filename}`);
       });
     }
+
+    return result;
   } catch (error) {
-    console.warn('⚠️ Warning: Could not clean old backups:', error.message);
+    console.warn('⚠️ Warning: Could not clean expired backups:', error.message);
+    return {
+      retentionDays,
+      deleted: [],
+      deletedCount: 0,
+      error: error.message,
+    };
   }
 }
 
@@ -283,4 +296,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { createBackup, generateBackupFilename };
+module.exports = { createBackup, generateBackupFilename, cleanOldBackups };

@@ -154,9 +154,12 @@ npm run db:restore:dev -- backup_dev_gymdb_2024-12-22T10-30-00.sql  # Restore sp
 - Always backup before restore
 - Production restore requires confirmation
 - Backups stored in `backups/` directory
-- Auto-cleanup keeps last 10 backups per environment
-- If `GOOGLE_DRIVE_BACKUP_ENABLED=true`, backup files are also uploaded to Google Drive
+- Auto-cleanup removes `.sql`/`.json` backups older than `BACKUP_RETENTION_DAYS` per environment
+- The same retention policy is applied after upload to Google Drive and MinIO/S3
+- If `GOOGLE_DRIVE_BACKUP_ENABLED=true`, backup files are also uploaded to Google Drive and expired cloud backups are removed from the configured folder
+- If `MINIO_BACKUP_ENABLED=true`, backup files are also uploaded to the configured bucket and expired cloud backups are removed under `MINIO_BACKUP_OBJECT_PREFIX`
 - Frontend can override non-secret Google Drive settings through `tenant.settings.backup.googleDrive`
+- Frontend can override the retention period through `tenant.settings.backup.retentionDays`
 - Google service-account credentials still stay in environment variables
 - For normal My Drive uploads, prefer OAuth refresh token credentials over service accounts
 

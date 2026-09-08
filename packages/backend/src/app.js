@@ -21,6 +21,8 @@ const { createCorsOptions } = require('./config/cors');
 const app = express();
 const backendPublicPath = path.join(__dirname, '../public');
 const frontendIndexPath = path.join(backendPublicPath, 'index.html');
+const frontendVersionPath = path.join(backendPublicPath, 'version.json');
+const noStoreCacheControl = 'no-store, no-cache, must-revalidate, proxy-revalidate';
 
 // Trust proxy - required for correct IP detection behind reverse proxy/load balancer
 // Cloudflare → Traefik → App (2 proxies)
@@ -46,8 +48,24 @@ app.use(metricsMiddleware);
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// Keep deployment metadata fresh so open frontend tabs can detect a new build.
+app.get('/version.json', (req, res, next) => {
+  if (!fs.existsSync(frontendVersionPath)) {
+    return next();
+  }
+
+  res.set('Cache-Control', noStoreCacheControl);
+  return res.sendFile(frontendVersionPath);
+});
+
 // Serve static files from public directory
-app.use(express.static(backendPublicPath));
+app.use(express.static(backendPublicPath, {
+  setHeaders: (res, filePath) => {
+    if (path.basename(filePath) === 'index.html') {
+      res.set('Cache-Control', noStoreCacheControl);
+    }
+  },
+}));
 
 app.use('/api/v1', routes);
 
@@ -95,7 +113,11 @@ app.use((req, res, next) => {
   }
 
   if (fs.existsSync(frontendIndexPath)) {
-    return res.sendFile(frontendIndexPath);
+    return res.sendFile(frontendIndexPath, {
+      headers: {
+        'Cache-Control': noStoreCacheControl,
+      },
+    });
   }
 
   return next();

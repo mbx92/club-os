@@ -70,7 +70,7 @@
 │                                                                  │
 │ ⚠️  Important Notes:                                            │
 │ • Backups are stored locally on the server                      │
-│ • Only the last 10 backups are kept automatically               │
+│ • Backups older than the configured retention are removed       │
 │ • Download important backups for off-site storage               │
 │                                                                  │
 └──────────────────────────────────────────────────────────────────┘

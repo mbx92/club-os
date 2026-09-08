@@ -7,6 +7,72 @@
 
     <div class="card bg-base-100 shadow-xl">
       <div class="card-body">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 class="card-title mb-2">
+              <IconCloudUpload class="h-6 w-6" />
+              Backup Retention
+            </h2>
+            <p class="text-sm text-base-content/70">
+              Tentukan berapa lama file backup lokal disimpan sebelum otomatis dibersihkan.
+            </p>
+          </div>
+          <span class="badge badge-outline">{{ backupRetentionDays }} hari</span>
+        </div>
+
+        <div v-if="loading" class="flex justify-center py-8">
+          <span class="loading loading-spinner loading-lg"></span>
+        </div>
+
+        <template v-else>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(220px,320px)_1fr] lg:items-end">
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text font-semibold">Retention backup lokal</span>
+              </label>
+              <input
+                v-model.number="backupRetentionDays"
+                type="number"
+                min="1"
+                max="3650"
+                class="input input-bordered w-full"
+                placeholder="30"
+              >
+              <label class="label">
+                <span class="label-text-alt">File lebih lama dari nilai ini dihapus setelah backup sukses dibuat.</span>
+              </label>
+            </div>
+
+            <div class="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                class="btn btn-ghost"
+                :disabled="saving || !hasBackupRetentionChanges"
+                @click="resetBackupRetentionSettings"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                :disabled="saving || !hasBackupRetentionChanges"
+                @click="handleSaveBackupRetentionSettings"
+              >
+                <span
+                  v-if="saving && savingSection === 'retention'"
+                  class="loading loading-spinner loading-sm"
+                ></span>
+                <IconDeviceFloppy v-else class="h-5 w-5" />
+                Simpan Retention
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
         <div class="flex items-start justify-between gap-4">
           <div>
             <h2 class="card-title mb-2">
@@ -735,6 +801,8 @@ import {
 
 const authStore = useAuthStore()
 const { showWarning } = useNotification()
+const DEFAULT_BACKUP_RETENTION_DAYS = 30
+const MAX_BACKUP_RETENTION_DAYS = 3650
 const {
   tenantSettings,
   loading,
@@ -816,11 +884,13 @@ const createDefaultGlitchtipSettings = () => ({
 const paymentSettings = ref(createDefaultPaymentSettings())
 const googleDriveSettings = ref(createDefaultGoogleDriveSettings())
 const minioSettings = ref(createDefaultMinioSettings())
+const backupRetentionDays = ref(DEFAULT_BACKUP_RETENTION_DAYS)
 const glitchtipSettings = ref(createDefaultGlitchtipSettings())
 
 const originalPaymentSettings = ref(createDefaultPaymentSettings())
 const originalGoogleDriveSettings = ref(createDefaultGoogleDriveSettings())
 const originalMinioSettings = ref(createDefaultMinioSettings())
+const originalBackupRetentionDays = ref(DEFAULT_BACKUP_RETENTION_DAYS)
 const originalGlitchtipSettings = ref(createDefaultGlitchtipSettings())
 
 const currentTransactionSettings = ref({})
@@ -885,6 +955,15 @@ const normalizeMinioSettings = (minio = {}) => ({
   useSsl: Boolean(minio.useSsl)
 })
 
+const normalizeBackupRetentionDays = (value) => {
+  const parsed = Number.parseInt(value, 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_BACKUP_RETENTION_DAYS
+  }
+
+  return Math.min(parsed, MAX_BACKUP_RETENTION_DAYS)
+}
+
 const normalizeGlitchtipSettings = (glitchtip = {}) => ({
   enabled: Boolean(glitchtip.enabled),
   dsn: glitchtip.dsn || '',
@@ -903,6 +982,10 @@ const hasGoogleDriveChanges = computed(() => {
 
 const hasMinioChanges = computed(() => {
   return JSON.stringify(minioSettings.value) !== JSON.stringify(originalMinioSettings.value)
+})
+
+const hasBackupRetentionChanges = computed(() => {
+  return backupRetentionDays.value !== originalBackupRetentionDays.value
 })
 
 const hasGlitchtipChanges = computed(() => {
@@ -924,6 +1007,7 @@ const applySettings = (settingsSource = {}) => {
   paymentSettings.value = normalizePaymentSettings(settingsSource?.transaction?.payment || {})
   googleDriveSettings.value = normalizeGoogleDriveSettings(settingsSource?.backup?.googleDrive || {})
   minioSettings.value = normalizeMinioSettings(settingsSource?.backup?.minio || {})
+  backupRetentionDays.value = normalizeBackupRetentionDays(settingsSource?.backup?.retentionDays)
   glitchtipSettings.value = normalizeGlitchtipSettings(settingsSource?.integrations?.glitchtip || {})
 
   originalPaymentSettings.value = clone(paymentSettings.value)
@@ -934,6 +1018,7 @@ const applySettings = (settingsSource = {}) => {
     storedRefreshToken: settingsSource?.backup?.googleDrive?.oauth?.refreshToken || '',
   }
   originalMinioSettings.value = clone(minioSettings.value)
+  originalBackupRetentionDays.value = backupRetentionDays.value
   originalGlitchtipSettings.value = clone(glitchtipSettings.value)
 }
 
@@ -988,6 +1073,7 @@ const buildBackupSettingsPayload = () => {
 
   return {
     backup: {
+      retentionDays: normalizeBackupRetentionDays(backupRetentionDays.value),
       googleDrive: {
         enabled: googleDriveSettings.value.enabled,
         required: googleDriveSettings.value.enabled ? googleDriveSettings.value.required : false,
@@ -1063,6 +1149,23 @@ const validateMinioSettings = () => {
   return true
 }
 
+const validateBackupRetentionSettings = () => {
+  const parsed = Number.parseInt(backupRetentionDays.value, 10)
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    showWarning('Retention backup minimal 1 hari')
+    return false
+  }
+
+  if (parsed > MAX_BACKUP_RETENTION_DAYS) {
+    showWarning(`Retention backup maksimal ${MAX_BACKUP_RETENTION_DAYS} hari`)
+    return false
+  }
+
+  backupRetentionDays.value = parsed
+  return true
+}
+
 const validateGlitchtipSettings = () => {
   if (glitchtipSettings.value.enabled && !glitchtipSettings.value.dsn.trim()) {
     showWarning('DSN wajib diisi saat GlitchTip aktif')
@@ -1123,6 +1226,11 @@ const handleSaveGoogleDriveSettings = async () => {
 const handleSaveMinioSettings = async () => {
   if (!validateMinioSettings()) return
   await saveBackupSettings('minio', 'MinIO backup settings updated successfully')
+}
+
+const handleSaveBackupRetentionSettings = async () => {
+  if (!validateBackupRetentionSettings()) return
+  await saveBackupSettings('retention', 'Backup retention settings updated successfully')
 }
 
 const handleTestMinioConnection = async () => {
@@ -1218,6 +1326,10 @@ const handleProcessCloudBackup = async (provider) => {
 
 const resetPaymentSettings = () => {
   paymentSettings.value = clone(originalPaymentSettings.value)
+}
+
+const resetBackupRetentionSettings = () => {
+  backupRetentionDays.value = originalBackupRetentionDays.value
 }
 
 const resetGlitchtipSettings = () => {

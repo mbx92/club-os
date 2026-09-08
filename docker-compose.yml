@@ -53,6 +53,7 @@ services:
       MINIO_BACKUP_FORCE_PATH_STYLE: ${MINIO_BACKUP_FORCE_PATH_STYLE:-true}
       MINIO_BACKUP_USE_SSL: ${MINIO_BACKUP_USE_SSL:-false}
       BACKUP_STORAGE_DIR: ${BACKUP_STORAGE_DIR:-/app/backups}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
       # Optional: pin auto-backup settings to a specific tenant
       AUTO_BACKUP_TENANT_ID: ${AUTO_BACKUP_TENANT_ID:-}
       PUBLIC_API_URL: ${PUBLIC_API_URL:-}
@@ -75,6 +76,7 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL:-/api/v1}
         VITE_APP_TITLE: ${VITE_APP_TITLE:-Club OS}
+        VITE_BUILD_ID: ${VITE_BUILD_ID:-}
     image: club-os-frontend:latest
     restart: unless-stopped
     depends_on:

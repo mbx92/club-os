@@ -21,13 +21,14 @@ import {
   IconClock,
   IconRefresh,
   IconAlertTriangle,
+  IconPrinter,
 } from '@tabler/icons-vue'
 
 defineOptions({ inheritAttrs: false })
 
 const route  = useRoute()
 const router = useRouter()
-const { transaction, detailLoading, loading, fetchTransactionById, cancelTransaction, refundTransaction, refundTransactionItems } = useTransactions()
+const { transaction, detailLoading, loading, fetchTransactionById, cancelTransaction, refundTransaction, refundTransactionItems, reprintReceipt } = useTransactions()
 
 const goBack = () => {
   if (window.history.length > 1) router.back()
@@ -96,7 +97,20 @@ const submitRefund = async () => {
   refundModal.value = false
 }
 
+const reprinting = ref(false)
 const id = route.params.id
+const handleReprint = async () => {
+  if (!id || reprinting.value) return
+  reprinting.value = true
+  try {
+    await reprintReceipt(id)
+  } catch {
+    // notification handled in composable
+  } finally {
+    reprinting.value = false
+  }
+}
+
 onMounted(() => fetchTransactionById(id))
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -188,6 +202,15 @@ const changeAmount  = computed(() => Number(tx.value?.changeAmount)   || 0)
           <span class="badge badge-md">{{ typeLabel(tx.transactionType) }}</span>
           <span v-if="tx.orderType" class="badge badge-md badge-ghost">{{ orderTypeLabel(tx.orderType) }}</span>
           <span class="badge badge-md" :class="statusBadgeClass(tx.status)">{{ statusLabel(tx.status) }}</span>
+          <button
+            class="btn btn-ghost btn-sm"
+            :disabled="reprinting"
+            @click="handleReprint"
+          >
+            <span v-if="reprinting" class="loading loading-spinner loading-xs"></span>
+            <IconPrinter v-else class="w-4 h-4" />
+            Cetak Ulang Receipt
+          </button>
           <button v-if="canCancel" class="btn btn-warning btn-sm" @click="openCancelModal">
             <IconAlertTriangle class="w-4 h-4" />
             Batal Transaksi

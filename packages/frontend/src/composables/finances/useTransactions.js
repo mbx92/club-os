@@ -121,6 +121,17 @@ export function useTransactions() {
    * @param {string} paymentMethod - New payment method
    * @param {string} bankName - Bank name (optional, for bank transfer/credit card/debit card)
    */
+  const reprintReceipt = async (transactionId) => {
+    try {
+      const response = await api.post(`/transactions/${transactionId}/reprint-receipt`)
+      showSuccess(response.message || 'Receipt berhasil dicetak ulang')
+      return response
+    } catch (err) {
+      handleError(err, 'Gagal mencetak ulang receipt')
+      throw err
+    }
+  }
+
   const updatePaymentMethod = async (id, paymentMethod, bankName = '') => {
     loading.value = true
     try {
@@ -197,5 +208,6 @@ export function useTransactions() {
     refundTransaction,
     refundTransactionItems,
     updatePaymentMethod,
+    reprintReceipt,
   }
 }

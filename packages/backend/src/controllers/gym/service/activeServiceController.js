@@ -27,6 +27,12 @@ const accountService = require('../../../services/accountService');
 const { getTenantTimezone } = require('../../../utils/tenantTimezone');
 const { recordPaymentInflow } = require('../../finance/vaultController');
 
+function addCalendarDays(date, days) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + (Number(days) || 0));
+  return result;
+}
+
 /**
  * Get all walk-in active services (memberId IS NULL)
  */
@@ -739,118 +745,100 @@ async function purchaseServices(req, res, next) {
       }, t);
     }
 
-    // Create ActiveServices for all purchases (including walk-in)
-    // Uses flatMap to create N ActiveService records when quantity > 1
-    const activeServicePromises = normalizedServicePlans.flatMap(sp => {
+    // One ActiveService per plan: qty memperpanjang durasi (membership) atau menambah sesi (paket)
+    const activeServicePromises = normalizedServicePlans.map(sp => (async () => {
       const plan = servicePlanMap[sp.servicePlanId];
-      const qty = parseInt(sp.quantity) || 1;
+      const qty = Math.max(1, parseInt(sp.quantity, 10) || 1);
+      const unitDurationDays = plan.duration || plan.validityDays || 30;
+      const durationDays = unitDurationDays * qty;
+      const isSessionBased = plan.sessions && plan.sessions > 0;
+      const sessionsForQty = isSessionBased ? plan.sessions * qty : plan.sessions;
 
-      return Array.from({ length: qty }, (_, qtyIndex) => (async () => {
-        // Check if member already has active service for this plan (for extension logic — members only)
-        // Only check for first item in quantity batch to avoid conflicts
-        const existingActiveService = (!isWalkIn && memberId && qtyIndex === 0) ? await ActiveService.findOne({
-          where: {
-            memberId,
-            servicePlanId: sp.servicePlanId,
-            tenantId: effectiveTenantId,
-            status: 'active',
-            endDate: { [Op.gte]: new Date() } // Still has remaining days
-          },
-          order: [['endDate', 'DESC']], // Get the one that expires last
-          transaction: t
-        }) : null;
+      const existingActiveService = (!isWalkIn && memberId) ? await ActiveService.findOne({
+        where: {
+          memberId,
+          servicePlanId: sp.servicePlanId,
+          tenantId: effectiveTenantId,
+          status: 'active',
+          endDate: { [Op.gte]: new Date() }
+        },
+        order: [['endDate', 'DESC']],
+        transaction: t
+      }) : null;
 
-        // Determine start date and end date based on service type
-        let start;
-        let endDate;
-        let totalSessions = plan.sessions;
-        let remainingSessions = plan.sessions;
-        let serviceNotes = notes;
+      let start;
+      let endDate;
+      let totalSessions = sessionsForQty;
+      let remainingSessions = sessionsForQty;
+      let serviceNotes = notes;
 
-        const duration = plan.duration || plan.validityDays;
-        const isSessionBased = plan.sessions && plan.sessions > 0;
+      if (existingActiveService) {
+        if (isSessionBased && existingActiveService.remainingSessions > 0) {
+          const sessionsToAdd = sessionsForQty;
+          const newTotalSessions = existingActiveService.totalSessions + sessionsToAdd;
+          const newRemainingSessions = existingActiveService.remainingSessions + sessionsToAdd;
+          const extendedEnd = addCalendarDays(existingActiveService.endDate, durationDays);
 
-        if (existingActiveService) {
-          if (isSessionBased && existingActiveService.remainingSessions > 0) {
-            // SESSION-BASED EXTENSION: Add sessions to existing service
-            // Update existing service's sessions instead of creating new one
-            const sessionsToAdd = plan.sessions * qty; // Add all qty sessions at once
-            const newTotalSessions = existingActiveService.totalSessions + sessionsToAdd;
-            const newRemainingSessions = existingActiveService.remainingSessions + sessionsToAdd;
+          await existingActiveService.update({
+            totalSessions: newTotalSessions,
+            remainingSessions: newRemainingSessions,
+            endDate: extendedEnd,
+            notes: existingActiveService.notes
+              ? `${existingActiveService.notes}\n[${new Date().toISOString().split('T')[0]}] Tambah ${sessionsToAdd} sesi qty ${qty} (total: ${newTotalSessions} sesi).`
+              : `Tambah ${sessionsToAdd} sesi qty ${qty} (total: ${newTotalSessions} sesi).`
+          }, { transaction: t });
 
-            await existingActiveService.update({
-              totalSessions: newTotalSessions,
-              remainingSessions: newRemainingSessions,
-              notes: existingActiveService.notes
-                ? `${existingActiveService.notes}\n[${new Date().toISOString().split('T')[0]}] Tambah ${sessionsToAdd} sesi (total: ${newTotalSessions} sesi).`
-                : `Tambah ${sessionsToAdd} sesi (total: ${newTotalSessions} sesi).`
-            }, { transaction: t });
-
-            // Return the updated existing service (not create new)
-            return existingActiveService;
-          } else {
-            // TIME-BASED EXTENSION: Extend endDate
-            start = new Date(existingActiveService.endDate);
-
-            if (duration) {
-              endDate = new Date(start);
-              endDate.setDate(endDate.getDate() + duration);
-            } else {
-              endDate = new Date(start);
-              endDate.setDate(endDate.getDate() + 30);
-            }
-
-            const oldEndDate = new Date(existingActiveService.endDate);
-            const formattedDate = oldEndDate.toISOString().split('T')[0];
-            serviceNotes = `Perpanjangan dari service aktif hingga ${formattedDate}. ${notes || ''}`.trim();
-          }
-        } else {
-          // NEW SERVICE
-          if (sp.startDate) {
-            start = new Date(sp.startDate);
-            start.setHours(start.getHours() + 7);
-          } else {
-            start = new Date();
-          }
-
-          if (duration) {
-            endDate = new Date(start);
-            endDate.setDate(endDate.getDate() + duration);
-          } else {
-            endDate = new Date(start);
-            endDate.setDate(endDate.getDate() + 30);
-          }
+          return existingActiveService;
         }
 
-        // Calculate per-item price with proportional discount and tax
-        const itemPrice = parseFloat(plan.price);
-        const proportionalDiscount = (voucherDiscount / subtotal) * itemPrice;
-        const proportionalTax = (taxAmount / subtotal) * itemPrice;
-        const itemFinalPrice = itemPrice - proportionalDiscount + proportionalTax;
+        start = new Date(existingActiveService.endDate);
+        endDate = addCalendarDays(start, durationDays);
+        const formattedDate = start.toISOString().split('T')[0];
+        serviceNotes = [
+          qty > 1 ? `Qty ${qty} × ${unitDurationDays} hari.` : null,
+          `Perpanjangan dari service aktif hingga ${formattedDate}.`,
+          notes
+        ].filter(Boolean).join(' ');
+      } else {
+        if (sp.startDate) {
+          start = new Date(sp.startDate);
+          start.setHours(start.getHours() + 7);
+        } else {
+          start = new Date();
+        }
+        endDate = addCalendarDays(start, durationDays);
+        if (qty > 1) {
+          serviceNotes = [`Qty ${qty} × ${unitDurationDays} hari.`, notes].filter(Boolean).join(' ');
+        }
+      }
 
-        return ActiveService.create({
-          tenantId: effectiveTenantId,
-          memberId: memberId || null,
-          customerName: isWalkIn ? customerName : null,
-          servicePlanId: sp.servicePlanId,
-          serviceType: plan.serviceType,
-          startDate: start,
-          endDate,
-          totalSessions,
-          remainingSessions,
-          status: 'active',
-          autoRenew: sp.autoRenew || false,
-          purchaseTransactionId: transaction.id,
-          purchaseDate: new Date(),
-          assignedTrainerId: sp.assignedTrainerId || null,
-          pricePaid: itemFinalPrice,
-          currency: plan.currency,
-          voucherId: voucherId,
-          voucherDiscount: proportionalDiscount,
-          notes: serviceNotes
-        }, { transaction: t });
-      })());
-    });
+      const linePrice = parseFloat(plan.price) * qty;
+      const proportionalDiscount = subtotal > 0 ? (voucherDiscount / subtotal) * linePrice : 0;
+      const proportionalTax = subtotal > 0 ? (taxAmount / subtotal) * linePrice : 0;
+      const itemFinalPrice = linePrice - proportionalDiscount + proportionalTax;
+
+      return ActiveService.create({
+        tenantId: effectiveTenantId,
+        memberId: memberId || null,
+        customerName: isWalkIn ? customerName : null,
+        servicePlanId: sp.servicePlanId,
+        serviceType: plan.serviceType,
+        startDate: start,
+        endDate,
+        totalSessions,
+        remainingSessions,
+        status: 'active',
+        autoRenew: sp.autoRenew || false,
+        purchaseTransactionId: transaction.id,
+        purchaseDate: new Date(),
+        assignedTrainerId: sp.assignedTrainerId || null,
+        pricePaid: itemFinalPrice,
+        currency: plan.currency,
+        voucherId: voucherId,
+        voucherDiscount: proportionalDiscount,
+        notes: serviceNotes
+      }, { transaction: t });
+    })());
 
     const activeServices = await Promise.all(activeServicePromises);
 
@@ -891,9 +879,11 @@ async function purchaseServices(req, res, next) {
         const companions = sp.additionalMemberIds || [];
         if (companions.length === 0) continue;
 
-        const qty = parseInt(sp.quantity) || 1;
+        const qty = Math.max(1, parseInt(sp.quantity, 10) || 1);
+        const unitDurationDays = plan.duration || plan.validityDays || 30;
+        const durationDays = unitDurationDays * qty;
+        const sessionsForQty = plan.sessions ? plan.sessions * qty : null;
 
-        // Determine companion start/end dates (mirror primary member's calculation)
         let companionStart;
         if (sp.startDate) {
           companionStart = new Date(sp.startDate);
@@ -902,43 +892,31 @@ async function purchaseServices(req, res, next) {
           companionStart = new Date();
         }
 
-        const duration = plan.duration || plan.validityDays;
-        const companionEnd = new Date(companionStart);
-        if (duration) {
-          companionEnd.setDate(companionEnd.getDate() + duration);
-        } else {
-          companionEnd.setDate(companionEnd.getDate() + 30);
-        }
-
-        const itemPrice = parseFloat(plan.price);
-        const proportionalDiscount = subtotal > 0 ? (voucherDiscount / subtotal) * itemPrice : 0;
-        const proportionalTax = subtotal > 0 ? (taxAmount / subtotal) * itemPrice : 0;
+        const companionEnd = addCalendarDays(companionStart, durationDays);
 
         for (const companionId of companions) {
-          for (let q = 0; q < qty; q++) {
-            companionActiveServicePromises.push(
-              ActiveService.create({
-                tenantId: effectiveTenantId,
-                memberId: companionId,
-                servicePlanId: sp.servicePlanId,
-                serviceType: plan.serviceType,
-                startDate: companionStart,
-                endDate: companionEnd,
-                totalSessions: plan.sessions || null,
-                remainingSessions: plan.sessions || null,
-                status: 'active',
-                autoRenew: sp.autoRenew || false,
-                purchaseTransactionId: transaction.id,
-                purchaseDate: new Date(),
-                assignedTrainerId: sp.assignedTrainerId || null,
-                pricePaid: 0, // Companion included in primary price; 0 to avoid double-counting revenue
-                currency: plan.currency,
-                voucherId: voucherId,
-                voucherDiscount: 0,
-                notes: `Companion plan (pax=${plan.pax}) — dibeli bersama primary member ID: ${memberId}. Transaksi: ${transaction.transactionNumber}. ${notes || ''}`.trim()
-              }, { transaction: t })
-            );
-          }
+          companionActiveServicePromises.push(
+            ActiveService.create({
+              tenantId: effectiveTenantId,
+              memberId: companionId,
+              servicePlanId: sp.servicePlanId,
+              serviceType: plan.serviceType,
+              startDate: companionStart,
+              endDate: companionEnd,
+              totalSessions: sessionsForQty,
+              remainingSessions: sessionsForQty,
+              status: 'active',
+              autoRenew: sp.autoRenew || false,
+              purchaseTransactionId: transaction.id,
+              purchaseDate: new Date(),
+              assignedTrainerId: sp.assignedTrainerId || null,
+              pricePaid: 0, // Companion included in primary price; 0 to avoid double-counting revenue
+              currency: plan.currency,
+              voucherId: voucherId,
+              voucherDiscount: 0,
+              notes: `Companion plan (pax=${plan.pax}${qty > 1 ? `, qty ${qty}` : ''}) — dibeli bersama primary member ID: ${memberId}. Transaksi: ${transaction.transactionNumber}. ${notes || ''}`.trim()
+            }, { transaction: t })
+          );
         }
       }
     }
@@ -1027,11 +1005,13 @@ async function purchaseServices(req, res, next) {
         hasPrinterSettings: !!(tenantForPrint?.settings?.printers)
       });
 
+      const receiptCopies = tenantForPrint?.settings?.transaction?.receiptCopies ?? 2;
       await receiptPrinterService.printCombinedServiceReceipt(
         reloadedServices,
         memberForReceipt,
         transactionWithPayments,
-        tenantForPrint
+        tenantForPrint,
+        { copies: receiptCopies }
       );
     } catch (printError) {
       // Log but don't fail the purchase if printing fails

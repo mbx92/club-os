@@ -2110,6 +2110,165 @@ exports.prePrintPayment = async (req, res) => {
 };
 
 /**
+ * Reprint thermal receipt for a completed gym POS / membership transaction.
+ * @route POST /transactions/:id/reprint-receipt
+ */
+exports.reprintReceipt = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user.tenantId;
+    const isSuperAdmin = req.user.isSuperAdmin;
+
+    const transaction = await Transaction.findOne({
+      where: {
+        id,
+        ...(!isSuperAdmin && { tenantId })
+      },
+      include: [
+        {
+          model: Member,
+          as: 'member',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone']
+        },
+        {
+          model: TransactionItem,
+          as: 'transactionItems',
+          required: false
+        },
+        {
+          model: TransactionPayment,
+          as: 'payments',
+          required: false
+        },
+        {
+          model: Voucher,
+          as: 'voucher',
+          attributes: ['id', 'code', 'name', 'type', 'value'],
+          required: false
+        },
+        {
+          model: RestaurantTable,
+          as: 'table',
+          attributes: ['id', 'tableNumber', 'tableName'],
+          required: false
+        }
+      ]
+    });
+
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        message: 'Transaksi tidak ditemukan'
+      });
+    }
+
+    const tenant = await Tenant.findByPk(transaction.tenantId, {
+      attributes: ['id', 'name', 'address', 'phone', 'settings']
+    });
+
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant tidak ditemukan'
+      });
+    }
+
+    const receiptCopies = tenant.settings?.transaction?.receiptCopies ?? 2;
+
+    const activeServices = await ActiveService.findAll({
+      where: {
+        purchaseTransactionId: id,
+        tenantId: transaction.tenantId
+      },
+      include: [
+        {
+          model: ServicePlan,
+          as: 'servicePlan',
+          attributes: ['id', 'name', 'serviceType', 'durationType', 'price', 'sessions', 'duration', 'validityDays']
+        },
+        {
+          model: Member,
+          as: 'member',
+          attributes: ['id', 'firstName', 'lastName'],
+          required: false
+        }
+      ]
+    });
+
+    let printResult;
+    if (activeServices.length > 0) {
+      const memberForReceipt = transaction.member || {
+        name: transaction.customerName || activeServices[0].customerName
+      };
+      printResult = await receiptPrinterService.printCombinedServiceReceipt(
+        activeServices,
+        memberForReceipt,
+        transaction,
+        tenant,
+        { copies: receiptCopies }
+      );
+    } else if (transaction.transactionType === 'restaurant') {
+      printResult = await receiptPrinterService.printOrderReceipt(
+        transaction,
+        tenant,
+        { copies: receiptCopies }
+      );
+    } else {
+      printResult = await receiptPrinterService.printPaymentReceipt(
+        transaction,
+        tenant,
+        { copies: receiptCopies }
+      );
+    }
+
+    if (printResult?.skipped) {
+      return res.status(400).json({
+        success: false,
+        message: printResult.message || 'Printer receipt belum dikonfigurasi'
+      });
+    }
+
+    if (printResult?.error || printResult?.success === false) {
+      return res.status(500).json({
+        success: false,
+        message: printResult.message || 'Gagal mencetak receipt'
+      });
+    }
+
+    logger.logInfo('Transaction receipt reprinted', {
+      action: 'REPRINT_RECEIPT',
+      transactionId: id,
+      transactionNumber: transaction.transactionNumber,
+      copies: printResult.copies || receiptCopies,
+      tenantId: transaction.tenantId,
+      userId: req.user.id
+    });
+
+    return res.json({
+      success: true,
+      message: 'Receipt berhasil dicetak ulang',
+      data: {
+        transactionId: id,
+        transactionNumber: transaction.transactionNumber,
+        copies: printResult.copies || receiptCopies
+      }
+    });
+  } catch (error) {
+    logger.logError('Error reprinting receipt', {
+      action: 'REPRINT_RECEIPT_ERROR',
+      transactionId: req.params.id,
+      error: error.message,
+      stack: error.stack
+    });
+    return res.status(500).json({
+      success: false,
+      message: 'Gagal mencetak ulang receipt',
+      error: error.message
+    });
+  }
+};
+
+/**
  * Split bill per item — divide one transaction into multiple bills by items
  * Each split creates a new transaction with selected items.
  * Original transaction is marked as 'split'.

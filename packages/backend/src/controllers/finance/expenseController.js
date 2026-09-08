@@ -941,31 +941,39 @@ async function getAllExpenses(req, res, next) {
     }
 
     const offset = (page - 1) * limit;
+    const parsedLimit = parseInt(limit, 10);
 
-    const { count, rows: expenses } = await Expense.findAndCountAll({
-      where,
-      limit: parseInt(limit),
-      offset,
-      order: [[sortBy, sortOrder.toUpperCase()]],
-      include: [
-        { model: ExpenseCategory, as: 'category' },
-        { model: Location, as: 'location' },
-        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: User, as: 'approver', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: Account, as: 'account', attributes: ['id', 'name', 'type', 'bankName', 'paymentMethod', 'balance'] },
-        { model: VaultAccount, as: 'vaultAccount', attributes: ['id', 'name', 'balance'] },
-      ]
-    });
+    const [{ count, rows: expenses }, totalAmount] = await Promise.all([
+      Expense.findAndCountAll({
+        where,
+        limit: parsedLimit,
+        offset,
+        order: [[sortBy, sortOrder.toUpperCase()]],
+        include: [
+          { model: ExpenseCategory, as: 'category' },
+          { model: Location, as: 'location' },
+          { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName', 'email'] },
+          { model: User, as: 'approver', attributes: ['id', 'firstName', 'lastName', 'email'] },
+          { model: Account, as: 'account', attributes: ['id', 'name', 'type', 'bankName', 'paymentMethod', 'balance'] },
+          { model: VaultAccount, as: 'vaultAccount', attributes: ['id', 'name', 'balance'] },
+        ]
+      }),
+      Expense.sum('totalAmount', { where })
+    ]);
 
     res.json({
       success: true,
       data: {
         expenses,
         pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page: parseInt(page, 10),
+          limit: parsedLimit,
           total: count,
-          totalPages: Math.ceil(count / limit)
+          totalPages: Math.ceil(count / parsedLimit)
+        },
+        summary: {
+          totalAmount: parseFloat(totalAmount) || 0,
+          count
         }
       }
     });

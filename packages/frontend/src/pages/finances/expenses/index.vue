@@ -39,160 +39,88 @@ meta:
       </div>
     </div>
 
-    <!-- Filters and Search -->
-    <div class="card bg-base-100 shadow-xl mb-6">
-      <div class="card-body">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-          <!-- Search Input -->
-          <div class="form-control lg:col-span-3">
-            <label class="label">
-              <span class="label-text font-medium">Pencarian</span>
-            </label>
-            <input
-              v-model="filters.search"
-              type="text"
-              placeholder="Cari pengeluaran..."
-              class="input input-bordered w-full"
-              @input="debouncedSearch"
-            />
-          </div>
-
-          <!-- Status Filter -->
-          <div class="form-control lg:col-span-2">
-            <label class="label">
-              <span class="label-text font-medium">Status</span>
-            </label>
-            <select v-model="filters.status" class="select select-bordered w-full" @change="handleSearch">
-              <option value="">Semua Status</option>
-              <option value="draft">Draf</option>
-              <option value="pending">Tertunda</option>
-              <option value="approved">Disetujui</option>
-              <option value="paid">Dibayar</option>
-              <option value="cancelled">Dibatalkan</option>
-            </select>
-          </div>
-
-          <!-- Category Filter -->
-          <div class="form-control lg:col-span-2">
-            <label class="label">
-              <span class="label-text font-medium">Kategori</span>
-            </label>
-            <select v-model="filters.categoryId" class="select select-bordered w-full" @change="handleSearch">
-              <option value="">Semua Kategori</option>
-              <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-                {{ cat.name }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Fund Source Filter -->
-          <div class="form-control lg:col-span-2">
-            <label class="label">
-              <span class="label-text font-medium">Sumber Dana</span>
-            </label>
-            <select v-model="filters.fundSource" class="select select-bordered w-full" @change="handleSearch">
-              <option value="">Semua Sumber Dana</option>
-              <option v-for="opt in fundSourceFilterOptions" :key="opt.value" :value="opt.value">
-                {{ opt.label }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Account Filter -->
-          <div class="form-control lg:col-span-2">
-            <label class="label">
-              <span class="label-text font-medium">Akun</span>
-            </label>
-            <select v-model="filters.accountId" class="select select-bordered w-full" @change="handleSearch">
-              <option value="">Semua Akun</option>
-              <option v-for="account in accountFilterOptions" :key="account.id" :value="account.id">
-                {{ formatAccountFilterLabel(account) }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Start Date -->
-          <div class="form-control lg:col-span-2">
-            <label class="label">
-              <span class="label-text font-medium">Tanggal Mulai</span>
-            </label>
-            <input
-              v-model="filters.startDate"
-              type="date"
-              class="input input-bordered w-full"
-              @change="handleSearch"
-            />
-          </div>
-
-          <!-- End Date -->
-          <div class="form-control lg:col-span-2">
-            <label class="label">
-              <span class="label-text font-medium">Tanggal Akhir</span>
-            </label>
-            <input
-              v-model="filters.endDate"
-              type="date"
-              class="input input-bordered w-full"
-              @change="handleSearch"
-            />
-          </div>
-
-          <!-- Limit -->
-          <div class="form-control lg:col-span-1">
-            <label class="label">
-              <span class="label-text font-medium">Tampilkan</span>
-            </label>
-            <select v-model="filters.limit" class="select select-bordered w-full" @change="handleSearch">
-              <option :value="20">20</option>
-              <option :value="50">50</option>
-              <option :value="100">100</option>
-            </select>
-          </div>
+    <!-- Filters -->
+    <div class="card bg-base-100 shadow-md mb-4">
+      <div class="card-body p-3 sm:p-4 gap-3">
+        <div class="flex flex-wrap gap-2">
+          <input
+            v-model="filters.search"
+            type="text"
+            placeholder="Cari judul, vendor, nomor..."
+            class="input input-bordered input-sm flex-1 min-w-[12rem]"
+            @input="debouncedSearch"
+          />
+          <select v-model="filters.status" class="select select-bordered select-sm w-full sm:w-36" @change="handleSearch">
+            <option value="">Semua status</option>
+            <option value="draft">Draf</option>
+            <option value="pending">Tertunda</option>
+            <option value="approved">Disetujui</option>
+            <option value="paid">Dibayar</option>
+            <option value="cancelled">Dibatalkan</option>
+          </select>
+          <select v-model="filters.categoryId" class="select select-bordered select-sm w-full sm:w-40" @change="handleSearch">
+            <option value="">Semua kategori</option>
+            <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+              {{ cat.name }}
+            </option>
+          </select>
+          <select v-model="filters.fundSource" class="select select-bordered select-sm w-full sm:w-40" @change="handleSearch">
+            <option value="">Semua sumber</option>
+            <option v-for="opt in fundSourceFilterOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+          <select v-model="filters.accountId" class="select select-bordered select-sm w-full sm:w-44" @change="handleSearch">
+            <option value="">Semua akun</option>
+            <option v-for="account in accountFilterOptions" :key="account.id" :value="account.id">
+              {{ formatAccountFilterLabel(account) }}
+            </option>
+          </select>
+          <input
+            v-model="filters.startDate"
+            type="date"
+            class="input input-bordered input-sm w-full sm:w-36"
+            @change="handleSearch"
+          />
+          <input
+            v-model="filters.endDate"
+            type="date"
+            class="input input-bordered input-sm w-full sm:w-36"
+            @change="handleSearch"
+          />
+          <select v-model="filters.limit" class="select select-bordered select-sm w-20" @change="handleSearch">
+            <option :value="20">20</option>
+            <option :value="50">50</option>
+            <option :value="100">100</option>
+          </select>
         </div>
 
-        <!-- Active Filters -->
-        <div v-if="hasActiveFilters" class="flex items-center gap-2 mt-4 pt-4 border-t border-base-300">
-          <span class="text-sm text-base-content/60">Filter aktif:</span>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-if="filters.search"
-              class="badge badge-primary badge-outline gap-1"
-              @click="clearFilter('search')"
-            >
-              Pencarian: "{{ filters.search }}" ✕
-            </button>
-            <button
-              v-if="filters.status"
-              class="badge badge-primary badge-outline gap-1"
-              @click="clearFilter('status')"
-            >
-              Status: {{ filters.status }} ✕
-            </button>
-            <button
-              v-if="filters.categoryId"
-              class="badge badge-primary badge-outline gap-1"
-              @click="clearFilter('categoryId')"
-            >
-              Kategori ✕
-            </button>
-            <button
-              v-if="filters.fundSource"
-              class="badge badge-primary badge-outline gap-1"
-              @click="clearFilter('fundSource')"
-            >
-              Sumber Dana: {{ fundSourceFilterLabel }} ✕
-            </button>
-            <button
-              v-if="filters.accountId"
-              class="badge badge-primary badge-outline gap-1"
-              @click="clearFilter('accountId')"
-            >
-              Akun: {{ accountFilterLabel }} ✕
-            </button>
-            <button class="btn btn-xs btn-ghost" @click="clearAllFilters">Hapus Semua</button>
-          </div>
+        <div v-if="hasActiveFilters" class="flex flex-wrap items-center gap-1.5">
+          <button
+            v-for="chip in activeFilterChips"
+            :key="chip.key"
+            type="button"
+            class="badge badge-sm badge-ghost gap-1 cursor-pointer"
+            @click="clearFilter(chip.key)"
+          >
+            {{ chip.label }}
+            <span aria-hidden="true">×</span>
+          </button>
+          <button type="button" class="btn btn-ghost btn-xs" @click="clearAllFilters">
+            Hapus semua
+          </button>
         </div>
       </div>
+    </div>
+
+    <div v-if="!loading" class="flex flex-wrap items-end justify-between gap-2 mb-3 px-0.5">
+      <p class="text-sm text-base-content/60">
+        {{ summary.count || pagination.total || 0 }} pengeluaran
+      </p>
+      <p class="text-sm">
+        <span class="text-base-content/60">Total pengeluaran</span>
+        <span class="ml-2 font-semibold tabular-nums">{{ formatCurrency(summary.totalAmount) }}</span>
+      </p>
     </div>
 
     <!-- Loading State -->
@@ -316,6 +244,17 @@ meta:
                 </td>
               </tr>
             </tbody>
+            <tfoot>
+              <tr class="border-t border-base-300">
+                <td colspan="4" class="text-right text-xs font-medium uppercase tracking-wide text-base-content/50">
+                  Total pengeluaran
+                </td>
+                <td class="text-right font-semibold tabular-nums whitespace-nowrap">
+                  {{ formatCurrency(summary.totalAmount) }}
+                </td>
+                <td colspan="3"></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
 
@@ -517,6 +456,7 @@ const {
   loading,
   actionLoading,
   pagination,
+  summary,
   fetchExpenses,
   createExpense,
   updateExpense,
@@ -640,13 +580,40 @@ const accountFilterLabel = computed(() => {
 const hasExpenses = computed(() => expenses.value.length > 0)
 
 const hasActiveFilters = computed(() => {
-  return filters.value.search || 
-         filters.value.status || 
+  return filters.value.search ||
+         filters.value.status ||
          filters.value.categoryId ||
          filters.value.fundSource ||
          filters.value.accountId ||
          filters.value.startDate ||
          filters.value.endDate
+})
+
+const activeFilterChips = computed(() => {
+  const chips = []
+  if (filters.value.search) {
+    chips.push({ key: 'search', label: `"${filters.value.search}"` })
+  }
+  if (filters.value.status) {
+    chips.push({ key: 'status', label: formatStatus(filters.value.status) })
+  }
+  if (filters.value.categoryId) {
+    const category = categories.value?.find((item) => String(item.id) === String(filters.value.categoryId))
+    chips.push({ key: 'categoryId', label: category?.name || 'Kategori' })
+  }
+  if (filters.value.fundSource) {
+    chips.push({ key: 'fundSource', label: fundSourceFilterLabel.value })
+  }
+  if (filters.value.accountId) {
+    chips.push({ key: 'accountId', label: accountFilterLabel.value })
+  }
+  if (filters.value.startDate) {
+    chips.push({ key: 'startDate', label: `Dari ${formatDate(filters.value.startDate)}` })
+  }
+  if (filters.value.endDate) {
+    chips.push({ key: 'endDate', label: `Sampai ${formatDate(filters.value.endDate)}` })
+  }
+  return chips
 })
 
 const formatCurrency = (amount) => {

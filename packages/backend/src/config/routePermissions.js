@@ -380,6 +380,7 @@ const ROUTE_TO_SUBJECT_MAP = {
   '/transactions/:id/refund': { subject: 'Transaction', actions: ['cancel'] },
   '/transactions/:id/refund-items': { subject: 'Transaction', actions: ['cancel'] },
   '/transactions/:id/pre-print': { subject: 'Transaction', actions: ['read'] },
+  '/transactions/:id/reprint-receipt': { subject: 'Transaction', actions: ['read'] },
   '/transactions/:id/split-bill': { subject: 'Transaction', actions: ['update'] },
   '/transactions/:id/payment': { subject: 'Transaction', actions: ['update'] },
   '/transactions/combined': { subject: 'Transaction', actions: ['create'] },

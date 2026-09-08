@@ -12,7 +12,7 @@ Sistem ini menyediakan:
 - ✅ Database info & statistics
 - ✅ Super admin only access
 - ✅ Support MySQL & PostgreSQL
-- ✅ Auto cleanup old backups (keep last 10)
+- ✅ Retention-based cleanup for local and cloud backups
 
 ## 🔧 Prerequisites
 
@@ -262,8 +262,10 @@ Authorization: Bearer <super-admin-token>
 ## 📦 Backup Strategy
 
 ### Automatic Cleanup
-- Keeps **last 10 backups** per environment
-- Auto-deletes older backups when limit exceeded
+- Keeps backups for `BACKUP_RETENTION_DAYS` days per environment (default: 30)
+- The retention value can also be set from Settings > Integrations > Backup Retention
+- Auto-deletes expired local backups after each successful backup
+- When enabled, applies the same cleanup to Google Drive files and MinIO/S3 objects
 - Runs after each successful backup
 
 ### Filename Format

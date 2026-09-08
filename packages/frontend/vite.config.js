@@ -9,12 +9,30 @@ import IconsResolver from 'unplugin-icons/resolver'
 import Pages from 'vite-plugin-pages'
 import VueDevTools from 'vite-plugin-vue-devtools'
 
+function deploymentVersionPlugin(buildId) {
+  return {
+    name: 'deployment-version',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify({
+          buildId,
+          generatedAt: new Date().toISOString(),
+        }),
+      })
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const apiProxyTarget = env.VITE_API_PROXY_TARGET || 'http://localhost:3000'
+  const buildId = env.VITE_BUILD_ID || `build-${Date.now()}`
 
   return {
     plugins: [
+      deploymentVersionPlugin(buildId),
       tailwindcss(),
       vue(),
       
@@ -113,6 +131,10 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
+    },
+
+    define: {
+      __APP_BUILD_ID__: JSON.stringify(buildId),
     },
 
     server: {

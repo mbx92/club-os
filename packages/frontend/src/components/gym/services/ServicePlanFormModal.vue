@@ -37,7 +37,12 @@
                 <option value="membership">Membership</option>
                 <option value="class_package">Paket Kelas</option>
                 <option value="pt_package">Paket PT</option>
-                <option value="spa_package">Paket Spa</option>
+                <option
+                  v-if="isEditMode && formData.serviceType === 'spa_package'"
+                  value="spa_package"
+                >
+                  Paket Spa
+                </option>
                 <option value="custom">Add-on</option>
               </select>
               <label v-if="errors.serviceType" class="label">
@@ -237,324 +242,92 @@
             </div>
           </div>
 
-          <!-- Access Control Section -->
-          <div v-if="formData.serviceType">
-            <h4 class="mb-3 text-base font-semibold">Access Control</h4>
-
-            <!-- Membership Access Control -->
-            <div v-if="formData.serviceType === 'membership'" class="space-y-4">
-              <!-- Facilities -->
-              <div class="w-full form-control">
-                <label class="label">
-                  <span class="font-medium label-text">Facilities</span>
-                </label>
-                <input
-                  v-model="facilitiesInput"
-                  type="text"
-                  placeholder="e.g., gym, pool, sauna (comma-separated)"
-                  class="w-full input input-bordered"
-                  @blur="updateFacilities"
-                />
-                <div
-                  v-if="formData.accessControl.facilities?.length > 0"
-                  class="flex flex-wrap gap-2 mt-2"
-                >
-                  <div
-                    v-for="(facility, index) in formData.accessControl
-                      .facilities"
-                    :key="index"
-                    class="gap-2 badge badge-primary"
-                  >
-                    {{ facility }}
-                    <button type="button" @click="removeFacility(index)">
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Max Check-ins -->
-              <div class="w-full form-control">
-                <label class="label">
-                  <span class="font-medium label-text">Max Check-ins</span>
-                </label>
-                <input
-                  v-model.number="formData.accessControl.maxCheckIns"
-                  type="number"
-                  min="0"
-                  placeholder="30 (0 for unlimited)"
-                  class="w-full input input-bordered"
-                />
-                <label class="label">
-                  <span class="label-text-alt text-base-content/60"
-                    >Maximum number of check-ins allowed (0 = unlimited)</span
-                  >
-                </label>
-              </div>
-            </div>
-
-            <!-- Class Package Access Control -->
-            <div
-              v-if="formData.serviceType === 'class_package'"
-              class="space-y-4"
-            >
-              <!-- Applicable Class Types -->
-              <div class="w-full form-control">
-                <label class="label">
-                  <span class="font-medium label-text"
-                    >Applicable Class Types</span
-                  >
-                </label>
-                <input
-                  v-model="classTypesInput"
-                  type="text"
-                  placeholder="e.g., yoga, pilates, zumba (comma-separated)"
-                  class="w-full input input-bordered"
-                  @blur="updateClassTypes"
-                />
-                <div
-                  v-if="formData.accessControl.applicableClassTypes?.length > 0"
-                  class="flex flex-wrap gap-2 mt-2"
-                >
-                  <div
-                    v-for="(classType, index) in formData.accessControl
-                      .applicableClassTypes"
-                    :key="index"
-                    class="gap-2 badge badge-secondary"
-                  >
-                    {{ classType }}
-                    <button type="button" @click="removeClassType(index)">
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Requires Trainer Assignment -->
-              <label
-                class="justify-start w-full gap-3 px-4 py-3 border rounded-lg cursor-pointer label border-base-300"
-              >
-                <input
-                  v-model="formData.accessControl.requiresTrainerAssignment"
-                  type="checkbox"
-                  class="checkbox"
-                />
-                <span class="label-text">Requires Trainer Assignment</span>
-              </label>
-
-              <!-- Default Trainer Selection (if requires trainer) -->
-              <div
-                v-if="formData.accessControl.requiresTrainerAssignment"
-                class="w-full form-control"
-              >
-                <label class="label">
-                  <span class="font-medium label-text">Default Trainer</span>
-                </label>
-                <button
-                  type="button"
-                  class="justify-start w-full btn btn-bordered"
-                  :class="{ 'btn-primary': formData.trainerId }"
-                  @click="openTrainerModal"
-                >
-                  <span v-if="selectedTrainerName" class="font-normal">
-                    {{ selectedTrainerName }}
-                  </span>
-                  <span v-else class="font-normal text-base-content/50">
-                    Click to select trainer
-                  </span>
-                </button>
-                <label class="label">
-                  <span class="label-text-alt text-base-content/60">
-                    Optional: Select a default trainer for this package
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            <!-- PT Package Access Control -->
-            <div v-if="formData.serviceType === 'pt_package'" class="space-y-4">
-              <label
-                class="justify-start w-full gap-3 px-4 py-3 border rounded-lg cursor-pointer label border-base-300"
-              >
-                <input
-                  v-model="formData.accessControl.requiresTrainerAssignment"
-                  type="checkbox"
-                  class="checkbox"
-                  checked
-                />
-                <span class="label-text">Requires Trainer Assignment</span>
-              </label>
-
-              <!-- Default Trainer Selection -->
-              <div
-                v-if="formData.accessControl.requiresTrainerAssignment"
-                class="w-full form-control"
-              >
-                <label class="label">
-                  <span class="font-medium label-text">Default Trainer</span>
-                </label>
-                <button
-                  type="button"
-                  class="justify-start w-full btn btn-bordered"
-                  :class="{ 'btn-primary': formData.trainerId }"
-                  @click="openTrainerModal"
-                >
-                  <span v-if="selectedTrainerName" class="font-normal">
-                    {{ selectedTrainerName }}
-                  </span>
-                  <span v-else class="font-normal text-base-content/50">
-                    Click to select trainer
-                  </span>
-                </button>
-                <label class="label">
-                  <span class="label-text-alt text-base-content/60">
-                    Optional: Select a default trainer for this package
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Spa Package Access Control -->
-            <div
-              v-if="formData.serviceType === 'spa_package'"
-              class="space-y-4"
-            >
-              <label
-                class="justify-start w-full gap-3 px-4 py-3 border rounded-lg cursor-pointer label border-base-300"
-              >
-                <input
-                  v-model="formData.accessControl.requiresTrainerAssignment"
-                  type="checkbox"
-                  class="checkbox"
-                />
-                <span class="label-text">Requires Therapist Assignment</span>
-              </label>
-
-              <!-- Default Therapist Selection (if requires therapist) -->
-              <div
-                v-if="formData.accessControl.requiresTrainerAssignment"
-                class="w-full form-control"
-              >
-                <label class="label">
-                  <span class="font-medium label-text">Default Therapist</span>
-                </label>
-                <button
-                  type="button"
-                  class="justify-start w-full btn btn-bordered"
-                  :class="{ 'btn-primary': formData.trainerId }"
-                  @click="openTrainerModal"
-                >
-                  <span v-if="selectedTrainerName" class="font-normal">
-                    {{ selectedTrainerName }}
-                  </span>
-                  <span v-else class="font-normal text-base-content/50">
-                    Click to select therapist
-                  </span>
-                </button>
-                <label class="label">
-                  <span class="label-text-alt text-base-content/60">
-                    Optional: Select a default therapist for this package
-                  </span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <!-- Settings Section -->
+          <!-- Display Settings -->
           <div>
             <h4 class="mb-3 text-base font-semibold">Display Settings</h4>
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <!-- Display Order -->
-              <div class="w-full form-control">
-                <label class="label">
-                  <span class="font-medium label-text">Display Order</span>
-                </label>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <span class="mb-1 block text-sm font-medium">Urutan</span>
                 <input
                   v-model.number="formData.displayOrder"
                   type="number"
                   min="1"
                   placeholder="1"
-                  class="w-full input input-bordered"
+                  class="w-full input input-bordered input-sm"
                 />
-                <label class="label">
-                  <span class="label-text-alt text-base-content/60"
-                    >Lower numbers appear first</span
-                  >
-                </label>
               </div>
-
-              <!-- Popular Flag -->
-              <div class="w-full form-control">
-                <label class="label">
-                  <span class="font-medium label-text">Popular Plan</span>
-                </label>
-                <label
-                  class="justify-start w-full gap-3 px-4 py-3 border rounded-lg cursor-pointer label border-base-300"
-                >
-                  <input
-                    v-model="formData.isPopular"
-                    type="checkbox"
-                    class="checkbox checkbox-warning"
-                  />
-                  <span class="label-text">Mark as popular</span>
-                </label>
-              </div>
-
-              <!-- Walk-in Eligible Flag -->
-              <div class="w-full form-control">
-                <label class="label">
-                  <span class="font-medium label-text">Walk-in Eligible</span>
-                </label>
-                <label
-                  class="justify-start w-full gap-3 px-4 py-3 border rounded-lg cursor-pointer label border-base-300"
-                >
-                  <input
-                    v-model="formData.allowWalkIn"
-                    type="checkbox"
-                    class="checkbox checkbox-secondary"
-                  />
-                  <div>
-                    <span class="label-text">Tersedia untuk Walk-in</span>
-                    <p class="text-xs text-base-content/50 mt-0.5">Tampil di POS saat tipe pelanggan Walk-in dipilih</p>
-                  </div>
-                </label>
-              </div>
-
-              <!-- Pax -->
-              <div class="w-full form-control">
-                <label class="label">
-                  <span class="font-medium label-text">Pax</span>
-                </label>
+              <div>
+                <span class="mb-1 block text-sm font-medium">Pax</span>
                 <input
                   v-model.number="formData.pax"
                   type="number"
                   min="1"
-                  placeholder="Jumlah orang per transaksi, contoh: 2 (untuk paket couple)"
-                  class="w-full input input-bordered"
+                  placeholder="1"
+                  class="w-full input input-bordered input-sm"
                 />
-                <label class="label">
-                  <span class="label-text-alt text-base-content/50">Isi jika 1 transaksi mencakup lebih dari 1 orang (misal: couple = 2)</span>
-                </label>
               </div>
             </div>
+            <p class="mt-1 text-xs text-base-content/50">
+              Urutan lebih kecil tampil lebih dulu. Pax diisi jika 1 transaksi mencakup lebih dari 1 orang.
+            </p>
 
-            <!-- Active Status -->
-            <div class="w-full mt-4 form-control">
-              <label class="label">
-                <span class="font-medium label-text">Status</span>
-              </label>
-              <label
-                class="justify-start w-full gap-3 px-4 py-3 border rounded-lg cursor-pointer label border-base-300"
+            <div class="mt-3 space-y-2">
+              <div
+                class="flex items-center w-full gap-3 px-3 py-2 border rounded-lg cursor-pointer border-base-300"
+                role="checkbox"
+                :aria-checked="!!formData.isPopular"
+                tabindex="0"
+                @click="formData.isPopular = !formData.isPopular"
+                @keydown.enter.prevent="formData.isPopular = !formData.isPopular"
+                @keydown.space.prevent="formData.isPopular = !formData.isPopular"
               >
                 <input
-                  v-model="formData.isActive"
                   type="checkbox"
-                  class="toggle toggle-success"
+                  class="toggle toggle-warning toggle-sm pointer-events-none"
+                  tabindex="-1"
+                  :checked="!!formData.isPopular"
                 />
-                <span class="label-text">{{
-                  formData.isActive ? "Active" : "Inactive"
-                }}</span>
-              </label>
+                <span class="text-sm">Populer</span>
+              </div>
+
+              <div
+                class="flex items-center w-full gap-3 px-3 py-2 border rounded-lg cursor-pointer border-base-300"
+                role="checkbox"
+                :aria-checked="!!formData.allowWalkIn"
+                tabindex="0"
+                @click="toggleAllowWalkIn"
+                @keydown.enter.prevent="toggleAllowWalkIn"
+                @keydown.space.prevent="toggleAllowWalkIn"
+              >
+                <input
+                  type="checkbox"
+                  class="toggle toggle-secondary toggle-sm pointer-events-none"
+                  tabindex="-1"
+                  :checked="!!formData.allowWalkIn"
+                />
+                <span>
+                  <span class="block text-sm">Tersedia untuk Walk-in</span>
+                  <span class="block text-xs text-base-content/50">Tampil di POS untuk pelanggan walk-in</span>
+                </span>
+              </div>
+
+              <div
+                class="flex items-center w-full gap-3 px-3 py-2 border rounded-lg cursor-pointer border-base-300"
+                role="checkbox"
+                :aria-checked="!!formData.isActive"
+                tabindex="0"
+                @click="formData.isActive = !formData.isActive"
+                @keydown.enter.prevent="formData.isActive = !formData.isActive"
+                @keydown.space.prevent="formData.isActive = !formData.isActive"
+              >
+                <input
+                  type="checkbox"
+                  class="toggle toggle-success toggle-sm pointer-events-none"
+                  tabindex="-1"
+                  :checked="!!formData.isActive"
+                />
+                <span class="text-sm">{{ formData.isActive ? 'Aktif' : 'Nonaktif' }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -663,9 +436,14 @@ const requiresTrainerChecked = computed(() => {
 });
 
 // Initialize form with plan data if editing
+const toggleAllowWalkIn = () => {
+  formData.value.allowWalkIn = !formData.value.allowWalkIn;
+};
+
 watch(
-  () => props.plan,
-  (newPlan) => {
+  () => props.plan?.id,
+  () => {
+    const newPlan = props.plan;
     if (newPlan) {
       formData.value = {
         serviceType: newPlan.serviceType || "membership",

@@ -4,8 +4,14 @@ const {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
 } = require('@aws-sdk/client-s3');
 const { getMimeType } = require('./googleDriveBackup');
+const {
+  getDefaultBackupRetentionDays,
+  normalizeBackupRetentionDays,
+} = require('../src/utils/backupStorage');
 
 function parseBoolean(value) {
   return String(value).toLowerCase() === 'true';
@@ -109,6 +115,11 @@ function buildObjectKey(backupResult, objectPrefix) {
   return objectPrefix ? `${objectPrefix}/${backupResult.filename}` : backupResult.filename;
 }
 
+function buildBackupObjectPrefix(environment, objectPrefix) {
+  const filenamePrefix = `backup_${environment}_`;
+  return objectPrefix ? `${objectPrefix}/${filenamePrefix}` : filenamePrefix;
+}
+
 function buildTestObjectKey(objectPrefix) {
   const suffix = `clubos-minio-test-${Date.now()}.txt`;
   return objectPrefix ? `${objectPrefix}/__healthcheck__/${suffix}` : `__healthcheck__/${suffix}`;
@@ -183,7 +194,106 @@ async function putObjectToS3(client, config, objectKey, body, contentType, metad
   }));
 }
 
-async function maybeUploadBackupToS3(backupResult, overrides = null) {
+async function listS3Objects(client, config, prefix) {
+  const objects = [];
+  let continuationToken = null;
+
+  do {
+    const response = await client.send(new ListObjectsV2Command({
+      Bucket: config.bucket,
+      Prefix: prefix,
+      ContinuationToken: continuationToken || undefined,
+    }));
+
+    objects.push(...(response.Contents || []));
+    continuationToken = response.IsTruncated
+      ? response.NextContinuationToken || null
+      : null;
+  } while (continuationToken);
+
+  return objects;
+}
+
+async function cleanupExpiredS3Backups({
+  client,
+  config,
+  environment = process.env.NODE_ENV || 'development',
+  retentionDays = getDefaultBackupRetentionDays(),
+  now = new Date(),
+} = {}) {
+  const normalizedRetentionDays = normalizeBackupRetentionDays(retentionDays);
+  const nowDate = now instanceof Date ? now : new Date(now);
+  const cutoffTime = nowDate.getTime() - (normalizedRetentionDays * 24 * 60 * 60 * 1000);
+  const objectPrefix = buildBackupObjectPrefix(environment, config.objectPrefix);
+  const remoteObjects = await listS3Objects(client, config, objectPrefix);
+  const candidates = remoteObjects.filter(object => {
+    const key = object.Key || '';
+    return key.startsWith(objectPrefix)
+      && (key.endsWith('.sql') || key.endsWith('.json'))
+      && object.LastModified
+      && new Date(object.LastModified).getTime() < cutoffTime;
+  });
+  const deleted = [];
+  const errors = [];
+
+  for (let index = 0; index < candidates.length; index += 1000) {
+    const batch = candidates.slice(index, index + 1000);
+    try {
+      const response = await client.send(new DeleteObjectsCommand({
+        Bucket: config.bucket,
+        Delete: {
+          Objects: batch.map(object => ({ Key: object.Key })),
+          Quiet: true,
+        },
+      }));
+
+      const responseErrors = response.Errors || [];
+      const responseErrorKeys = new Set(responseErrors.map(error => error.Key));
+      batch.forEach(object => {
+        if (responseErrorKeys.has(object.Key)) {
+          const responseError = responseErrors.find(error => error.Key === object.Key);
+          errors.push({
+            objectKey: object.Key,
+            error: responseError?.Message || responseError?.Code || 'Delete failed',
+          });
+          return;
+        }
+
+        deleted.push({
+          objectKey: object.Key,
+          lastModifiedAt: new Date(object.LastModified).toISOString(),
+          deletedAt: nowDate.toISOString(),
+        });
+      });
+    } catch (error) {
+      batch.forEach(object => {
+        errors.push({
+          objectKey: object.Key,
+          error: error.message,
+        });
+      });
+    }
+  }
+
+  return {
+    attempted: true,
+    retentionDays: normalizedRetentionDays,
+    cutoffAt: new Date(cutoffTime).toISOString(),
+    prefix: objectPrefix,
+    scannedCount: remoteObjects.length,
+    candidateCount: candidates.length,
+    deleted,
+    deletedCount: deleted.length,
+    errors,
+    errorCount: errors.length,
+  };
+}
+
+async function maybeUploadBackupToS3(
+  backupResult,
+  overrides = null,
+  retentionDays = getDefaultBackupRetentionDays()
+) {
   const config = resolveMinioBackupConfig(overrides);
   const configIssue = validateMinioBackupConfig(config);
 
@@ -198,6 +308,7 @@ async function maybeUploadBackupToS3(backupResult, overrides = null) {
       skipped: true,
       reason: configIssue,
       source: config.source,
+      retention: null,
     };
   }
 
@@ -220,6 +331,26 @@ async function maybeUploadBackupToS3(backupResult, overrides = null) {
       }
     );
 
+    let retention;
+    try {
+      retention = await cleanupExpiredS3Backups({
+        client,
+        config,
+        environment: backupResult.environment,
+        retentionDays,
+      });
+    } catch (error) {
+      retention = {
+        attempted: true,
+        retentionDays: normalizeBackupRetentionDays(retentionDays),
+        deleted: [],
+        deletedCount: 0,
+        errors: [],
+        errorCount: 1,
+        error: error.message,
+      };
+    }
+
     return {
       enabled: true,
       uploaded: true,
@@ -232,6 +363,7 @@ async function maybeUploadBackupToS3(backupResult, overrides = null) {
       objectKey,
       eTag: response.ETag ? response.ETag.replace(/"/g, '') : null,
       versionId: response.VersionId || null,
+      retention,
     };
   } catch (error) {
     if (config.required) {
@@ -248,6 +380,7 @@ async function maybeUploadBackupToS3(backupResult, overrides = null) {
       region: config.region,
       source: config.source,
       objectKey,
+      retention: null,
       error: error.message,
     };
   }
@@ -335,4 +468,7 @@ module.exports = {
   validateMinioBackupConfig,
   parseEndpoint,
   normalizeObjectPrefix,
+  buildBackupObjectPrefix,
+  listS3Objects,
+  cleanupExpiredS3Backups,
 };

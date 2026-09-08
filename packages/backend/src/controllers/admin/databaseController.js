@@ -12,7 +12,7 @@ const { testMinioConnection } = require('../../../scripts/s3Backup');
 const { createError } = require('../../utils/errorCodes');
 const logger = require('../../utils/logger');
 const { resolveBackupOptionsForTenantId } = require('../../utils/backupGoogleDriveConfig');
-const { ensureBackupStorageDir } = require('../../utils/backupStorage');
+const { ensureBackupStorageDir, getDefaultBackupRetentionDays } = require('../../utils/backupStorage');
 const productionImportService = require('../../services/productionImportService');
 
 const backupsDir = ensureBackupStorageDir();
@@ -107,6 +107,7 @@ function buildBackupFailure(err, backupOptions = {}) {
     targetTenantName: backupOptions.targetTenantName || null,
     resolutionSource: backupOptions.resolutionSource || null,
     requestedCloudProvider: backupOptions.requestedCloudProvider || null,
+    retentionDays: backupOptions.retentionDays || getDefaultBackupRetentionDays(),
   };
 
   if (err?.code === 'GOOGLE_DRIVE_BACKUP_FAILED') {
@@ -164,6 +165,7 @@ async function createDatabaseBackup(req, res, next) {
       userName: req.user.name,
       isSuperAdmin: req.user.isSuperAdmin,
       targetTenantId: backupOptions.targetTenantId,
+      retentionDays: backupOptions.retentionDays,
     });
 
     let result;
@@ -193,7 +195,9 @@ async function createDatabaseBackup(req, res, next) {
     logger.info('Database backup completed', {
       userId: req.user.id,
       filename: result.filename,
-      size: result.sizeMB + ' MB'
+      size: result.sizeMB + ' MB',
+      retentionDays: result.retention?.retentionDays || backupOptions.retentionDays,
+      expiredBackupsDeleted: result.retention?.deletedCount || 0,
     });
 
     res.status(201).json({
@@ -212,6 +216,11 @@ async function createDatabaseBackup(req, res, next) {
         localFileDeleted: Boolean(result.localFileDeleted),
         googleDrive: result.googleDrive || null,
         minio: result.minio || null,
+        retention: result.retention || {
+          retentionDays: backupOptions.retentionDays || getDefaultBackupRetentionDays(),
+          deleted: [],
+          deletedCount: 0,
+        },
         settingsSourceTenantId: backupOptions.targetTenantId,
         settingsSourceTenantName: backupOptions.targetTenantName || null,
         requestedCloudProvider: backupOptions.requestedCloudProvider || null,
@@ -281,6 +290,12 @@ async function testMinioBackupConnection(req, res, next) {
  */
 async function listBackups(req, res, next) {
   try {
+    const targetTenantId = req.query?.tenantId || req.user.tenantId || null;
+    const backupOptions = await resolveBackupOptionsForTenantId(targetTenantId);
+    const retentionDays = backupOptions.retentionDays || getDefaultBackupRetentionDays();
+    const now = new Date();
+    const retentionMs = retentionDays * 24 * 60 * 60 * 1000;
+
     // Create backups directory if not exists
     if (!fs.existsSync(backupsDir)) {
       fs.mkdirSync(backupsDir, { recursive: true });
@@ -297,12 +312,15 @@ async function listBackups(req, res, next) {
         const parts = file.replace('.sql', '').replace('.json', '').split('_');
         const environment = parts[1] || 'unknown';
         const format = file.endsWith('.json') ? 'json' : 'sql';
+        const expiresAt = new Date(stats.mtime.getTime() + retentionMs);
         
         return {
           filename: file,
           size: stats.size,
           sizeMB: (stats.size / (1024 * 1024)).toFixed(2),
           createdAt: stats.mtime.toISOString(),
+          expiresAt: expiresAt.toISOString(),
+          isExpired: expiresAt.getTime() < now.getTime(),
           environment,
           format,
           downloadUrl: `/api/v1/admin/database/download/${file}`
@@ -315,7 +333,13 @@ async function listBackups(req, res, next) {
       data: {
         backups: files,
         total: files.length,
-        totalSizeMB: files.reduce((sum, file) => sum + parseFloat(file.sizeMB), 0).toFixed(2)
+        totalSizeMB: files.reduce((sum, file) => sum + parseFloat(file.sizeMB), 0).toFixed(2),
+        retention: {
+          retentionDays,
+          settingsSourceTenantId: backupOptions.targetTenantId,
+          settingsSourceTenantName: backupOptions.targetTenantName || null,
+          resolutionSource: backupOptions.resolutionSource,
+        }
       }
     });
   } catch (err) {

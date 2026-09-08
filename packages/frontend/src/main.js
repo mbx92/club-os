@@ -16,6 +16,7 @@ import {
   configureFrontendGlitchtip,
   syncFrontendGlitchtipContext,
 } from '@/services/glitchtip'
+import { startDeploymentVersionMonitor } from '@/services/deploymentVersion'
 
 // Import directives
 import { vFeatureLock, featureLockStyles } from '@/directives/featureLock'
@@ -89,6 +90,7 @@ const initApp = async () => {
   }
 
   syncGlitchtipFromAuth()
+  startDeploymentVersionMonitor()
   
   // Mount app after auth is initialized
   app.mount('#app')

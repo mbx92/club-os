@@ -64,9 +64,14 @@ meta:
                 <IconRefresh class="w-4 h-4 mr-1" />
                 Full Refund
               </button>
-              <button class="btn btn-ghost btn-sm" @click="printTransaction">
-                <IconPrinter class="w-4 h-4 mr-1" />
-                Print
+              <button
+                class="btn btn-ghost btn-sm"
+                :disabled="reprinting"
+                @click="printTransaction"
+              >
+                <span v-if="reprinting" class="loading loading-spinner loading-xs"></span>
+                <IconPrinter v-else class="w-4 h-4 mr-1" />
+                Cetak Ulang Receipt
               </button>
             </div>
           </div>
@@ -430,7 +435,8 @@ const {
   loading, 
   getTransactionById, 
   refundTransaction,
-  refundTransactionItems
+  refundTransactionItems,
+  reprintReceipt,
 } = useTransactions()
 const { formatCurrency } = useCurrency()
 
@@ -576,9 +582,18 @@ const handlePartialRefund = async () => {
   }
 }
 
-const printTransaction = () => {
-  // TODO: Implement print receipt functionality
-  window.print()
+const reprinting = ref(false)
+
+const printTransaction = async () => {
+  if (!transaction.value?.id || reprinting.value) return
+  reprinting.value = true
+  try {
+    await reprintReceipt(transaction.value.id)
+  } catch {
+    // notification handled in composable
+  } finally {
+    reprinting.value = false
+  }
 }
 
 // Lifecycle

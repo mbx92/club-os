@@ -1520,7 +1520,7 @@ const buildCombinedServiceReceipt = (activeServices, member, transaction, tenant
 /**
  * Print combined service purchase receipt (all services in one receipt)
  */
-const printCombinedServiceReceipt = async (activeServices, member, transaction, tenant) => {
+const printCombinedServiceReceipt = async (activeServices, member, transaction, tenant, options = {}) => {
   try {
     logger.logInfo('Print combined service receipt - Starting', {
       action: 'PRINT_COMBINED_SERVICE_RECEIPT_START',
@@ -1576,13 +1576,19 @@ const printCombinedServiceReceipt = async (activeServices, member, transaction, 
     });
     
     const receiptContent = buildCombinedServiceReceipt(activeServices, member, transaction, tenant, template);
-    
-    // Send to printer
-    const result = await sendToPrinter(
-      printer.ipAddress,
-      printer.port || 9100,
-      receiptContent
-    );
+    const copies = Math.max(1, parseInt(options.copies, 10) || tenant?.settings?.transaction?.receiptCopies || 2);
+
+    let result;
+    for (let i = 0; i < copies; i++) {
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+      result = await sendToPrinter(
+        printer.ipAddress,
+        printer.port || 9100,
+        receiptContent
+      );
+    }
     
     logger.logInfo('Combined service receipt printed successfully', {
       action: 'PRINT_COMBINED_SERVICE_RECEIPT_SUCCESS',
@@ -1590,10 +1596,11 @@ const printCombinedServiceReceipt = async (activeServices, member, transaction, 
       transactionId: transaction.id,
       serviceCount: activeServices.length,
       printerId: printer.id,
-      printerName: printer.name
+      printerName: printer.name,
+      copies
     });
     
-    return result;
+    return { ...result, copies };
   } catch (error) {
     logger.error('Failed to print combined service receipt', {
       action: 'PRINT_COMBINED_SERVICE_RECEIPT_ERROR',
@@ -2291,7 +2298,7 @@ const buildPaymentReceipt = (transaction, tenant, template = {}) => {
  * @param {Object} tenant - Tenant with settings (printers, templates)
  * @returns {Promise<Object>} Print result
  */
-const printPaymentReceipt = async (transaction, tenant) => {
+const printPaymentReceipt = async (transaction, tenant, options = {}) => {
   try {
     const printer = getReceiptPrinter(tenant);
     
@@ -2351,11 +2358,18 @@ const printPaymentReceipt = async (transaction, tenant) => {
     }
     
     try {
-      const result = await sendToPrinter(
-        printer.ipAddress,
-        printer.port || 9100,
-        receiptContent
-      );
+      const copies = Math.max(1, parseInt(options.copies, 10) || 1);
+      let result;
+      for (let i = 0; i < copies; i++) {
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 800));
+        }
+        result = await sendToPrinter(
+          printer.ipAddress,
+          printer.port || 9100,
+          receiptContent
+        );
+      }
       
       if (printJob) {
         await printJob.update({ 
@@ -2369,10 +2383,11 @@ const printPaymentReceipt = async (transaction, tenant) => {
         tenantId: tenant.id,
         transactionId: transaction.id,
         transactionNumber: transaction.transactionNumber,
-        printJobId: printJob?.id
+        printJobId: printJob?.id,
+        copies
       });
       
-      return { ...result, printJobId: printJob?.id };
+      return { ...result, printJobId: printJob?.id, copies };
     } catch (printError) {
       if (printJob) {
         await printJob.update({ 

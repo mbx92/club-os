@@ -122,7 +122,7 @@
                             </div>
                           </div>
 
-                          <div class="mt-6 grid gap-3 md:grid-cols-3">
+                          <div class="mt-6 grid gap-3 md:grid-cols-4">
                             <div class="rounded-2xl border border-base-300/80 bg-base-100/88 p-4 shadow-sm">
                               <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/45">Total backup</div>
                               <div class="mt-2 text-3xl font-black text-base-content">{{ backups.length }}</div>
@@ -137,6 +137,11 @@
                               <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/45">Backup terbaru</div>
                               <div class="mt-2 text-xl font-black text-base-content">{{ latestBackupTime }}</div>
                               <p class="mt-2 text-sm text-base-content/60">{{ latestBackupLabel }}</p>
+                            </div>
+                            <div class="rounded-2xl border border-base-300/80 bg-base-100/88 p-4 shadow-sm">
+                              <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/45">Retention</div>
+                              <div class="mt-2 text-3xl font-black text-base-content">{{ backupRetentionDays }}</div>
+                              <p class="mt-2 text-sm text-base-content/60">Hari penyimpanan backup lokal.</p>
                             </div>
                           </div>
                         </div>
@@ -199,7 +204,13 @@
                                 {{ backups.length }} file
                               </span>
                               <span class="rounded-full border border-base-300 bg-base-200 px-3 py-1.5">
-                                Max 10 file tersimpan otomatis
+                                Retention {{ backupRetentionDays }} hari
+                              </span>
+                              <span
+                                v-if="expiredBackupCount > 0"
+                                class="rounded-full border border-warning/30 bg-warning/10 px-3 py-1.5 text-warning"
+                              >
+                                {{ expiredBackupCount }} file melewati retention
                               </span>
                             </div>
                           </div>
@@ -251,6 +262,9 @@
                                       <div class="text-sm">
                                         <div class="font-medium text-base-content">{{ formatDate(backup.createdAt) }}</div>
                                         <div class="text-xs text-base-content/50">{{ formatTime(backup.createdAt) }}</div>
+                                        <div v-if="backup.expiresAt" class="mt-1 text-xs" :class="backup.isExpired ? 'text-warning' : 'text-base-content/50'">
+                                          Kedaluwarsa {{ formatDate(backup.expiresAt) }}
+                                        </div>
                                       </div>
                                     </td>
                                     <td>
@@ -359,6 +373,7 @@ const emit = defineEmits(['update:modelValue', 'close'])
 const authStore = useAuthStore()
 const {
   backups,
+  backupRetention,
   databaseInfo,
   isLoading,
   isCreatingBackup,
@@ -396,6 +411,7 @@ const createDefaultMinioSettings = () => ({
 })
 const googleDriveSettings = ref(createDefaultGoogleDriveSettings())
 const minioSettings = ref(createDefaultMinioSettings())
+const fallbackBackupRetentionDays = ref(30)
 
 // Computed
 const sortedBackups = computed(() => {
@@ -409,6 +425,14 @@ const totalSizeMB = computed(() => {
     return sum + parseFloat(backup.sizeMB || 0)
   }, 0)
   return total.toFixed(2)
+})
+
+const backupRetentionDays = computed(() => {
+  return backupRetention.value?.retentionDays || fallbackBackupRetentionDays.value
+})
+
+const expiredBackupCount = computed(() => {
+  return backups.value.filter((backup) => backup.isExpired).length
 })
 
 const latestBackupTime = computed(() => {
@@ -477,12 +501,20 @@ const normalizeMinioSettings = (minio = {}) => ({
   useSsl: Boolean(minio.useSsl)
 })
 
+const normalizeBackupRetentionDays = (value) => {
+  const parsed = Number.parseInt(value, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 3650) : 30
+}
+
 const applyBackupSettings = (settingsSource = null) => {
   googleDriveSettings.value = normalizeGoogleDriveSettings(
     settingsSource?.backup?.googleDrive || {}
   )
   minioSettings.value = normalizeMinioSettings(
     settingsSource?.backup?.minio || {}
+  )
+  fallbackBackupRetentionDays.value = normalizeBackupRetentionDays(
+    settingsSource?.backup?.retentionDays
   )
 }
 

@@ -309,6 +309,17 @@ export function useTransactions() {
     }
   }
 
+  const reprintReceipt = async (transactionId) => {
+    try {
+      const response = await api.post(`/transactions/${transactionId}/reprint-receipt`)
+      showSuccess(response.message || 'Receipt berhasil dicetak ulang')
+      return response
+    } catch (err) {
+      handleError(err, 'Gagal mencetak ulang receipt')
+      throw err
+    }
+  }
+
   /**
    * Create an add-on transaction (e.g. sewa handuk) after check-in
    * Uses POST /transactions with item-based payload
@@ -360,6 +371,7 @@ export function useTransactions() {
     // Methods
     createTransaction,
     createAddonTransaction,
+    reprintReceipt,
     fetchTransactions,
     getTransactionById,
     getTransactionStatistics,

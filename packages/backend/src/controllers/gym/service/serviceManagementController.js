@@ -88,14 +88,33 @@ async function getAllActiveServices(req, res, next) {
       where.status = 'active';
     }
 
-    // Search by member name / email, or by customerName (day pass walk-in)
-    if (search) {
-      const escapedSearch = search.replace(/'/g, "''");
+    // Search by full member name, email, phone, walk-in name, or plan name
+    const trimmedSearch = String(search || '').trim().replace(/\s+/g, ' ');
+    if (trimmedSearch) {
+      const escapedSearch = trimmedSearch.replace(/'/g, "''");
+      const like = `%${escapedSearch}%`;
       where[Op.and] = where[Op.and] || [];
       where[Op.and].push(sequelize.literal(
-        `("ActiveService"."customerName" ILIKE '%${escapedSearch}%' ` +
-        `OR EXISTS (SELECT 1 FROM "Members" m WHERE m.id = "ActiveService"."memberId" ` +
-        `AND (m."firstName" ILIKE '%${escapedSearch}%' OR m."lastName" ILIKE '%${escapedSearch}%' OR m."email" ILIKE '%${escapedSearch}%')))`
+        `(` +
+          `"ActiveService"."customerName" ILIKE '${like}' ` +
+          `OR EXISTS (` +
+            `SELECT 1 FROM "Members" m ` +
+            `WHERE m.id = "ActiveService"."memberId" ` +
+            `AND (` +
+              `m."firstName" ILIKE '${like}' ` +
+              `OR m."lastName" ILIKE '${like}' ` +
+              `OR m."email" ILIKE '${like}' ` +
+              `OR COALESCE(m."phone", '') ILIKE '${like}' ` +
+              `OR CONCAT(m."firstName", ' ', m."lastName") ILIKE '${like}' ` +
+              `OR CONCAT(m."lastName", ' ', m."firstName") ILIKE '${like}'` +
+            `)` +
+          `) ` +
+          `OR EXISTS (` +
+            `SELECT 1 FROM "ServicePlans" sp ` +
+            `WHERE sp.id = "ActiveService"."servicePlanId" ` +
+            `AND sp.name ILIKE '${like}'` +
+          `)` +
+        `)`
       ));
     }
 
