@@ -73,26 +73,6 @@ meta:
           </div>
         </div>
       </router-link>
-
-      <router-link
-        to="/gym/spa/calendar"
-        class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow cursor-pointer"
-      >
-        <div class="card-body">
-          <div class="flex items-center gap-4">
-            <div class="p-4 bg-info/10 rounded-xl">
-              <IconCalendar class="w-8 h-8 text-info" />
-            </div>
-            <div class="flex-1">
-              <h2 class="card-title">Spa Packages Calendar</h2>
-              <p class="text-base-content/60">
-                View spa and wellness service schedules
-              </p>
-            </div>
-            <IconChevronRight class="w-6 h-6 text-base-content/40" />
-          </div>
-        </div>
-      </router-link>
     </div>
   </div>
 </template>

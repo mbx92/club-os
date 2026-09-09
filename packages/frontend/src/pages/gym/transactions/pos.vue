@@ -925,6 +925,8 @@ import {
 } from '@tabler/icons-vue'
 
 const router = useRouter()
+const HIDDEN_POS_SERVICE_TYPES = ['spa_package']
+const isVisiblePosPlan = (plan) => plan.isActive && !HIDDEN_POS_SERVICE_TYPES.includes(plan.serviceType)
 const { createTransaction } = useTransactions()
 const { plans, loading: plansLoading, fetchPlans } = useServicePlans()
 const { members, loading: membersLoading, fetchMembers, createMember } = useMembers()
@@ -1067,17 +1069,17 @@ const serviceTypes = computed(() => {
   
   // Get unique service types
   const types = [...new Set(plans.value.map(p => p.serviceType))]
+    .filter(type => !HIDDEN_POS_SERVICE_TYPES.includes(type))
   
   const typeLabels = {
     'membership': 'Membership',
     'class_package': 'Class Packages',
     'pt_package': 'PT Packages',
-    'spa_package': 'Spa Packages',
     'custom': 'Custom Services'
   }
   
   // Filter plans based on search query first  
-  let filteredBySearch = plans.value.filter(p => p.isActive)
+  let filteredBySearch = plans.value.filter(isVisiblePosPlan)
   // Walk-in: only show walk-in eligible plans
   if (customerType.value === 'walk-in') {
     filteredBySearch = filteredBySearch.filter(p => p.allowWalkIn === true)
@@ -1112,8 +1114,8 @@ const filteredPlans = computed(() => {
   if (!plans.value) return []
   
   let filtered = activeTab.value === 'all' 
-    ? plans.value.filter(p => p.isActive)
-    : plans.value.filter(p => p.serviceType === activeTab.value && p.isActive)
+    ? plans.value.filter(isVisiblePosPlan)
+    : plans.value.filter(p => p.serviceType === activeTab.value && isVisiblePosPlan(p))
   
   // Walk-in: only show plans flagged as allowWalkIn
   if (customerType.value === 'walk-in') {
@@ -1139,8 +1141,8 @@ const totalPlanPages = computed(() => {
   if (!plans.value) return 1
   
   let filtered = activeTab.value === 'all'
-    ? plans.value.filter(p => p.isActive)
-    : plans.value.filter(p => p.serviceType === activeTab.value && p.isActive)
+    ? plans.value.filter(isVisiblePosPlan)
+    : plans.value.filter(p => p.serviceType === activeTab.value && isVisiblePosPlan(p))
   
   if (customerType.value === 'walk-in') {
     filtered = filtered.filter(p => p.allowWalkIn === true)
@@ -1163,8 +1165,8 @@ const totalFilteredPlans = computed(() => {
   if (!plans.value) return 0
 
   let filtered = activeTab.value === 'all'
-    ? plans.value.filter(p => p.isActive)
-    : plans.value.filter(p => p.serviceType === activeTab.value && p.isActive)
+    ? plans.value.filter(isVisiblePosPlan)
+    : plans.value.filter(p => p.serviceType === activeTab.value && isVisiblePosPlan(p))
 
   if (customerType.value === 'walk-in') {
     filtered = filtered.filter(p => p.allowWalkIn === true)

@@ -43,7 +43,7 @@ meta:
         </div>
 
         <!-- By Service Type Cards -->
-        <div v-for="typeStat in statistics.byServiceType" 
+        <div v-for="typeStat in visibleServiceTypeStats" 
              :key="typeStat.serviceType"
              class="shadow card bg-base-100">
           <div class="p-4 card-body">
@@ -118,7 +118,6 @@ meta:
               <option value="membership">Membership</option>
               <option value="class_package">Class Package</option>
               <option value="pt_package">PT Package</option>
-              <option value="spa_package">Spa Package</option>
             </select>
           </div>
 
@@ -493,6 +492,12 @@ const assigningTrainer = ref(false)
 
 // Computed
 const hasServices = computed(() => services.value && services.value.length > 0)
+
+const visibleServiceTypeStats = computed(() => {
+  return (statistics.value?.byServiceType || []).filter(
+    (typeStat) => typeStat.serviceType !== 'spa_package'
+  )
+})
 
 const activeTrainers = computed(() => {
   const filtered = trainers.value.filter(trainer => {

@@ -24,13 +24,25 @@ const transactionSettingsService = require('../../../services/transactionSetting
 const voucherService = require('../../../services/voucherService');
 const receiptPrinterService = require('../../../services/receiptPrinterService');
 const accountService = require('../../../services/accountService');
-const { getTenantTimezone } = require('../../../utils/tenantTimezone');
+const { getTenantTimezone, endOfDayInTz } = require('../../../utils/tenantTimezone');
 const { recordPaymentInflow } = require('../../finance/vaultController');
 
 function addCalendarDays(date, days) {
   const result = new Date(date);
   result.setDate(result.getDate() + (Number(days) || 0));
   return result;
+}
+
+function isDayPassPlan(plan) {
+  if (plan?.sessions && Number(plan.sessions) > 0) return false;
+  const duration = Number(plan?.duration || 0);
+  const validity = Number(plan?.validityDays || 0);
+  return duration === 1 || (duration === 0 && validity === 1);
+}
+
+function dayPassEndOfPurchaseDay(start, timezone) {
+  const dateStr = start.toLocaleDateString('en-CA', { timeZone: timezone });
+  return endOfDayInTz(dateStr, timezone);
 }
 
 /**
@@ -745,102 +757,117 @@ async function purchaseServices(req, res, next) {
       }, t);
     }
 
-    // One ActiveService per plan: qty memperpanjang durasi (membership) atau menambah sesi (paket)
-    const activeServicePromises = normalizedServicePlans.map(sp => (async () => {
+    // Membership/paket: qty memperpanjang durasi atau menambah sesi (satu ActiveService).
+    // Day pass (durasi 1 hari): qty = jumlah tiket hari ini, masing-masing tetap valid 1 hari.
+    const activeServices = [];
+    for (const sp of normalizedServicePlans) {
       const plan = servicePlanMap[sp.servicePlanId];
       const qty = Math.max(1, parseInt(sp.quantity, 10) || 1);
       const unitDurationDays = plan.duration || plan.validityDays || 30;
-      const durationDays = unitDurationDays * qty;
       const isSessionBased = plan.sessions && plan.sessions > 0;
+      const dayPass = isDayPassPlan(plan);
+      const timezone = getTenantTimezone(req);
+      const copies = dayPass ? qty : 1;
+      const durationDays = dayPass ? unitDurationDays : unitDurationDays * qty;
       const sessionsForQty = isSessionBased ? plan.sessions * qty : plan.sessions;
-
-      const existingActiveService = (!isWalkIn && memberId) ? await ActiveService.findOne({
-        where: {
-          memberId,
-          servicePlanId: sp.servicePlanId,
-          tenantId: effectiveTenantId,
-          status: 'active',
-          endDate: { [Op.gte]: new Date() }
-        },
-        order: [['endDate', 'DESC']],
-        transaction: t
-      }) : null;
-
-      let start;
-      let endDate;
-      let totalSessions = sessionsForQty;
-      let remainingSessions = sessionsForQty;
-      let serviceNotes = notes;
-
-      if (existingActiveService) {
-        if (isSessionBased && existingActiveService.remainingSessions > 0) {
-          const sessionsToAdd = sessionsForQty;
-          const newTotalSessions = existingActiveService.totalSessions + sessionsToAdd;
-          const newRemainingSessions = existingActiveService.remainingSessions + sessionsToAdd;
-          const extendedEnd = addCalendarDays(existingActiveService.endDate, durationDays);
-
-          await existingActiveService.update({
-            totalSessions: newTotalSessions,
-            remainingSessions: newRemainingSessions,
-            endDate: extendedEnd,
-            notes: existingActiveService.notes
-              ? `${existingActiveService.notes}\n[${new Date().toISOString().split('T')[0]}] Tambah ${sessionsToAdd} sesi qty ${qty} (total: ${newTotalSessions} sesi).`
-              : `Tambah ${sessionsToAdd} sesi qty ${qty} (total: ${newTotalSessions} sesi).`
-          }, { transaction: t });
-
-          return existingActiveService;
-        }
-
-        start = new Date(existingActiveService.endDate);
-        endDate = addCalendarDays(start, durationDays);
-        const formattedDate = start.toISOString().split('T')[0];
-        serviceNotes = [
-          qty > 1 ? `Qty ${qty} × ${unitDurationDays} hari.` : null,
-          `Perpanjangan dari service aktif hingga ${formattedDate}.`,
-          notes
-        ].filter(Boolean).join(' ');
-      } else {
-        if (sp.startDate) {
-          start = new Date(sp.startDate);
-          start.setHours(start.getHours() + 7);
-        } else {
-          start = new Date();
-        }
-        endDate = addCalendarDays(start, durationDays);
-        if (qty > 1) {
-          serviceNotes = [`Qty ${qty} × ${unitDurationDays} hari.`, notes].filter(Boolean).join(' ');
-        }
-      }
 
       const linePrice = parseFloat(plan.price) * qty;
       const proportionalDiscount = subtotal > 0 ? (voucherDiscount / subtotal) * linePrice : 0;
       const proportionalTax = subtotal > 0 ? (taxAmount / subtotal) * linePrice : 0;
       const itemFinalPrice = linePrice - proportionalDiscount + proportionalTax;
+      const pricePerCopy = itemFinalPrice / copies;
 
-      return ActiveService.create({
-        tenantId: effectiveTenantId,
-        memberId: memberId || null,
-        customerName: isWalkIn ? customerName : null,
-        servicePlanId: sp.servicePlanId,
-        serviceType: plan.serviceType,
-        startDate: start,
-        endDate,
-        totalSessions,
-        remainingSessions,
-        status: 'active',
-        autoRenew: sp.autoRenew || false,
-        purchaseTransactionId: transaction.id,
-        purchaseDate: new Date(),
-        assignedTrainerId: sp.assignedTrainerId || null,
-        pricePaid: itemFinalPrice,
-        currency: plan.currency,
-        voucherId: voucherId,
-        voucherDiscount: proportionalDiscount,
-        notes: serviceNotes
-      }, { transaction: t });
-    })());
+      for (let copyIndex = 0; copyIndex < copies; copyIndex++) {
+        const existingActiveService = (!dayPass && !isWalkIn && memberId) ? await ActiveService.findOne({
+          where: {
+            memberId,
+            servicePlanId: sp.servicePlanId,
+            tenantId: effectiveTenantId,
+            status: 'active',
+            endDate: { [Op.gte]: new Date() }
+          },
+          order: [['endDate', 'DESC']],
+          transaction: t
+        }) : null;
 
-    const activeServices = await Promise.all(activeServicePromises);
+        let start;
+        let endDate;
+        let totalSessions = sessionsForQty;
+        let remainingSessions = sessionsForQty;
+        let serviceNotes = notes;
+
+        if (existingActiveService) {
+          if (isSessionBased && existingActiveService.remainingSessions > 0) {
+            const sessionsToAdd = sessionsForQty;
+            const newTotalSessions = existingActiveService.totalSessions + sessionsToAdd;
+            const newRemainingSessions = existingActiveService.remainingSessions + sessionsToAdd;
+            const extendedEnd = addCalendarDays(existingActiveService.endDate, durationDays);
+
+            await existingActiveService.update({
+              totalSessions: newTotalSessions,
+              remainingSessions: newRemainingSessions,
+              endDate: extendedEnd,
+              notes: existingActiveService.notes
+                ? `${existingActiveService.notes}\n[${new Date().toISOString().split('T')[0]}] Tambah ${sessionsToAdd} sesi qty ${qty} (total: ${newTotalSessions} sesi).`
+                : `Tambah ${sessionsToAdd} sesi qty ${qty} (total: ${newTotalSessions} sesi).`
+            }, { transaction: t });
+
+            activeServices.push(existingActiveService);
+            continue;
+          }
+
+          start = new Date(existingActiveService.endDate);
+          endDate = addCalendarDays(start, durationDays);
+          const formattedDate = start.toISOString().split('T')[0];
+          serviceNotes = [
+            qty > 1 ? `Qty ${qty} × ${unitDurationDays} hari.` : null,
+            `Perpanjangan dari service aktif hingga ${formattedDate}.`,
+            notes
+          ].filter(Boolean).join(' ');
+        } else {
+          if (sp.startDate) {
+            start = new Date(sp.startDate);
+            start.setHours(start.getHours() + 7);
+          } else {
+            start = new Date();
+          }
+          endDate = dayPass
+            ? dayPassEndOfPurchaseDay(start, timezone)
+            : addCalendarDays(start, durationDays);
+          if (dayPass && qty > 1) {
+            serviceNotes = [`Day pass ${copyIndex + 1}/${qty}. Valid hari pembelian saja.`, notes].filter(Boolean).join(' ');
+          } else if (dayPass) {
+            serviceNotes = ['Valid hari pembelian saja.', notes].filter(Boolean).join(' ');
+          } else if (qty > 1) {
+            serviceNotes = [`Qty ${qty} × ${unitDurationDays} hari.`, notes].filter(Boolean).join(' ');
+          }
+        }
+
+        const created = await ActiveService.create({
+          tenantId: effectiveTenantId,
+          memberId: memberId || null,
+          customerName: isWalkIn ? customerName : null,
+          servicePlanId: sp.servicePlanId,
+          serviceType: plan.serviceType,
+          startDate: start,
+          endDate,
+          totalSessions,
+          remainingSessions,
+          status: 'active',
+          autoRenew: sp.autoRenew || false,
+          purchaseTransactionId: transaction.id,
+          purchaseDate: new Date(),
+          assignedTrainerId: sp.assignedTrainerId || null,
+          pricePaid: pricePerCopy,
+          currency: plan.currency,
+          voucherId: voucherId,
+          voucherDiscount: proportionalDiscount / copies,
+          notes: serviceNotes
+        }, { transaction: t });
+
+        activeServices.push(created);
+      }
+    }
 
     // Create trainer commissions for services with assigned trainers (only if ActiveServices were created)
     const commissionPromises = activeServices.map(async (activeService) => {
@@ -881,7 +908,7 @@ async function purchaseServices(req, res, next) {
 
         const qty = Math.max(1, parseInt(sp.quantity, 10) || 1);
         const unitDurationDays = plan.duration || plan.validityDays || 30;
-        const durationDays = unitDurationDays * qty;
+        const durationDays = isDayPassPlan(plan) ? unitDurationDays : unitDurationDays * qty;
         const sessionsForQty = plan.sessions ? plan.sessions * qty : null;
 
         let companionStart;
@@ -892,7 +919,9 @@ async function purchaseServices(req, res, next) {
           companionStart = new Date();
         }
 
-        const companionEnd = addCalendarDays(companionStart, durationDays);
+        const companionEnd = isDayPassPlan(plan)
+          ? dayPassEndOfPurchaseDay(companionStart, getTenantTimezone(req))
+          : addCalendarDays(companionStart, durationDays);
 
         for (const companionId of companions) {
           companionActiveServicePromises.push(

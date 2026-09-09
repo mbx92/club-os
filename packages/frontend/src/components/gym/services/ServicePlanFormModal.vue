@@ -37,12 +37,6 @@
                 <option value="membership">Membership</option>
                 <option value="class_package">Paket Kelas</option>
                 <option value="pt_package">Paket PT</option>
-                <option
-                  v-if="isEditMode && formData.serviceType === 'spa_package'"
-                  value="spa_package"
-                >
-                  Paket Spa
-                </option>
                 <option value="custom">Add-on</option>
               </select>
               <label v-if="errors.serviceType" class="label">

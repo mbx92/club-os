@@ -12,7 +12,7 @@ meta:
       <div>
         <h1 class="text-2xl font-bold">Katalog</h1>
         <p class="text-sm text-base-content/60 mt-0.5">
-          Kelola membership, paket kelas, paket PT, spa, dan add-on di satu tempat
+          Kelola membership, paket kelas, paket PT, dan add-on di satu tempat
         </p>
       </div>
       <button class="btn btn-primary btn-sm" @click="openCreateModal">
@@ -76,9 +76,9 @@ meta:
       <span class="loading loading-spinner loading-lg"></span>
     </div>
 
-    <div v-else-if="hasPlans" class="card bg-base-100 shadow-md">
-      <div class="card-body p-3 sm:p-4">
-        <div class="overflow-x-auto">
+    <div v-else-if="hasPlans" class="card bg-base-100 shadow-md overflow-visible">
+      <div class="card-body p-3 sm:p-4 overflow-visible">
+        <div>
           <table class="table table-xs table-zebra">
             <thead>
               <tr class="text-[11px] uppercase tracking-wide text-base-content/60">
@@ -141,32 +141,14 @@ meta:
                   />
                 </td>
                 <td class="text-center">
-                  <div class="dropdown dropdown-end">
-                    <button
-                      tabindex="0"
-                      class="btn btn-ghost btn-xs btn-circle"
-                      :disabled="actionLoading"
-                    >
-                      <IconDotsVertical class="w-3.5 h-3.5" />
-                    </button>
-                    <ul tabindex="0" class="dropdown-content z-[1] menu menu-sm p-1.5 shadow-lg bg-base-100 rounded-box w-40">
-                      <li>
-                        <a @click="showPlanDetail(plan)">
-                          <IconEye class="w-3.5 h-3.5" /> Detail
-                        </a>
-                      </li>
-                      <li>
-                        <a @click="openEditModal(plan)">
-                          <IconEdit class="w-3.5 h-3.5" /> Edit
-                        </a>
-                      </li>
-                      <li>
-                        <a class="text-error" @click="confirmDeletePlan(plan)">
-                          <IconTrash class="w-3.5 h-3.5" /> Hapus
-                        </a>
-                      </li>
-                    </ul>
-                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-xs btn-circle"
+                    :disabled="actionLoading"
+                    @click.stop="toggleRowMenu($event, plan)"
+                  >
+                    <IconDotsVertical class="w-3.5 h-3.5" />
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -243,11 +225,37 @@ meta:
       @submit="handlePlanSubmit"
       @close="handleModalClose"
     />
+
+    <Teleport to="body">
+      <ul
+        v-if="rowMenuPlan"
+        data-catalog-row-menu
+        class="menu menu-sm p-1.5 shadow-lg bg-base-100 rounded-box w-40 border border-base-300"
+        :style="rowMenuStyle"
+        @click.stop
+      >
+        <li>
+          <a @click="showPlanDetail(rowMenuPlan)">
+            <IconEye class="w-3.5 h-3.5" /> Detail
+          </a>
+        </li>
+        <li>
+          <a @click="openEditModal(rowMenuPlan)">
+            <IconEdit class="w-3.5 h-3.5" /> Edit
+          </a>
+        </li>
+        <li>
+          <a class="text-error" @click="confirmDeletePlan(rowMenuPlan)">
+            <IconTrash class="w-3.5 h-3.5" /> Hapus
+          </a>
+        </li>
+      </ul>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
   IconPlus,
   IconEdit,
@@ -273,7 +281,6 @@ const typeTabs = [
   { value: 'membership', label: 'Membership' },
   { value: 'class_package', label: 'Paket Kelas' },
   { value: 'pt_package', label: 'Paket PT' },
-  { value: 'spa_package', label: 'Spa' },
   { value: 'custom', label: 'Add-on' },
 ]
 
@@ -315,7 +322,29 @@ const modalLoading = ref(false)
 const actionLoading = ref(false)
 const planFormModal = ref(null)
 const detailModal = ref(null)
+const rowMenuPlan = ref(null)
+const rowMenuStyle = ref({})
 let searchTimeout = null
+
+const closeRowMenu = () => {
+  rowMenuPlan.value = null
+}
+
+const toggleRowMenu = (event, plan) => {
+  if (rowMenuPlan.value?.id === plan.id) {
+    closeRowMenu()
+    return
+  }
+  const rect = event.currentTarget.getBoundingClientRect()
+  rowMenuStyle.value = {
+    position: 'fixed',
+    zIndex: 9999,
+    top: `${Math.max(8, rect.top - 4)}px`,
+    left: `${Math.min(rect.right, window.innerWidth - 8)}px`,
+    transform: 'translate(-100%, -100%)',
+  }
+  rowMenuPlan.value = plan
+}
 
 const hasActiveFilters = computed(() => {
   return filters.value.search || filters.value.serviceType !== 'all' || filters.value.isActive !== 'all'
@@ -389,6 +418,7 @@ const openCreateModal = () => {
 }
 
 const openEditModal = (plan) => {
+  closeRowMenu()
   editingPlan.value = plan
   planFormModal.value?.openModal()
 }
@@ -424,6 +454,7 @@ const togglePlanStatus = async (plan) => {
 }
 
 const confirmDeletePlan = async (plan) => {
+  closeRowMenu()
   const confirmed = await dialog.confirm({
     title: 'Hapus item katalog',
     message: `Hapus "${plan.name}"? Item yang sudah terjual tidak akan terpengaruh.`,
@@ -444,11 +475,19 @@ const confirmDeletePlan = async (plan) => {
 }
 
 const showPlanDetail = (plan) => {
+  closeRowMenu()
   selectedPlan.value = plan
   detailModal.value?.showModal()
 }
 
 onMounted(async () => {
+  document.addEventListener('click', closeRowMenu)
+  window.addEventListener('scroll', closeRowMenu, true)
   await Promise.all([loadPlans(), fetchStats()])
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeRowMenu)
+  window.removeEventListener('scroll', closeRowMenu, true)
 })
 </script>

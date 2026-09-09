@@ -78,7 +78,6 @@ meta:
               <option value="membership">Membership</option>
               <option value="class_package">Class Package</option>
               <option value="pt_package">PT Package</option>
-              <option value="spa_package">Spa Package</option>
             </select>
           </div>
         </div>
