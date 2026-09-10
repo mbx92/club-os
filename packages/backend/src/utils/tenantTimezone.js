@@ -74,6 +74,18 @@ function endOfDayInTz(dateString, timezone) {
 }
 
 /**
+ * Return the UTC Date for a clock time on `dateString` in `timezone`.
+ * Example: dateTimeInTz('2026-09-10', 22, 0, 'Asia/Makassar') → 22:00 WITA that day.
+ */
+function dateTimeInTz(dateString, hours, minutes, timezone) {
+  const hh = String(hours).padStart(2, '0');
+  const mm = String(minutes || 0).padStart(2, '0');
+  const nominalUtc = new Date(`${dateString}T${hh}:${mm}:00.000Z`);
+  const offsetMs = getTimezoneOffsetMs(nominalUtc, timezone);
+  return new Date(nominalUtc.getTime() - offsetMs);
+}
+
+/**
  * Return today's date string ('YYYY-MM-DD') in the given timezone.
  *
  * @param {string} timezone - IANA timezone
@@ -133,6 +145,7 @@ module.exports = {
   getTenantTimezone,
   startOfDayInTz,
   endOfDayInTz,
+  dateTimeInTz,
   todayInTz,
   addDays,
   firstDayOfMonth,
