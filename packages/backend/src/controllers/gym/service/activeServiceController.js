@@ -24,35 +24,14 @@ const transactionSettingsService = require('../../../services/transactionSetting
 const voucherService = require('../../../services/voucherService');
 const receiptPrinterService = require('../../../services/receiptPrinterService');
 const accountService = require('../../../services/accountService');
-const { getTenantTimezone, dateTimeInTz } = require('../../../utils/tenantTimezone');
+const { getTenantTimezone } = require('../../../utils/tenantTimezone');
+const { isSameDayPassPlan, endAtWorkingHoursClose } = require('../../../utils/sameDayPass');
 const { recordPaymentInflow } = require('../../finance/vaultController');
 
 function addCalendarDays(date, days) {
   const result = new Date(date);
   result.setDate(result.getDate() + (Number(days) || 0));
   return result;
-}
-
-const SAME_DAY_PASS_END_HOUR = 22;
-
-function isSameDayPassPlan(plan) {
-  const sessions = Number(plan?.sessions || 0);
-  const duration = Number(plan?.duration || 0);
-  const validity = Number(plan?.validityDays || 0);
-  const durationType = plan?.durationType;
-
-  if (durationType === 'session_based' || sessions > 0) {
-    return sessions === 1;
-  }
-  if (durationType === 'time_based' || duration > 0) {
-    return duration === 1;
-  }
-  return validity === 1;
-}
-
-function sameDayPassEndAt(start, timezone) {
-  const dateStr = start.toLocaleDateString('en-CA', { timeZone: timezone });
-  return dateTimeInTz(dateStr, SAME_DAY_PASS_END_HOUR, 0, timezone);
 }
 
 /**
@@ -767,8 +746,14 @@ async function purchaseServices(req, res, next) {
       }, t);
     }
 
-    // Membership/paket (>1 hari/sesi): qty memperpanjang durasi atau menambah sesi.
-    // Day pass / 1 hari time-based / 1 sesi: qty = tiket hari pembelian, berakhir pukul 22:00.
+    // Load tenant working hours for validity end time
+    const tenantRecord = await Tenant.findByPk(effectiveTenantId, {
+      attributes: ['id', 'name', 'address', 'phone', 'settings']
+    });
+    const workingHours = tenantRecord?.settings?.workingHours || null;
+
+    // Membership/paket: qty memperpanjang durasi atau menambah sesi.
+    // 1 hari / 1 sesi: qty = tiket hari pembelian. Semua berakhir di jam tutup working hours.
     const activeServices = [];
     for (const sp of normalizedServicePlans) {
       const plan = servicePlanMap[sp.servicePlanId];
@@ -813,7 +798,11 @@ async function purchaseServices(req, res, next) {
             const sessionsToAdd = sessionsForQty;
             const newTotalSessions = existingActiveService.totalSessions + sessionsToAdd;
             const newRemainingSessions = existingActiveService.remainingSessions + sessionsToAdd;
-            const extendedEnd = addCalendarDays(existingActiveService.endDate, durationDays);
+            const extendedEnd = endAtWorkingHoursClose(
+            addCalendarDays(existingActiveService.endDate, durationDays),
+            workingHours,
+            timezone
+          );
 
             await existingActiveService.update({
               totalSessions: newTotalSessions,
@@ -829,7 +818,11 @@ async function purchaseServices(req, res, next) {
           }
 
           start = new Date(existingActiveService.endDate);
-          endDate = addCalendarDays(start, durationDays);
+          endDate = endAtWorkingHoursClose(
+            addCalendarDays(start, durationDays),
+            workingHours,
+            timezone
+          );
           const formattedDate = start.toISOString().split('T')[0];
           serviceNotes = [
             qty > 1 ? `Qty ${qty} × ${unitDurationDays} hari.` : null,
@@ -843,13 +836,15 @@ async function purchaseServices(req, res, next) {
           } else {
             start = new Date();
           }
-          endDate = sameDayPass
-            ? sameDayPassEndAt(start, timezone)
-            : addCalendarDays(start, durationDays);
+          endDate = endAtWorkingHoursClose(
+            sameDayPass ? start : addCalendarDays(start, durationDays),
+            workingHours,
+            timezone
+          );
           if (sameDayPass && qty > 1) {
-            serviceNotes = [`Day pass ${copyIndex + 1}/${qty}. Valid hari pembelian sampai pukul 22:00.`, notes].filter(Boolean).join(' ');
+            serviceNotes = [`Tiket ${copyIndex + 1}/${qty}. Valid hari pembelian sampai jam tutup.`, notes].filter(Boolean).join(' ');
           } else if (sameDayPass) {
-            serviceNotes = ['Valid hari pembelian sampai pukul 22:00.', notes].filter(Boolean).join(' ');
+            serviceNotes = ['Valid hari pembelian sampai jam tutup.', notes].filter(Boolean).join(' ');
           } else if (qty > 1) {
             serviceNotes = [`Qty ${qty} × ${unitDurationDays} hari.`, notes].filter(Boolean).join(' ');
           }
@@ -933,9 +928,11 @@ async function purchaseServices(req, res, next) {
           companionStart = new Date();
         }
 
-        const companionEnd = isSameDayPassPlan(plan)
-          ? sameDayPassEndAt(companionStart, getTenantTimezone(req))
-          : addCalendarDays(companionStart, durationDays);
+        const companionEnd = endAtWorkingHoursClose(
+          isSameDayPassPlan(plan) ? companionStart : addCalendarDays(companionStart, durationDays),
+          workingHours,
+          getTenantTimezone(req)
+        );
 
         for (const companionId of companions) {
           companionActiveServicePromises.push(
@@ -1024,9 +1021,7 @@ async function purchaseServices(req, res, next) {
     });
 
     // Auto-print receipt
-    const tenantForPrint = await Tenant.findByPk(effectiveTenantId, {
-      attributes: ['id', 'name', 'address', 'phone', 'settings']
-    });
+    const tenantForPrint = tenantRecord;
 
     const transactionWithPayments = await Transaction.findByPk(transaction.id, {
       include: [

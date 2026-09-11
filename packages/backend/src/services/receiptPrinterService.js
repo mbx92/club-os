@@ -12,6 +12,7 @@
 const net = require('net');
 const logger = require('../utils/logger');
 const { PrintJob } = require('../models');
+const { isSameDayPassPlan, formatValidityUntilClose, formatCloseTimeLabel } = require('../utils/sameDayPass');
 
 /**
  * ESC/POS Commands
@@ -50,17 +51,47 @@ const formatCurrency = (amount) => {
   return `Rp ${formatted}`;
 };
 
+const getTenantTimezoneName = (tenant) => tenant?.settings?.timezone || 'Asia/Makassar';
+
 /**
- * Format date to Indonesian format
+ * Format date to Indonesian format (tenant timezone)
  */
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('id-ID', {
+const formatDate = (date, timezone = 'Asia/Makassar') => {
+  return new Date(date).toLocaleString('id-ID', {
+    timeZone: timezone,
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
   });
+};
+
+const formatDateOnly = (date, timezone = 'Asia/Makassar') => {
+  return new Date(date).toLocaleDateString('id-ID', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+};
+
+const formatValidityLine = (activeService, tenant) => {
+  const timezone = getTenantTimezoneName(tenant);
+  const workingHours = tenant?.settings?.workingHours || null;
+  const start = activeService?.startDate;
+  const end = activeService?.endDate || activeService?.startDate;
+  if (!start && !end) return '-';
+
+  const startDay = start ? new Date(start).toLocaleDateString('en-CA', { timeZone: timezone }) : null;
+  const endDay = end ? new Date(end).toLocaleDateString('en-CA', { timeZone: timezone }) : startDay;
+  const closeLabel = formatCloseTimeLabel(workingHours, end || start, timezone);
+
+  if (!startDay || startDay === endDay) {
+    return formatValidityUntilClose(end || start, timezone, workingHours);
+  }
+
+  return `${formatDateOnly(start, timezone)} s/d ${formatDateOnly(end, timezone)} pukul ${closeLabel}`;
 };
 
 /**
@@ -1020,17 +1051,9 @@ const buildServiceReceipt = (activeService, member, transaction, tenant, templat
     content += padLine(`${trainerLabel}:`, trainerName, paperWidth) + COMMANDS.LINE_FEED;
   }
   
-  // Time-based or Session-based
-  if (activeService.serviceType === 'membership' || 
-      (activeService.serviceType === 'class' && bodyTemplate.durationType !== 'session')) {
-    // Add line break before validity period
-    content += COMMANDS.LINE_FEED;
-    
-    // Time-based - format as single line with s/d
-    const startDateStr = activeService?.startDate ? formatDate(activeService.startDate) : '-';
-    const endDateStr = activeService?.endDate ? formatDate(activeService.endDate) : '-';
-    content += `${bodyTemplate.validityLabel || 'Berlaku'}: ${startDateStr} s/d ${endDateStr}` + COMMANDS.LINE_FEED;
-  }
+  // Validity for all service types
+  content += COMMANDS.LINE_FEED;
+  content += `${bodyTemplate.validityLabel || 'Berlaku'}: ${formatValidityLine(activeService, tenant)}` + COMMANDS.LINE_FEED;
   
   // Session info for session-based services
   if ((activeService.serviceType === 'class' || activeService.serviceType === 'personalTraining') && 
@@ -1370,56 +1393,65 @@ const buildCombinedServiceReceipt = (activeServices, member, transaction, tenant
   content += COMMANDS.BOLD_OFF;
   content += COMMANDS.LINE_FEED;
   
-  for (let i = 0; i < activeServices.length; i++) {
-    const activeService = activeServices[i];
+  const groupedServices = [];
+  for (const activeService of activeServices) {
+    const plan = activeService.servicePlan;
+    const sameDay = isSameDayPassPlan(plan);
+    if (sameDay && plan?.id) {
+      const existing = groupedServices.find((group) => group.sameDay && group.planId === plan.id);
+      if (existing) {
+        existing.items.push(activeService);
+        continue;
+      }
+    }
+    groupedServices.push({
+      sameDay,
+      planId: plan?.id,
+      items: [activeService]
+    });
+  }
+
+  groupedServices.forEach((group, i) => {
+    const activeService = group.items[0];
     const servicePlan = activeService.servicePlan;
-    
-    // Service number and name
-    content += `${i + 1}. ${servicePlan?.name || 'Service'}` + COMMANDS.LINE_FEED;
-    
-    // Trainer if assigned
+    const qty = group.items.length;
+    const name = servicePlan?.name || 'Service';
+
+    content += qty > 1 ? `${i + 1}. ${qty}x ${name}` : `${i + 1}. ${name}`;
+    content += COMMANDS.LINE_FEED;
+
     if (activeService.assignedTrainer && bodyTemplate.showTrainer !== false) {
-      const trainerLabel = activeService.serviceType === 'personalTraining' ? 
-        (bodyTemplate.trainerLabel || 'Trainer') : 
-        (bodyTemplate.instructorLabel || 'Instruktur');
+      const trainerLabel = activeService.serviceType === 'personalTraining'
+        ? (bodyTemplate.trainerLabel || 'Trainer')
+        : (bodyTemplate.instructorLabel || 'Instruktur');
       const trainerName = activeService.assignedTrainer.firstName && activeService.assignedTrainer.lastName
         ? `${activeService.assignedTrainer.firstName} ${activeService.assignedTrainer.lastName}`
         : activeService.assignedTrainer.name || '-';
       content += `   ${trainerLabel}: ${trainerName}` + COMMANDS.LINE_FEED;
     }
-    
-    // Time-based info (membership)
-    if (activeService.serviceType === 'membership') {
-      content += `   ${bodyTemplate.validityLabel || 'Berlaku'}:` + COMMANDS.LINE_FEED;
-      const startDateStr = activeService?.startDate ? formatDate(activeService.startDate) : '-';
-      const endDateStr = activeService?.endDate ? formatDate(activeService.endDate) : '-';
-      content += `   ${startDateStr} s/d ${endDateStr}` + COMMANDS.LINE_FEED;
+
+    if (group.sameDay || activeService.serviceType === 'membership' || activeService.startDate || activeService.endDate) {
+      content += `   ${bodyTemplate.validityLabel || 'Berlaku'}: ${formatValidityLine(activeService, tenant)}` + COMMANDS.LINE_FEED;
     }
-    
-    // Session-based info
-    if (activeService.totalSessions) {
+
+    if (!group.sameDay && activeService.totalSessions) {
       content += `   Total Sesi: ${activeService.totalSessions} Sesi` + COMMANDS.LINE_FEED;
       if (activeService.remainingSessions !== null && activeService.remainingSessions !== undefined) {
         content += `   Sisa Sesi: ${activeService.remainingSessions} Sesi` + COMMANDS.LINE_FEED;
       }
-      
-      // Show validity period for session-based (from validityDays)
-      if (activeService.serviceType === 'class' && (activeService.startDate || activeService.endDate)) {
-        content += `   Berlaku s/d:` + COMMANDS.LINE_FEED;
-        const endDateStr = activeService?.endDate ? formatDate(activeService.endDate) : '-';
-        content += `   ${endDateStr}` + COMMANDS.LINE_FEED;
-      }
     }
-    
-    // Price
+
     const itemPrice = parseFloat(servicePlan?.price || 0);
-    content += padLine(`   ${bodyTemplate.priceLabel || 'Harga'}:`, formatCurrency(itemPrice), paperWidth) + COMMANDS.LINE_FEED;
-    
-    // Add spacing between services
-    if (i < activeServices.length - 1) {
+    if (qty > 1) {
+      content += padLine(`   @${formatCurrency(itemPrice)}`, formatCurrency(itemPrice * qty), paperWidth) + COMMANDS.LINE_FEED;
+    } else {
+      content += padLine(`   ${bodyTemplate.priceLabel || 'Harga'}:`, formatCurrency(itemPrice), paperWidth) + COMMANDS.LINE_FEED;
+    }
+
+    if (i < groupedServices.length - 1) {
       content += COMMANDS.LINE_FEED;
     }
-  }
+  });
   
   content += createSeparator(bodyTemplate.separatorChar || '-', paperWidth) + COMMANDS.LINE_FEED;
   
@@ -2144,9 +2176,11 @@ const buildPaymentReceipt = (transaction, tenant, template = {}) => {
     // Active service info (start/end dates, sessions)
     if (item.activeServiceId && bodyTemplate.showServiceDetails !== false) {
       if (item.startDate) {
-        const startDateStr = formatDate(item.startDate);
-        const endDateStr = item.endDate ? formatDate(item.endDate) : '-';
-        content += `   Berlaku: ${startDateStr} s/d ${endDateStr}` + COMMANDS.LINE_FEED;
+        content += `   Berlaku: ${formatValidityLine({
+          startDate: item.startDate,
+          endDate: item.endDate,
+          servicePlan: item.servicePlan || item.itemDetails?.servicePlan
+        }, tenant)}` + COMMANDS.LINE_FEED;
       }
       if (item.totalSessions) {
         content += `   Sesi: ${item.totalSessions} sesi` + COMMANDS.LINE_FEED;
