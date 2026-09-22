@@ -52,6 +52,10 @@ export const useMembers = () => {
         queryParams.append('checkInEligible', 'true')
       }
 
+      if (params.lite) {
+        queryParams.append('lite', 'true')
+      }
+
       const response = await api.get(`/gym/members?${queryParams.toString()}`)
       members.value = response.data || []
       return response

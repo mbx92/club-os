@@ -175,6 +175,11 @@ module.exports = (sequelize, DataTypes) => {
     sequelize,
     modelName: 'Member',
     paranoid: true, // Enable soft delete
+    indexes: [
+      { fields: ['tenantId'] },
+      { fields: ['tenantId', 'membershipStatus'] },
+      { fields: ['tenantId', 'isActive'] },
+    ],
     hooks: {
       beforeValidate: async (member, options) => {
         // Ensure at least email or phone is provided

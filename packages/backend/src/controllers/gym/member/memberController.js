@@ -70,28 +70,41 @@ async function getMembers(req, res, next) {
       sortBy = 'createdAt',
       sortOrder = 'DESC',
       checkInEligible = 'false',
+      lite = 'false',
     } = req.query;
 
     const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
+    const limitNum = Math.min(parseInt(limit, 10) || 10, lite === 'true' || lite === true ? 50 : 100);
     const offset = (pageNum - 1) * limitNum;
     const forCheckIn = checkInEligible === 'true' || checkInEligible === true;
+    const isLite = lite === 'true' || lite === true;
 
     const where = isSuperAdmin ? {} : { tenantId };
 
-    // Search by name, email, phone, or full name
+    // Search by name, email, phone, or full name (bind params, no string concat SQL)
     if (search) {
       const trimmedSearch = search.trim();
-      const escapedSearch = trimmedSearch.replace(/'/g, "''");
-      where[Op.or] = [
-        { firstName: { [Op.iLike]: `%${trimmedSearch}%` } },
-        { lastName: { [Op.iLike]: `%${trimmedSearch}%` } },
-        { email: { [Op.iLike]: `%${trimmedSearch}%` } },
-        { phone: { [Op.iLike]: `%${trimmedSearch}%` } },
-        sequelize.literal(
-          `CONCAT("Member"."firstName", ' ', "Member"."lastName") ILIKE '%${escapedSearch}%'`
-        ),
-      ];
+      const like = `%${trimmedSearch}%`;
+      const digits = trimmedSearch.replace(/\D/g, '');
+      const looksLikePhone = digits.length >= 4 && digits.length >= trimmedSearch.replace(/\s/g, '').length * 0.7;
+
+      if (looksLikePhone) {
+        where[Op.or] = [
+          { phone: { [Op.iLike]: `%${digits}%` } },
+          { phone: { [Op.iLike]: like } },
+        ];
+      } else {
+        where[Op.or] = [
+          { firstName: { [Op.iLike]: like } },
+          { lastName: { [Op.iLike]: like } },
+          { email: { [Op.iLike]: like } },
+          { phone: { [Op.iLike]: like } },
+          sequelize.where(
+            sequelize.literal(`(COALESCE("Member"."firstName", '') || ' ' || COALESCE("Member"."lastName", ''))`),
+            { [Op.iLike]: like }
+          ),
+        ];
+      }
     }
 
     // Filter by active status
@@ -101,9 +114,13 @@ async function getMembers(req, res, next) {
       where.isActive = true;
     }
 
-    // Filter by membership status
+    // Filter by membership status (single value or comma-separated, e.g. active,expired)
     if (membershipStatus && membershipStatus !== 'all') {
-      where.membershipStatus = membershipStatus;
+      const statuses = String(membershipStatus)
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+      where.membershipStatus = statuses.length > 1 ? { [Op.in]: statuses } : statuses[0];
     } else if (forCheckIn) {
       where.membershipStatus = 'active';
     }
@@ -128,12 +145,9 @@ async function getMembers(req, res, next) {
         }
       : { status: 'active' };
 
-    const { count, rows: members } = await Member.findAndCountAll({
-      where,
-      order: [[sortField, order]],
-      limit: limitNum,
-      offset,
-      include: [
+    const include = isLite
+      ? []
+      : [
         {
           model: User,
           as: 'user',
@@ -142,8 +156,8 @@ async function getMembers(req, res, next) {
         {
           model: ActiveService,
           as: 'activeServices',
-          include: [{ 
-            model: ServicePlan, 
+          include: [{
+            model: ServicePlan,
             as: 'servicePlan',
             attributes: ['id', 'name', 'serviceType', 'price', 'duration', 'durationType', 'sessions', 'validityDays', 'isActive']
           }],
@@ -153,10 +167,41 @@ async function getMembers(req, res, next) {
           order: [['endDate', 'DESC']],
           limit: 5
         }
-      ]
-    });
+      ];
 
-    const totalPages = Math.ceil(count / limitNum);
+    const query = {
+      where,
+      order: [[sortField, order]],
+      limit: limitNum,
+      offset,
+      include,
+    };
+    if (isLite) {
+      query.subQuery = false;
+      query.attributes = [
+        'id',
+        'firstName',
+        'lastName',
+        'email',
+        'phone',
+        'membershipStatus',
+        'isActive',
+        'tenantId',
+      ];
+    }
+
+    let members;
+    let count;
+    if (isLite) {
+      members = await Member.findAll(query);
+      count = members.length;
+    } else {
+      const result = await Member.findAndCountAll(query);
+      count = result.count;
+      members = result.rows;
+    }
+
+    const totalPages = isLite ? 1 : Math.ceil(count / limitNum);
 
     logger.logInfo("Members retrieved", {
       action: 'MEMBERS_RETRIEVED',

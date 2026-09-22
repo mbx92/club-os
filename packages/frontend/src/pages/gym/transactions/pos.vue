@@ -647,7 +647,7 @@ meta:
               <span class="loading loading-spinner loading-lg"></span>
             </div>
             <div v-else-if="memberResults.length === 0" class="py-12 text-center text-base-content/60">
-              No members found
+              {{ memberSearch.trim().length < 2 ? 'Ketik minimal 2 karakter untuk mencari member' : 'No members found' }}
             </div>
             <div v-else class="space-y-2">
               <div
@@ -657,7 +657,16 @@ meta:
                 class="transition-all border cursor-pointer card bg-base-100 border-base-300 hover:border-primary hover:bg-base-200"
               >
                 <div class="p-4 card-body">
-                  <div class="font-semibold">{{ member.firstName }} {{ member.lastName }}</div>
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="font-semibold">{{ member.firstName }} {{ member.lastName }}</div>
+                    <span
+                      v-if="member.membershipStatus && member.membershipStatus !== 'active'"
+                      class="badge badge-xs"
+                      :class="getMembershipStatusClass(member.membershipStatus)"
+                    >
+                      {{ getMembershipStatusLabel(member.membershipStatus) }}
+                    </span>
+                  </div>
                   <div class="text-sm text-base-content/60">
                     {{ member.email }} • {{ member.phone }}
                   </div>
@@ -929,7 +938,7 @@ const HIDDEN_POS_SERVICE_TYPES = ['spa_package']
 const isVisiblePosPlan = (plan) => plan.isActive && !HIDDEN_POS_SERVICE_TYPES.includes(plan.serviceType)
 const { createTransaction } = useTransactions()
 const { plans, loading: plansLoading, fetchPlans } = useServicePlans()
-const { members, loading: membersLoading, fetchMembers, createMember } = useMembers()
+const { members, loading: membersLoading, fetchMembers, createMember, getMembershipStatusClass, getMembershipStatusLabel } = useMembers()
 const { vouchers: availableVouchers, loading: vouchersLoading, fetchVouchers, validateVoucher } = useVouchers()
 const { formatCurrency } = useCurrency()
 const { availableMethods: availablePaymentMethods, getMethodLabel, defaultPaymentMethod, loadPaymentMethods, methodRequiresBank } = usePaymentMethods()
@@ -967,6 +976,26 @@ const selectedMember = ref(null)
 const showMemberResults = ref(false)
 const memberModal = ref(null)
 let memberSearchTimeout = null
+let memberSearchSeq = 0
+
+const POS_MEMBER_FILTER = {
+  isActive: 'all',
+  membershipStatus: 'active,expired',
+  lite: true,
+}
+
+const loadPosMembers = async (params = {}) => {
+  const seq = ++memberSearchSeq
+  const result = await fetchMembers({
+    page: 1,
+    limit: params.limit || 20,
+    ...POS_MEMBER_FILTER,
+    ...params,
+  })
+  if (seq !== memberSearchSeq) return result
+  memberResults.value = result.data || members.value || []
+  return result
+}
 
 // Quick Create Member
 const showCreateMemberForm = ref(false)
@@ -997,10 +1026,6 @@ const handleQuickCreateMember = async () => {
     if (createMemberForm.value.email.trim()) payload.email = createMemberForm.value.email.trim()
     const result = await createMember(payload)
     const newMember = result.member
-    // refresh member list
-    await fetchMembers({ page: 1, limit: 100, isActive: 'all' })
-    memberResults.value = members.value
-    // auto-select new member
     selectMember(newMember)
     showCreateMemberForm.value = false
     createMemberForm.value = { firstName: '', lastName: '', phone: '', email: '' }
@@ -1349,29 +1374,7 @@ const formatDuration = (plan) => {
 const formatPaymentLabel = (method) => getMethodLabel(method)
 
 const searchMembers = async () => {
-  if (memberSearchTimeout) {
-    clearTimeout(memberSearchTimeout)
-  }
-  
-  memberSearchTimeout = setTimeout(async () => {
-    if (!memberSearch.value.trim()) {
-      showMemberResults.value = false
-      return
-    }
-    
-    try {
-      const result = await fetchMembers({
-        search: memberSearch.value,
-        limit: 10,
-        isActive: 'all'
-      })
-      
-      memberResults.value = result.data || []
-      showMemberResults.value = true
-    } catch (error) {
-      console.error('Error searching members:', error)
-    }
-  }, 300)
+  handleMemberSearch()
 }
 
 const selectMember = (member) => {
@@ -1387,13 +1390,10 @@ const clearMember = () => {
 
 const openMemberModal = async () => {
   memberSearch.value = ''
+  memberResults.value = []
   showCreateMemberForm.value = false
   createMemberForm.value = { firstName: '', lastName: '', phone: '', email: '' }
   createMemberErrors.value = {}
-  if (members.value.length === 0) {
-    await fetchMembers({ page: 1, limit: 100, isActive: 'all' })
-  }
-  memberResults.value = members.value
   memberModal.value?.showModal()
 }
 
@@ -1420,21 +1420,27 @@ const closeVoucherModal = () => {
   errorVoucherId.value = null
 }
 
-const handleMemberSearch = (event) => {
-  const query = event.target.value.toLowerCase()
-  memberSearch.value = query
-  
-  if (!query) {
-    memberResults.value = members.value
+const handleMemberSearch = () => {
+  if (memberSearchTimeout) {
+    clearTimeout(memberSearchTimeout)
+  }
+
+  const query = memberSearch.value.trim()
+  if (query.length < 2) {
+    memberResults.value = []
     return
   }
 
-  memberResults.value = members.value.filter(member => {
-    const fullName = `${member.firstName} ${member.lastName}`.toLowerCase()
-    const email = member.email?.toLowerCase() || ''
-    const phone = member.phone || ''
-    return fullName.includes(query) || email.includes(query) || phone.includes(query)
-  })
+  memberSearchTimeout = setTimeout(async () => {
+    try {
+      await loadPosMembers({
+        search: query,
+        limit: 20,
+      })
+    } catch (error) {
+      console.error('Error searching members:', error)
+    }
+  }, 400)
 }
 
 const handleVoucherSearch = (event) => {
