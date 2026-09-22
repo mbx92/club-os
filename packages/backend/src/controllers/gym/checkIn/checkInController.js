@@ -16,7 +16,7 @@ async function createCheckIn(req, res, next) {
 
   try {
     const { tenantId, isSuperAdmin, id: userId } = req.user;
-    const { memberId, serviceType, notes } = req.body;
+    const { memberId, serviceType, notes, activeServiceId } = req.body;
 
     // Validate member
     const memberWhere = { id: memberId };
@@ -44,7 +44,83 @@ async function createCheckIn(req, res, next) {
     let activeService = null;
     let sessionUsed = false;
 
-    if (serviceType) {
+    if (activeServiceId) {
+      const serviceWhere = {
+        id: activeServiceId,
+        memberId,
+        status: 'active',
+        endDate: { [Op.gte]: sequelize.literal('CURRENT_DATE') }
+      };
+
+      if (!isSuperAdmin) {
+        serviceWhere.tenantId = tenantId;
+      }
+
+      activeService = await ActiveService.findOne({
+        where: serviceWhere,
+        include: [
+          { model: ServicePlan, as: 'servicePlan' },
+          { model: Trainer, as: 'assignedTrainer' }
+        ],
+        transaction: t
+      });
+
+      if (!activeService) {
+        await t.rollback();
+        return next(createError(
+          'NO_VALID_SERVICE',
+          'No valid service found for this member. Please purchase a service plan.',
+          400
+        ));
+      }
+
+      if (['class_package', 'pt_package', 'spa_package', 'custom'].includes(activeService.serviceType)
+        && activeService.totalSessions
+        && (!activeService.remainingSessions || activeService.remainingSessions <= 0)) {
+        await t.rollback();
+        return next(createError(
+          'NO_VALID_SERVICE',
+          `No remaining sessions for ${activeService.serviceType}. Please purchase a service plan.`,
+          400
+        ));
+      }
+
+      const servicePlan = activeService.servicePlan;
+      if (servicePlan && servicePlan.accessControl && servicePlan.accessControl.maxCheckIns) {
+        const maxCheckIns = parseInt(servicePlan.accessControl.maxCheckIns);
+
+        if (maxCheckIns > 0) {
+          const serviceStartDate = new Date(activeService.startDate);
+          const serviceEndDate = new Date(activeService.endDate);
+
+          const checkInCount = await CheckIn.count({
+            where: {
+              activeServiceId: activeService.id,
+              checkInTime: {
+                [Op.between]: [serviceStartDate, serviceEndDate]
+              }
+            },
+            transaction: t
+          });
+
+          if (checkInCount >= maxCheckIns) {
+            await t.rollback();
+            return next(createError(
+              'MAX_CHECKINS_REACHED',
+              `Maximum check-ins limit reached (${maxCheckIns} check-ins for ${activeService.serviceType}). Please upgrade your service plan.`,
+              400
+            ));
+          }
+        }
+      }
+
+      if (activeService.totalSessions && activeService.remainingSessions > 0) {
+        await withRetry(async () => {
+          await activeService.useSession(t);
+        });
+        sessionUsed = true;
+      }
+    } else if (serviceType) {
       // Specific service type check-in (class_package, pt_package, etc.)
       const serviceWhere = {
         memberId,
