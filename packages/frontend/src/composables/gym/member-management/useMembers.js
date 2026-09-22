@@ -246,7 +246,8 @@ export const useMembers = () => {
       active: 'badge-success',
       inactive: 'badge-ghost',
       suspended: 'badge-warning',
-      expired: 'badge-error'
+      expired: 'badge-error',
+      cancelled: 'badge-ghost',
     }
     return statusClasses[status] || 'badge-ghost'
   }
@@ -260,7 +261,8 @@ export const useMembers = () => {
       active: 'Active',
       inactive: 'Inactive',
       suspended: 'Suspended',
-      expired: 'Expired'
+      expired: 'Expired',
+      cancelled: 'Cancelled',
     }
     return statusLabels[status] || status
   }

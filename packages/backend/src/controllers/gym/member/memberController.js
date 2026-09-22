@@ -187,6 +187,16 @@ async function getMembers(req, res, next) {
         'membershipStatus',
         'isActive',
         'tenantId',
+        [
+          sequelize.literal(`(
+            SELECT MAX(asvc."endDate")
+            FROM "ActiveServices" AS asvc
+            WHERE asvc."memberId" = "Member"."id"
+              AND asvc."serviceType" = 'membership'
+              AND asvc."deletedAt" IS NULL
+          )`),
+          'membershipEndDate',
+        ],
       ];
     }
 

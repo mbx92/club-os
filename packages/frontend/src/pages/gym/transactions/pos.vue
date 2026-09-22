@@ -56,7 +56,22 @@ meta:
                 <div class="flex items-center w-full gap-3">
                   <IconCircleCheck class="w-6 h-6" />
                   <div class="flex-1">
-                    <div class="font-semibold">{{ selectedMember.firstName }} {{ selectedMember.lastName }}</div>
+                    <div class="flex flex-wrap items-center gap-1">
+                      <div class="font-semibold">{{ selectedMember.firstName }} {{ selectedMember.lastName }}</div>
+                      <span
+                        class="badge badge-xs"
+                        :class="getMembershipStatusClass(selectedMember.membershipStatus)"
+                      >
+                        {{ getMembershipStatusLabel(selectedMember.membershipStatus) }}
+                      </span>
+                      <span
+                        v-if="membershipExpiryLabel(selectedMember)"
+                        class="badge badge-xs"
+                        :class="membershipExpiryClass(selectedMember)"
+                      >
+                        {{ membershipExpiryLabel(selectedMember) }}
+                      </span>
+                    </div>
                     <div class="text-sm opacity-80">{{ selectedMember.email }} | {{ selectedMember.phone }}</div>
                   </div>
                   <button class="btn btn-sm btn-ghost" @click="clearMember">
@@ -551,8 +566,8 @@ meta:
     <!-- Member Selection Modal -->
     <Teleport to="body">
       <dialog ref="memberModal" class="modal">
-        <div class="w-11/12 max-w-3xl modal-box">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex flex-col w-11/12 max-w-3xl h-[36rem] max-h-[90vh] modal-box">
+        <div class="flex items-center justify-between mb-4 shrink-0">
           <h3 class="text-xl font-bold">{{ showCreateMemberForm ? 'New Member' : 'Select Member' }}</h3>
           <div class="flex items-center gap-2">
             <button
@@ -571,7 +586,7 @@ meta:
         </div>
 
         <!-- Quick Create Member Form -->
-        <div v-if="showCreateMemberForm" class="space-y-4">
+        <div v-if="showCreateMemberForm" class="flex-1 min-h-0 overflow-y-auto space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div class="form-control">
               <label class="label py-1"><span class="label-text font-medium">First Name <span class="text-error">*</span></span></label>
@@ -630,45 +645,72 @@ meta:
         <!-- Search + List (shown when not creating) -->
         <template v-else>
           <!-- Search -->
-          <div class="mb-4 form-control">
-            <input
-              type="text"
-              placeholder="Search member by name, email, or phone..."
-              class="w-full input input-bordered"
-              v-model="memberSearch"
-              @input="handleMemberSearch"
-              autocomplete="off"
-            />
+          <div class="mb-4 space-y-3 shrink-0">
+            <div class="form-control">
+              <input
+                type="text"
+                placeholder="Search member by name, email, or phone..."
+                class="w-full input input-bordered"
+                v-model="memberSearch"
+                @input="handleMemberSearch"
+                autocomplete="off"
+              />
+            </div>
+            <div class="join w-full">
+              <button
+                v-for="option in memberStatusFilterOptions"
+                :key="option.value"
+                type="button"
+                class="join-item btn btn-sm btn-outline flex-1"
+                :class="memberStatusFilter === option.value ? 'btn-active btn-primary' : ''"
+                @click="setMemberStatusFilter(option.value)"
+              >
+                {{ option.label }}
+              </button>
+            </div>
           </div>
 
           <!-- Members List -->
-          <div class="overflow-y-auto max-h-96">
-            <div v-if="membersLoading" class="flex items-center justify-center py-12">
+          <div class="relative flex-1 min-h-0 overflow-hidden">
+            <div
+              v-if="membersLoading"
+              class="absolute inset-0 z-10 flex items-center justify-center bg-base-100/70"
+            >
               <span class="loading loading-spinner loading-lg"></span>
             </div>
-            <div v-else-if="memberResults.length === 0" class="py-12 text-center text-base-content/60">
-              {{ memberSearch.trim().length < 2 ? 'Ketik minimal 2 karakter untuk mencari member' : 'No members found' }}
-            </div>
-            <div v-else class="space-y-2">
-              <div
-                v-for="member in memberResults"
-                :key="member.id"
-                @click="selectMember(member)"
-                class="transition-all border cursor-pointer card bg-base-100 border-base-300 hover:border-primary hover:bg-base-200"
-              >
-                <div class="p-4 card-body">
-                  <div class="flex items-center justify-between gap-2">
-                    <div class="font-semibold">{{ member.firstName }} {{ member.lastName }}</div>
-                    <span
-                      v-if="member.membershipStatus && member.membershipStatus !== 'active'"
-                      class="badge badge-xs"
-                      :class="getMembershipStatusClass(member.membershipStatus)"
-                    >
-                      {{ getMembershipStatusLabel(member.membershipStatus) }}
-                    </span>
-                  </div>
-                  <div class="text-sm text-base-content/60">
-                    {{ member.email }} • {{ member.phone }}
+            <div class="h-full overflow-y-auto">
+              <div v-if="memberResults.length === 0 && !membersLoading" class="flex items-center justify-center h-full text-base-content/60">
+                No members found
+              </div>
+              <div v-else class="space-y-2">
+                <div
+                  v-for="member in memberResults"
+                  :key="member.id"
+                  @click="selectMember(member)"
+                  class="transition-colors border cursor-pointer card bg-base-100 border-base-300 hover:border-primary hover:bg-base-200"
+                >
+                  <div class="p-3 card-body">
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="font-semibold">{{ member.firstName }} {{ member.lastName }}</div>
+                      <div class="flex flex-wrap items-center justify-end gap-1">
+                        <span
+                          class="badge badge-xs"
+                          :class="getMembershipStatusClass(member.membershipStatus)"
+                        >
+                          {{ getMembershipStatusLabel(member.membershipStatus) }}
+                        </span>
+                        <span
+                          v-if="membershipExpiryLabel(member)"
+                          class="badge badge-xs"
+                          :class="membershipExpiryClass(member)"
+                        >
+                          {{ membershipExpiryLabel(member) }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="text-sm text-base-content/60">
+                      {{ member.email }} • {{ member.phone }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -676,7 +718,7 @@ meta:
           </div>
         </template>
 
-        <div class="modal-action">
+        <div class="modal-action mt-4 shrink-0">
           <template v-if="showCreateMemberForm">
             <button type="button" class="btn btn-ghost" @click="showCreateMemberForm = false" :disabled="createMemberLoading">Back</button>
             <button type="button" class="btn btn-primary" @click="handleQuickCreateMember" :disabled="createMemberLoading">
@@ -900,6 +942,7 @@ meta:
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import dayjs from 'dayjs'
 import { useRouter } from 'vue-router'
 import { useTransactions } from '@/composables/gym/transactions'
 import { useServicePlans } from '@/composables/gym/service-management'
@@ -978,10 +1021,55 @@ const memberModal = ref(null)
 let memberSearchTimeout = null
 let memberSearchSeq = 0
 
+const memberStatusFilter = ref('all')
+const memberStatusFilterOptions = [
+  { value: 'all', label: 'All' },
+  { value: 'expired', label: 'Expired' },
+  { value: 'suspended', label: 'Suspend' },
+]
+
 const POS_MEMBER_FILTER = {
   isActive: 'all',
-  membershipStatus: 'active,expired',
   lite: true,
+}
+
+const getMemberEndDate = (member) => {
+  if (!member) return null
+  if (member.membershipEndDate) return member.membershipEndDate
+  const services = member.activeServices || []
+  const memberships = services.filter((service) => service.serviceType === 'membership' && service.endDate)
+  if (!memberships.length) return services[0]?.endDate || null
+  return memberships.reduce((latest, service) => {
+    if (!latest) return service.endDate
+    return String(service.endDate) > String(latest) ? service.endDate : latest
+  }, null)
+}
+
+const membershipExpiryDays = (member) => {
+  const endDate = getMemberEndDate(member)
+  if (!endDate) return null
+  return dayjs(endDate).startOf('day').diff(dayjs().startOf('day'), 'day')
+}
+
+const membershipExpiryLabel = (member) => {
+  const days = membershipExpiryDays(member)
+  if (days === null) return ''
+  if (days === 0) return 'exp hari ini'
+  const absDays = Math.abs(days)
+  if (absDays < 30) {
+    return days > 0 ? `exp ${absDays} hari lagi` : `exp ${absDays} hari lalu`
+  }
+  const months = Math.round(absDays / 30) || 1
+  const unit = months === 1 ? 'bulan' : 'bulan'
+  return days > 0 ? `exp ${months} ${unit} lagi` : `exp ${months} ${unit} lalu`
+}
+
+const membershipExpiryClass = (member) => {
+  const days = membershipExpiryDays(member)
+  if (days === null) return 'badge-ghost'
+  if (days < 0) return 'badge-error'
+  if (days <= 7) return 'badge-warning'
+  return 'badge-ghost'
 }
 
 const loadPosMembers = async (params = {}) => {
@@ -990,6 +1078,7 @@ const loadPosMembers = async (params = {}) => {
     page: 1,
     limit: params.limit || 20,
     ...POS_MEMBER_FILTER,
+    membershipStatus: memberStatusFilter.value,
     ...params,
   })
   if (seq !== memberSearchSeq) return result
@@ -1391,10 +1480,12 @@ const clearMember = () => {
 const openMemberModal = async () => {
   memberSearch.value = ''
   memberResults.value = []
+  memberStatusFilter.value = 'all'
   showCreateMemberForm.value = false
   createMemberForm.value = { firstName: '', lastName: '', phone: '', email: '' }
   createMemberErrors.value = {}
   memberModal.value?.showModal()
+  await runMemberSearch(true)
 }
 
 const closeMemberModal = () => {
@@ -1420,27 +1511,39 @@ const closeVoucherModal = () => {
   errorVoucherId.value = null
 }
 
-const handleMemberSearch = () => {
+const runMemberSearch = async (immediate = false) => {
   if (memberSearchTimeout) {
     clearTimeout(memberSearchTimeout)
   }
 
   const query = memberSearch.value.trim()
-  if (query.length < 2) {
-    memberResults.value = []
-    return
-  }
-
-  memberSearchTimeout = setTimeout(async () => {
+  const doFetch = async () => {
     try {
       await loadPosMembers({
-        search: query,
+        search: query || undefined,
         limit: 20,
       })
     } catch (error) {
       console.error('Error searching members:', error)
     }
-  }, 400)
+  }
+
+  if (immediate) {
+    await doFetch()
+    return
+  }
+
+  memberSearchTimeout = setTimeout(doFetch, 400)
+}
+
+const handleMemberSearch = () => {
+  runMemberSearch(false)
+}
+
+const setMemberStatusFilter = (status) => {
+  if (memberStatusFilter.value === status) return
+  memberStatusFilter.value = status
+  runMemberSearch(true)
 }
 
 const handleVoucherSearch = (event) => {
