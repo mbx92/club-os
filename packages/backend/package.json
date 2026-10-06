@@ -64,6 +64,8 @@
     "diagnose:cashregister:prod": "cross-env NODE_ENV=production node scripts/diagnoseCashRegisterReport.js",
     "fix:cashregister": "node scripts/diagnoseCashRegisterReport.js --fix",
     "fix:cashregister:prod": "cross-env NODE_ENV=production node scripts/diagnoseCashRegisterReport.js --fix",
+    "fix:cashregister:returned": "node scripts/diagnoseCashRegisterReport.js --fix --cash-returned",
+    "fix:cashregister:indrawer": "node scripts/diagnoseCashRegisterReport.js --fix --cash-in-drawer",
     "fix:cancelled-payments": "node scripts/fixCancelledPayments.js",
     "fix:cancelled-payments:preview": "node scripts/fixCancelledPayments.js",
     "fix:cancelled-payments:fix": "node scripts/fixCancelledPayments.js --fix",

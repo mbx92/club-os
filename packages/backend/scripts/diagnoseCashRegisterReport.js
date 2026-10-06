@@ -18,7 +18,10 @@
  *   node scripts/diagnoseCashRegisterReport.js --dates=2026-02-21,2026-02-22
  *   node scripts/diagnoseCashRegisterReport.js --dates=2026-10-05    ← 1 tanggal
  *   node scripts/diagnoseCashRegisterReport.js --sessionId=<uuid>    ← 1 shift saja
- *   node scripts/diagnoseCashRegisterReport.js --env=production --fix
+ *
+ *   --fix WAJIB disertai disposisi uang bila ada cash void setelah shift tutup:
+ *   node scripts/diagnoseCashRegisterReport.js --sessionId=<uuid> --fix --cash-returned
+ *   node scripts/diagnoseCashRegisterReport.js --sessionId=<uuid> --fix --cash-in-drawer
  */
 
 const path = require('path');
@@ -37,6 +40,16 @@ const DATES = datesArg
 // Target one shift by its CashRegisterSession id (overrides --dates when set).
 const sessionArg = process.argv.find(a => a.startsWith('--sessionId='));
 const SESSION_ID = sessionArg ? sessionArg.split('=')[1] : null;
+
+// Where did the physical cash from cancelled/refunded transactions go?
+//   --cash-returned  → sudah dikembalikan ke pelanggan (actualCash ikut turun)
+//   --cash-in-drawer → masih di laci (surplus dianggap nyata)
+// Wajib diisi saat ada cash void agar script tidak menciptakan surplus palsu.
+const CASH_DISPOSITION = process.argv.includes('--cash-returned')
+  ? 'returned'
+  : process.argv.includes('--cash-in-drawer')
+    ? 'in_drawer'
+    : null;
 
 require('dotenv').config({ path: path.join(__dirname, '..', `.env.${ENV}`) });
 
@@ -175,6 +188,33 @@ async function main() {
         s + (t.payments || []).filter(p => p.paymentMethod === 'cash')
               .reduce((ps, p) => ps + parseFloat(p.amount || 0), 0), 0);
 
+      // ── Cause 0: cash voided AFTER the drawer snapshot was frozen ─────────
+      // A cancelled/refunded transaction's cash is already excluded from
+      // getCashSummary (the correct "expected" figure), but the stored
+      // actualCash/closingBalance were captured before the void. Changing only
+      // closingBalance would fabricate a surplus — both sides must move together.
+      const voidedCashTrxs = await Transaction.findAll({
+        where: {
+          tenantId: session.tenantId,
+          createdAt: timeWhere,
+          status: { [Op.in]: ['cancelled', 'refunded', 'partially_refunded'] },
+          deletedAt: null,
+        },
+        include: [{
+          model: TransactionPayment,
+          as: 'payments',
+          where: { status: 'completed' },
+          required: true,
+          attributes: ['id', 'paymentMethod', 'amount'],
+        }],
+        attributes: ['id', 'transactionNumber', 'status', 'transactionType', 'changeAmount', 'cancelledAt', 'updatedAt'],
+      });
+      const voidedCashTotal = voidedCashTrxs.reduce((s, t) =>
+        s + (t.payments || [])
+          .filter(p => (p.paymentMethod || '').toLowerCase() === 'cash')
+          .reduce((ps, p) => ps + Math.max(0, parseFloat(p.amount || 0) - parseFloat(t.changeAmount || 0)), 0),
+      0);
+
       console.log('\n  ┌────────────────────────────────────────────────────────────┐');
       console.log(`  │  Perbandingan Kalkulasi Q_totalCash                        │`);
       console.log(`  ├──────────────────────────────┬───────────────┬─────────────┤`);
@@ -202,18 +242,25 @@ async function main() {
       // getCashSummary (expectedCash stored at close)
       const cashSummary  = await session.getCashSummary();
       // Close-shift formula is: closingBalance = expectedCash + tipping
-      // (tipping physically sits in the drawer), so the corrected difference
-      // must include tipping or it would invent a phantom surplus.
+      // (tipping physically sits in the drawer).
       const tipping      = parseFloat(session.tipping || 0);
       const correctedExpected = parseFloat((cashSummary.expectedCash + tipping).toFixed(2));
-      const correctedDiff = parseFloat((parseFloat(session.actualCash || 0) - correctedExpected).toFixed(2));
-      console.log(`\n  💰 getCashSummary (saat close shift):`);
+
+      const storedClosing = parseFloat(session.closingBalance || 0);
+      const storedActual  = parseFloat(session.actualCash || 0);
+      // `gap` = how much the frozen snapshot over-counts vs the correct figure.
+      // Non-zero only when a cash transaction was voided AFTER the shift closed.
+      const gap = parseFloat((storedClosing - correctedExpected).toFixed(2));
+
+      console.log(`\n  💰 getCashSummary (kalkulasi ulang sekarang):`);
       console.log(`     cashIn        : ${fmt(cashSummary.cashIn)}`);
       console.log(`     cashExpenseOut: ${fmt(cashSummary.cashExpenseOut)}`);
       console.log(`     expectedCash  : ${fmt(cashSummary.expectedCash)}`);
       if (tipping) console.log(`     tipping       : ${fmt(tipping)}`);
-      console.log(`     actualCash    : ${fmt(session.actualCash)}`);
-      console.log(`     difference baru (actualCash - expectedCash${tipping ? ' - tipping' : ''}): ${fmt(correctedDiff)}`);
+      console.log(`     closingBalance tersimpan : ${fmt(storedClosing)}`);
+      console.log(`     closingBalance benar     : ${fmt(correctedExpected)}`);
+      console.log(`     gap (snapshot beku)      : ${fmt(gap)}`);
+      console.log(`     actualCash tersimpan     : ${fmt(storedActual)}`);
 
       if (splitMergedTrxs.length > 0) {
         console.log(`\n  ⚠  Penyebab 1 — Transaksi split/merged (tidak masuk di OLD calc):`);
@@ -236,20 +283,59 @@ async function main() {
         });
       }
 
-      // ── FIX: update stored difference ────────────────────────────────────
-      if (FIX && session.status === 'closed') {
-        const oldDiff   = parseFloat(session.difference || 0);
-        const newDiff   = parseFloat(correctedDiff.toFixed(2));
-        const newExpected = correctedExpected;
+      if (voidedCashTrxs.length > 0) {
+        console.log(`\n  ⚠  Penyebab 3 — Cash VOID setelah shift tutup (snapshot jadi beku):`);
+        console.log(`     Total cash void: ${fmt(voidedCashTotal)}`);
+        voidedCashTrxs.forEach(t => {
+          const cashPays = (t.payments || [])
+            .filter(p => (p.paymentMethod || '').toLowerCase() === 'cash');
+          const voidedAt = t.cancelledAt ? new Date(t.cancelledAt).toISOString() : '(refunded)';
+          console.log(`     - ${t.transactionNumber} | ${t.status} | void at: ${voidedAt}`);
+          if (cashPays.length) console.log(`       cash : ${cashPays.map(p => fmt(p.amount)).join(', ')}`);
+        });
+      }
 
-        if (Math.abs(oldDiff - newDiff) < 0.01) {
-          console.log('\n  ✅ difference sudah benar, tidak perlu diupdate.');
+      // ── FIX: koreksi DUA SISI ────────────────────────────────────────────
+      // Mengubah closingBalance saja akan menciptakan surplus palsu:
+      //   difference = actualCash - closingBalance
+      // Jika cash void sudah keluar dari laci, actualCash HARUS ikut turun.
+      if (FIX && session.status === 'closed') {
+        const oldDiff = parseFloat(session.difference || 0);
+
+        if (Math.abs(gap) < 0.01) {
+          console.log('\n  ✅ closingBalance sudah benar, tidak perlu diupdate.');
+        } else if (!CASH_DISPOSITION) {
+          // Refuse to guess — an ambiguous correction is exactly how the
+          // phantom +11.000 surplus was created before.
+          console.log('\n  🛑 DIBATALKAN — ada gap tapi disposisi uang belum ditentukan.');
+          console.log(`     gap: ${fmt(gap)} (${voidedCashTrxs.length} transaksi cash void)`);
+          console.log('\n     Pilih salah satu:');
+          console.log('       --cash-returned   → uang sudah dikembalikan ke pelanggan');
+          console.log('                           (closingBalance DAN actualCash ikut turun)');
+          console.log('       --cash-in-drawer  → uang masih di laci');
+          console.log('                           (closingBalance turun, actualCash TETAP → surplus nyata)');
+          console.log('\n     Tanpa flag ini script tidak mengubah apa pun supaya tidak');
+          console.log('     menciptakan selisih palsu.');
         } else {
-          console.log(`\n  ⚡ Updating difference: ${fmt(oldDiff)} → ${fmt(newDiff)}`);
-          console.log(`     closingBalance: ${fmt(session.closingBalance)} → ${fmt(newExpected)}`);
+          // Both sides move together when the cash physically left the drawer.
+          const newActual = CASH_DISPOSITION === 'returned'
+            ? parseFloat((storedActual - gap).toFixed(2))
+            : storedActual;
+          const newDiff = parseFloat((newActual - correctedExpected).toFixed(2));
+
+          console.log(`\n  ⚡ Disposisi: ${CASH_DISPOSITION === 'returned' ? 'uang dikembalikan' : 'uang masih di laci'}`);
+          console.log(`     closingBalance: ${fmt(storedClosing)} → ${fmt(correctedExpected)}`);
+          if (CASH_DISPOSITION === 'returned') {
+            console.log(`     actualCash    : ${fmt(storedActual)} → ${fmt(newActual)}`);
+          } else {
+            console.log(`     actualCash    : ${fmt(storedActual)} (tetap)`);
+          }
+          console.log(`     difference    : ${fmt(oldDiff)} → ${fmt(newDiff)}`);
+
           await session.update({
+            closingBalance: correctedExpected,
+            actualCash: newActual,
             difference: newDiff,
-            closingBalance: newExpected,
           });
           console.log('  ✅ Updated.');
         }
@@ -261,9 +347,11 @@ async function main() {
 
   console.log('\n══════════════════════════════════════════════════════════════════');
   if (!FIX) {
-    console.log('  Jalankan dengan --fix untuk update difference di DB:');
     const target = SESSION_ID ? `--sessionId=${SESSION_ID}` : `--dates=${DATES.join(',')}`;
-    console.log(`  node scripts/diagnoseCashRegisterReport.js --env=${ENV} ${target} --fix`);
+    console.log('  Jalankan dengan --fix untuk update DB.');
+    console.log('  WAJIB tambahkan disposisi uang bila ada cash void:');
+    console.log(`    node scripts/diagnoseCashRegisterReport.js --env=${ENV} ${target} --fix --cash-returned`);
+    console.log(`    node scripts/diagnoseCashRegisterReport.js --env=${ENV} ${target} --fix --cash-in-drawer`);
   } else {
     console.log('  Selesai.');
   }
