@@ -16,6 +16,8 @@
  *   node scripts/diagnoseCashRegisterReport.js                      ← dev, 21 & 22 Feb
  *   node scripts/diagnoseCashRegisterReport.js --env=production      ← production
  *   node scripts/diagnoseCashRegisterReport.js --dates=2026-02-21,2026-02-22
+ *   node scripts/diagnoseCashRegisterReport.js --dates=2026-10-05    ← 1 tanggal
+ *   node scripts/diagnoseCashRegisterReport.js --sessionId=<uuid>    ← 1 shift saja
  *   node scripts/diagnoseCashRegisterReport.js --env=production --fix
  */
 
@@ -31,6 +33,10 @@ const datesArg = process.argv.find(a => a.startsWith('--dates='));
 const DATES = datesArg
   ? datesArg.split('=')[1].split(',')
   : ['2026-02-21', '2026-02-22'];
+
+// Target one shift by its CashRegisterSession id (overrides --dates when set).
+const sessionArg = process.argv.find(a => a.startsWith('--sessionId='));
+const SESSION_ID = sessionArg ? sessionArg.split('=')[1] : null;
 
 require('dotenv').config({ path: path.join(__dirname, '..', `.env.${ENV}`) });
 
@@ -81,13 +87,18 @@ async function main() {
   console.log(`  Mode : ${FIX ? '⚡ FIX (update difference di DB)' : '🔍 DIAGNOSE ONLY'}`);
   console.log('══════════════════════════════════════════════════════════════════\n');
 
-  for (const dateStr of DATES) {
+  // When targeting a specific session, ignore the date list and run once.
+  const dateTargets = SESSION_ID ? [null] : DATES;
+  for (const dateStr of dateTargets) {
     console.log(`\n${'─'.repeat(66)}`);
-    console.log(`  📅  ${dateStr}`);
+    console.log(`  📅  ${SESSION_ID ? `session ${SESSION_ID}` : dateStr}`);
     console.log(`${'─'.repeat(66)}`);
 
+    const sessionWhere = SESSION_ID
+      ? { id: SESSION_ID }
+      : { shiftDate: dateStr };
     const sessions = await CashRegisterSession.findAll({
-      where: { shiftDate: dateStr },
+      where: sessionWhere,
       order: [['openedAt', 'ASC']],
     });
 
@@ -190,13 +201,19 @@ async function main() {
 
       // getCashSummary (expectedCash stored at close)
       const cashSummary  = await session.getCashSummary();
-      const correctedDiff = parseFloat(session.actualCash || 0) - cashSummary.expectedCash;
+      // Close-shift formula is: closingBalance = expectedCash + tipping
+      // (tipping physically sits in the drawer), so the corrected difference
+      // must include tipping or it would invent a phantom surplus.
+      const tipping      = parseFloat(session.tipping || 0);
+      const correctedExpected = parseFloat((cashSummary.expectedCash + tipping).toFixed(2));
+      const correctedDiff = parseFloat((parseFloat(session.actualCash || 0) - correctedExpected).toFixed(2));
       console.log(`\n  💰 getCashSummary (saat close shift):`);
       console.log(`     cashIn        : ${fmt(cashSummary.cashIn)}`);
       console.log(`     cashExpenseOut: ${fmt(cashSummary.cashExpenseOut)}`);
       console.log(`     expectedCash  : ${fmt(cashSummary.expectedCash)}`);
+      if (tipping) console.log(`     tipping       : ${fmt(tipping)}`);
       console.log(`     actualCash    : ${fmt(session.actualCash)}`);
-      console.log(`     difference baru (actualCash - expectedCash): ${fmt(correctedDiff)}`);
+      console.log(`     difference baru (actualCash - expectedCash${tipping ? ' - tipping' : ''}): ${fmt(correctedDiff)}`);
 
       if (splitMergedTrxs.length > 0) {
         console.log(`\n  ⚠  Penyebab 1 — Transaksi split/merged (tidak masuk di OLD calc):`);
@@ -223,7 +240,7 @@ async function main() {
       if (FIX && session.status === 'closed') {
         const oldDiff   = parseFloat(session.difference || 0);
         const newDiff   = parseFloat(correctedDiff.toFixed(2));
-        const newExpected = parseFloat(cashSummary.expectedCash.toFixed(2));
+        const newExpected = correctedExpected;
 
         if (Math.abs(oldDiff - newDiff) < 0.01) {
           console.log('\n  ✅ difference sudah benar, tidak perlu diupdate.');
@@ -245,7 +262,8 @@ async function main() {
   console.log('\n══════════════════════════════════════════════════════════════════');
   if (!FIX) {
     console.log('  Jalankan dengan --fix untuk update difference di DB:');
-    console.log(`  node scripts/diagnoseCashRegisterReport.js --env=${ENV} --dates=${DATES.join(',')} --fix`);
+    const target = SESSION_ID ? `--sessionId=${SESSION_ID}` : `--dates=${DATES.join(',')}`;
+    console.log(`  node scripts/diagnoseCashRegisterReport.js --env=${ENV} ${target} --fix`);
   } else {
     console.log('  Selesai.');
   }

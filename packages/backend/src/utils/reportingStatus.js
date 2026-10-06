@@ -52,6 +52,85 @@ function shouldIncludeCashierTransaction(transaction) {
   return hasCompletedPayments(transaction);
 }
 
+// ── Canonical cash-in (kas masuk laci) ───────────────────────────────────────
+// Single source of truth for every "uang tunai masuk" calculation:
+//   CashRegisterSession.getCashSummary()  (authoritative at shift close),
+//   shift report, daily report, list sessions, cashier dashboard.
+//
+// A cash payment counts as cash-in only when ALL of these hold:
+//   1. paymentMethod = 'cash'
+//   2. payment status = 'completed'
+//   3. the parent transaction is NOT cancelled / refunded / partially_refunded
+//   4. the payment happened inside the shift window
+//
+// Net value = max(0, payment.amount - transaction.changeAmount) so the change
+// handed back to the customer never inflates the drawer.
+const CASH_IN_EXCLUDED_TRANSACTION_STATUSES = Object.freeze([
+  'cancelled',
+  'refunded',
+  'partially_refunded',
+]);
+
+// Raw-SQL list of the excluded statuses (for `t."status" NOT IN (...)`).
+const CASH_IN_EXCLUDED_TRANSACTION_STATUS_SQL = CASH_IN_EXCLUDED_TRANSACTION_STATUSES
+  .map((status) => `'${status}'`)
+  .join(', ');
+
+// Statuses whose cash already left the drawer and must be reported as refund out.
+const REFUNDED_TRANSACTION_STATUSES = Object.freeze(['refunded', 'partially_refunded']);
+
+/**
+ * True when a transaction's cash payments may count as cash-in.
+ * Cancelled / refunded / partially_refunded money must never be treated as masuk kas.
+ */
+function isCashInTransaction(transaction) {
+  if (!transaction) return false;
+  if (transaction.status == null) return true;
+  return !CASH_IN_EXCLUDED_TRANSACTION_STATUSES.includes(transaction.status);
+}
+
+/** Net cash for one payment: tendered minus change, never negative. */
+function netCashAmount(payment, transaction) {
+  const tendered = parseFloat(payment?.amount || 0);
+  const change = parseFloat(transaction?.changeAmount || 0);
+  return Math.max(0, tendered - change);
+}
+
+/**
+ * Net cash-in contributed by a single TransactionPayment row.
+ * Expects `payment.transaction` to be loaded (Sequelize include `as: 'transaction'`).
+ */
+function cashInFromPayment(payment) {
+  const transaction = payment?.transaction;
+  const method = (payment?.paymentMethod || '').toLowerCase().trim();
+  if (!isCashInTransaction(transaction)) return 0;
+  if (method !== 'cash' && method !== 'tunai') return 0;
+  return netCashAmount(payment, transaction);
+}
+
+/**
+ * Net cash-in contributed by a transaction and its loaded `payments`.
+ *
+ * @param {object} transaction        Transaction with `payments` loaded.
+ * @param {Function} [normalizeMethod] Optional method normalizer returning
+ *                                     'cash' for tunai variants (e.g. cashier
+ *                                     report's normalizePaymentMethod).
+ */
+function cashInFromTransaction(transaction, normalizeMethod) {
+  if (!isCashInTransaction(transaction)) return 0;
+
+  const isCashMethod = normalizeMethod
+    ? (method) => normalizeMethod(method) === 'cash'
+    : (method) => {
+        const m = (method || '').toLowerCase().trim();
+        return m === 'cash' || m === 'tunai';
+      };
+
+  return (transaction.payments || [])
+    .filter((p) => isCashMethod(p.paymentMethod))
+    .reduce((sum, p) => sum + netCashAmount(p, transaction), 0);
+}
+
 module.exports = {
   REVENUE_RECOGNIZED_TRANSACTION_STATUSES,
   REVENUE_RECOGNIZED_TRANSACTION_STATUS_SQL,
@@ -67,4 +146,11 @@ module.exports = {
   PAID_TRANSACTION_SEQUELIZE_LITERAL_SQL,
   hasCompletedPayments,
   shouldIncludeCashierTransaction,
+  CASH_IN_EXCLUDED_TRANSACTION_STATUSES,
+  CASH_IN_EXCLUDED_TRANSACTION_STATUS_SQL,
+  REFUNDED_TRANSACTION_STATUSES,
+  isCashInTransaction,
+  netCashAmount,
+  cashInFromPayment,
+  cashInFromTransaction,
 };

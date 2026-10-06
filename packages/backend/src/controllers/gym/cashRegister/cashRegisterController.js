@@ -27,6 +27,10 @@ const {
   CASH_REGISTER_TRANSACTION_STATUSES,
   COMPLETED_PAYMENT_STATUS,
   shouldIncludeCashierTransaction,
+  isCashInTransaction,
+  netCashAmount,
+  cashInFromPayment,
+  cashInFromTransaction,
 } = require('../../../utils/reportingStatus');
 const {
   getTenantTimezone,
@@ -589,17 +593,15 @@ exports.listSessions = async (req, res, next) => {
                 ...getTransactionLocationWhere(session.locationId),
               },
               required: true,
-              attributes: ['id', 'changeAmount'],
+              attributes: ['id', 'status', 'changeAmount'],
             }],
           });
 
           const reportableTransactions = transactionList.filter(shouldIncludeCashierTransaction);
 
-          const cashIn = cashPayments.reduce((sum, p) => {
-            const tendered = parseFloat(p.amount || 0);
-            const change = parseFloat(p.transaction.changeAmount || 0);
-            return sum + Math.max(0, tendered - change);
-          }, 0);
+          // Canonical cash-in: same filter as getCashSummary() — excludes
+          // cancelled/refunded so the shift list never disagrees with shift close.
+          const cashIn = cashPayments.reduce((sum, p) => sum + cashInFromPayment(p), 0);
 
           // Cash drawer expenses only (bukan semua paymentMethod=cash dari akun Tunai/Brankas)
           // CATATAN: petty_cash TIDAK dimasukkan — keluar dari fund, bukan laci.
@@ -1838,12 +1840,13 @@ exports.getDailyReport = async (req, res, next) => {
       const cashierTrx = reportableShiftTrx.filter(t => ['restaurant', 'pos'].includes(t.transactionType));
       const gymTrx = reportableShiftTrx.filter(t => t.transactionType === 'gym');
 
-      // Cash summary for shift (net = tendered - change, consistent with getCashSummary)
-      const cashIn = shiftTrx.reduce((s, t) => {
-        const change = parseFloat(t.changeAmount || 0);
-        const cashPayments = (t.payments || []).filter(p => normalizePaymentMethod(p.paymentMethod) === 'cash');
-        return s + cashPayments.reduce((ps, p) => ps + Math.max(0, parseFloat(p.amount || 0) - change), 0);
-      }, 0);
+      // Cash summary for shift (net = tendered - change, consistent with getCashSummary).
+      // Uses the canonical guard so a cancelled/refunded transaction never
+      // inflates the drawer figure shown next to "Kas Aktual".
+      const cashIn = shiftTrx.reduce(
+        (s, t) => s + cashInFromTransaction(t, normalizePaymentMethod),
+        0
+      );
 
       return {
         id: session.id,
@@ -2388,17 +2391,14 @@ exports.printDailyReport = async (req, res, next) => {
     const dayPcReturnTotal = dayPcReturns.reduce((s, r) => s + Math.abs(parseFloat(r.amount || 0)), 0);
     const dayCashExpensesWithPc = cashExpenses + dayPcReturnTotal;
 
-    // Per-shift cashIn summary
+    // Per-shift cashIn summary (canonical guard — see reportingStatus.js)
     const shiftsData = sessions.map(s => {
       const cashIn = allTransactions
         .filter(t => {
           const ct = new Date(t.createdAt), from = new Date(s.openedAt), to = s.closedAt ? new Date(s.closedAt) : new Date();
           return ct >= from && ct <= to;
         })
-        .reduce((sum, t) => {
-          const change = parseFloat(t.changeAmount || 0);
-          return sum + (t.payments || []).filter(p => normalizePaymentMethod(p.paymentMethod) === 'cash').reduce((ps, p) => ps + Math.max(0, parseFloat(p.amount || 0) - change), 0);
-        }, 0);
+        .reduce((sum, t) => sum + cashInFromTransaction(t, normalizePaymentMethod), 0);
       return {
         shiftName:      s.shiftName,
         status:         s.status,
@@ -2612,11 +2612,10 @@ exports.printShiftReport = async (req, res, next) => {
     }
 
     // ── Shift data for receipt (net = tendered - change, consistent with getCashSummary) ──
-    const cashIn = transactions.reduce((s, t) => {
-      const change = parseFloat(t.changeAmount || 0);
-      const cashPayments = (t.payments || []).filter(p => normalizePaymentMethod(p.paymentMethod) === 'cash');
-      return s + cashPayments.reduce((ps, p) => ps + Math.max(0, parseFloat(p.amount || 0) - change), 0);
-    }, 0);
+    const cashIn = transactions.reduce(
+      (s, t) => s + cashInFromTransaction(t, normalizePaymentMethod),
+      0
+    );
 
     const shiftData = {
       shiftName:      session.shiftName,

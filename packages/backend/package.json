@@ -62,6 +62,7 @@
     "fix:attendance:preview": "node scripts/fixAttendanceDateTimezone.js --dry-run",
     "diagnose:cashregister": "node scripts/diagnoseCashRegisterReport.js",
     "diagnose:cashregister:prod": "cross-env NODE_ENV=production node scripts/diagnoseCashRegisterReport.js",
+    "fix:cashregister": "node scripts/diagnoseCashRegisterReport.js --fix",
     "fix:cashregister:prod": "cross-env NODE_ENV=production node scripts/diagnoseCashRegisterReport.js --fix",
     "fix:cancelled-payments": "node scripts/fixCancelledPayments.js",
     "fix:cancelled-payments:preview": "node scripts/fixCancelledPayments.js",

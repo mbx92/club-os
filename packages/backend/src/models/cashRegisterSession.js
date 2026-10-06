@@ -36,6 +36,13 @@ module.exports = (sequelize, DataTypes) => {
       const { Transaction, TransactionPayment, Expense, PettyCashTransaction, PettyCash } = sequelize.models;
       const { Op } = require('sequelize');
       const { getCashDrawerExpenseWhere } = require('../utils/cashDrawerExpense');
+      // FYI: `getCashDrawerExpenseWhere` also gates expenses; cash-in uses the
+      // canonical helper below so every report path shares one filter definition.
+      const {
+        isCashInTransaction,
+        netCashAmount,
+        REFUNDED_TRANSACTION_STATUSES,
+      } = require('../utils/reportingStatus');
 
       const timeWhere = {
         [Op.gte]: this.openedAt,
@@ -78,23 +85,18 @@ module.exports = (sequelize, DataTypes) => {
         transaction: t,
       });
 
-      // Exclude cancelled, refunded, and partially_refunded from cash inflow
-      const EXCLUDED_STATUSES = ['cancelled', 'refunded', 'partially_refunded'];
-
       // Net cash in = tendered amount minus change returned to customer.
+      // Excludes cancelled/refunded/partially_refunded via the canonical helper.
       // TransactionPayment.amount may store the full tendered cash (e.g. 100000 for a 51 sale).
       // We deduct Transaction.changeAmount so only the actual sale amount enters kas.
       const cashIn = payments
-        .filter((p) => !EXCLUDED_STATUSES.includes(p.transaction.status))
-        .reduce((sum, p) => {
-          const tendered = parseFloat(p.amount || 0);
-          const change = parseFloat(p.transaction.changeAmount || 0);
-          return sum + Math.max(0, tendered - change);
-        }, 0);
+        .filter((p) => isCashInTransaction(p.transaction))
+        .reduce((sum, p) => sum + netCashAmount(p, p.transaction), 0);
 
+      // Refunded cash already left the drawer; reported separately, never as cash-in.
       const refundOut = payments
-        .filter((p) => ['refunded', 'partially_refunded'].includes(p.transaction.status))
-        .reduce((sum, p) => sum + Math.max(0, parseFloat(p.amount || 0) - parseFloat(p.transaction.changeAmount || 0)), 0);
+        .filter((p) => REFUNDED_TRANSACTION_STATUSES.includes(p.transaction.status))
+        .reduce((sum, p) => sum + netCashAmount(p, p.transaction), 0);
 
       // ── Pengeluaran dari laci saja (bukan dari akun Tunai/Brankas/Petty Cash) ──
       // Prefer expenses stamped to this session at pay-time (no time-window gap).

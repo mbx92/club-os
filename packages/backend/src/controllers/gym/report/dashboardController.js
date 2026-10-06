@@ -32,6 +32,10 @@ const {
   CASH_REGISTER_TRANSACTION_STATUSES,
   COMPLETED_PAYMENT_STATUS,
   shouldIncludeCashierTransaction,
+  REFUNDED_TRANSACTION_STATUSES,
+  isCashInTransaction,
+  netCashAmount,
+  cashInFromPayment,
 } = require('../../../utils/reportingStatus');
 const { getTenantTimezone, todayInTz, startOfDayInTz, endOfDayInTz, addDays, firstDayOfMonth, firstDayOfPrevMonth, lastDayOfPrevMonth } = require('../../../utils/tenantTimezone');
 
@@ -842,20 +846,12 @@ async function getPettyCashDashboard(req, res, next) {
         attributes: ['amount', 'createdAt'],
       });
 
-      // Exclude cancelled, refunded, and partially_refunded from cash inflow
-      const EXCLUDED_FROM_CASHIN = ['cancelled', 'refunded', 'partially_refunded'];
-
-      // Net cash in = tendered amount minus change returned to customer.
-      const cashIn = cashPayments
-        .filter(p => !EXCLUDED_FROM_CASHIN.includes(p.transaction.status))
-        .reduce((s, p) => {
-          const tendered = parseFloat(p.amount || 0);
-          const change = parseFloat(p.transaction.changeAmount || 0);
-          return s + Math.max(0, tendered - change);
-        }, 0);
+      // Exclude cancelled, refunded, and partially_refunded from cash inflow.
+      // Uses the canonical helper so this dashboard matches shift close exactly.
+      const cashIn = cashPayments.reduce((s, p) => s + cashInFromPayment(p), 0);
       const refundOut = cashPayments
-        .filter(p => ['refunded', 'partially_refunded'].includes(p.transaction.status))
-        .reduce((s, p) => s + Math.max(0, parseFloat(p.amount || 0) - parseFloat(p.transaction.changeAmount || 0)), 0);
+        .filter(p => REFUNDED_TRANSACTION_STATUSES.includes(p.transaction.status))
+        .reduce((s, p) => s + netCashAmount(p, p.transaction), 0);
 
       // Cash expenses (pengeluaran kas) selama shift ini
       const cashExpenseRows = await Expense.findAll({
@@ -878,7 +874,7 @@ async function getPettyCashDashboard(req, res, next) {
         cashOut,
         cashExpenseOut,
         expectedCash: parseFloat(openSession.openingBalance) + cashIn - cashOut,
-        transactionCount: cashPayments.filter(p => !EXCLUDED_FROM_CASHIN.includes(p.transaction.status)).length,
+        transactionCount: cashPayments.filter(p => isCashInTransaction(p.transaction)).length,
       };
 
       // Get all transactions for open session
