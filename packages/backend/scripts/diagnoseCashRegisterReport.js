@@ -51,6 +51,26 @@ const CASH_DISPOSITION = process.argv.includes('--cash-returned')
     ? 'in_drawer'
     : null;
 
+// ── Safety: --fix tidak boleh memakai tanggal default ─────────────────────────
+// Default DATES (21 & 22 Feb) hanya untuk repro di dev. Tanpa target eksplisit,
+// --fix bisa menyapu sesi historis yang sama sekali tidak dimaksudkan.
+if (FIX && !SESSION_ID && !datesArg) {
+  console.error('');
+  console.error('  🛑 DIBATALKAN — --fix butuh target eksplisit.');
+  console.error('');
+  console.error('  Tanpa --sessionId / --dates, script memakai default historis:');
+  console.error(`    ${DATES.join(', ')}  ← JANGAN diandalkan di production`);
+  console.error('');
+  console.error('  Tentukan target, contoh:');
+  console.error('    node scripts/diagnoseCashRegisterReport.js --env=production \\');
+  console.error('      --sessionId=<uuid> --fix --cash-returned');
+  console.error('');
+  console.error('  Atau lewat npm (argumen setelah -- diteruskan ke script):');
+  console.error('    npm run fix:cashregister:returned:prod -- --sessionId=<uuid>');
+  console.error('');
+  process.exit(1);
+}
+
 require('dotenv').config({ path: path.join(__dirname, '..', `.env.${ENV}`) });
 
 const { CashRegisterSession, Transaction, TransactionPayment, Expense, ExpenseCategory, sequelize } = require('../src/models');

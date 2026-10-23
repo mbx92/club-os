@@ -1,4 +1,4 @@
-FROM node:20-bookworm-slim AS builder
+FROM node:22.23.4-bookworm-slim AS builder
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ ENV VITE_BUILD_ID=${VITE_BUILD_ID}
 
 RUN npm run build -w packages/frontend
 
-FROM node:20-bookworm-slim AS runner
+FROM node:22.23.4-bookworm-slim AS runner
 
 WORKDIR /app
 
